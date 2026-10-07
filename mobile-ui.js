@@ -13,6 +13,12 @@ export function mobileUI({state,closeModal,closeTrade}){
   root.style.setProperty('--r-viewport-top',(viewport?.offsetTop||0)+'px');
   document.body.toggleAttribute('data-keyboard',keyboard);
   document.body.toggleAttribute('data-installed',standalone.matches||document.referrer.startsWith('android-app://com.rallydot.app'));
+  if(keyboard){
+   const active=document.activeElement,scroll=active?.closest('.r-trade-scroll,.r-checkout-scroll,.r-modal');
+   if(scroll){const field=active.getBoundingClientRect(),bounds=scroll.getBoundingClientRect(),bottom=Math.min(bounds.bottom,height+(viewport?.offsetTop||0))-16;
+    if(field.bottom>bottom)scroll.scrollTop+=field.bottom-bottom;
+   }
+  }
  }
  const schedule=()=>{if(!frame)frame=requestAnimationFrame(measure);};
  viewport?.addEventListener('resize',schedule,{passive:true});
