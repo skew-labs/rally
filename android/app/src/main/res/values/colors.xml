@@ -1,0 +1,5 @@
+<resources>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_dark">#18181C</color>
+    <color name="icon_background">#151515</color>
+</resources>

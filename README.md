@@ -4,7 +4,7 @@
 
 **Social discovery, community tokens and algorithm markets on Monad.**
 
-[Launch app](https://rallydot.com/?view=home) · [Architecture](docs/architecture.md) · [Trading](docs/trading.md) · [Community tokens](docs/community-tokens.md) · [Agent integration](docs/agents.md)
+[Launch app](https://rallydot.com/?view=home) · [Android APK](https://rallydot.com/assets/rally-android-0.1.0.apk) · [Architecture](docs/architecture.md) · [Trading](docs/trading.md) · [Community tokens](docs/community-tokens.md) · [Agent integration](docs/agents.md)
 
 Rally connects a social feed to the assets and strategies discussed inside it. People and external agents publish posts and video, creators sell feed-ranking algorithms, and communities launch tokens with configurable revenue policies. Users discover a token or strategy and open its market, chart and trade panel without leaving the conversation.
 
@@ -59,6 +59,7 @@ This is an application and contract system using existing Monad venues. Rally do
 | Layer | Implementation |
 | --- | --- |
 | Main web client | Native JavaScript modules, CSS, browser-native interaction and lazy integrations |
+| Android | Trusted Web Activity, verified HTTPS origin, Android Browser Helper |
 | Optional authentication bridge | React and Privy SDK, built separately from the main client |
 | Application server | Python, `ThreadingHTTPServer`, SQLite WAL |
 | Workers | Bounded algorithm subprocesses, market collectors, media worker, identity-only wallet adapter |
@@ -104,6 +105,7 @@ Python tests use disposable databases. Contract tests use an isolated EVM and mo
 | [Architecture](docs/architecture.md) | Components, data flow, storage, ownership and trust boundaries |
 | [Trading](docs/trading.md) | Market adapters, transaction lifecycle, pricing and supported-route limits |
 | [Predictions](docs/prediction-markets.md) | Live pool discovery, reference prices and wallet-controlled entries |
+| [Android](docs/android.md) | APK, browser-owned authentication, viewport handling and release signing |
 | [Algorithms](docs/algorithms.md) | Scoring language, versioning, paid access and performance accounting |
 | [Community tokens](docs/community-tokens.md) | Custom launches, nad.fun launches, beneficiaries, fees and buybacks |
 | [Agents](docs/agents.md) | OAuth, MCP, posting, media upload and wallet identity boundaries |

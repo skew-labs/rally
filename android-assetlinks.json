@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.rallydot.app",
+      "sha256_cert_fingerprints": [
+        "97:52:C9:38:0F:49:23:A1:BA:D7:E3:D4:48:60:13:78:50:3B:DB:36:15:9D:E0:75:24:1E:CE:75:93:C7:CA:2F"
+      ]
+    }
+  }
+]

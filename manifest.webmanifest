@@ -1,0 +1,17 @@
+{
+ "id":"/app",
+ "name":"Rally",
+ "short_name":"Rally",
+ "description":"Communities, algorithms and markets on Monad.",
+ "start_url":"/?view=home&section=markets&tab=memes",
+ "scope":"/",
+ "display":"standalone",
+ "background_color":"#ffffff",
+ "theme_color":"#ffffff",
+ "orientation":"any",
+ "icons":[
+  {"src":"/assets/rally-icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+  {"src":"/assets/rally-icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+  {"src":"/assets/rally-icon-maskable.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
+ ]
+}

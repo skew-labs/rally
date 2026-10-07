@@ -14,6 +14,7 @@ import { creatorUI } from './creator-ui.js';
 import { launchpadUI } from './launchpad.js';
 import { experienceUI } from './experience.js';
 import { motionUI } from './motion.js';
+import { mobileUI } from './mobile-ui.js';
 const Motion=motionUI();
 const $ = (s, r = document) => r.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -59,6 +60,7 @@ const brandPicker=selected=>`<div class="r-agent-client-picker" role="group" ari
 const params = new URLSearchParams(location.search);
 const marketTabs=['memes','spot','perps','prediction','stocks','rwa','venues'];
 const S = {view:params.get('view')||'home',mode:'for-you',marketTab:params.get('tab')||'memes',nadMode:params.get('phase')==='dex'?'dex':params.get('sort')==='latest'?'new':'cap',filter:'',boot:null,tokens:[],posts:[],cursor:null,chart:{theme:document.documentElement.dataset.theme||'light',chartProvider:'tradingview',chartInterval:'60'},trade:null,modal:null,provider:null,busy:false};
+const Mobile=mobileUI({state:S,closeModal,closeTrade});
 S.homeSection=params.get('section')==='feed'?'feed':'markets';
 if(!marketTabs.includes(S.marketTab))S.marketTab='memes';
 if(params.get('view')==='messages')history.replaceState({},'','/?view=home');
@@ -307,6 +309,7 @@ async function hydrateMarkets(){
 async function boot(compact=false){S.boot=await api('/api/bootstrap'+(compact?'?markets=0':''));if(S.boot.marketData){S.tokens=S.boot.marketData.tokens;S.marketData=S.boot.marketData;}try{const guest=JSON.parse(localStorage.getItem('rally:guest-watches')||'[]');if(!S.boot.me){S.boot.watches=Array.isArray(guest)?guest:[];const chosen=localStorage.getItem('rally:guest-feed');if(S.boot.feeds.some(f=>f.id===chosen&&f.access))S.boot.activeFeed=chosen;}}catch{}updateShell();rail();}
 async function navigate(view){
  if(!S.boot)await bootReady;
+ await Mobile.dismissForNavigation();
  if(view==='portfolio'&&!S.marketData)await hydrateMarkets();
  const id={community:S.community,profile:S.profile,feed:S.feed,post:S.post,token:S.nadToken}[view],destination=`/?view=${view}${id?'&id='+encodeURIComponent(id):''}${['payments','analytics'].includes(view)?'&period='+(S.launchPeriod||'30d')+(S.launchActivityToken?'&token='+encodeURIComponent(S.launchActivityToken):''):''}${view==='home'?'&section='+S.homeSection+(S.homeSection==='markets'?'&tab='+S.marketTab:''):''}${view==='swipe'?'&market='+S.swipeTab:''}${view==='explore'?'&tab='+S.marketTab+(S.marketTab==='memes'?(S.nadMode==='dex'?'&phase=dex':S.nadMode==='new'?'&sort=latest':''):''):''}`;
  if(destination===location.pathname+location.search){window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});focusMain();return;}

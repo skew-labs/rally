@@ -284,6 +284,9 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/app/':return self.response(b'',302,{'Location':'/app'+('?' + u.query if u.query else '')},'text/plain')
         if path in {'/app','/authorize'} or path=='/' and any(k in params for k in ('view','tab','id','market','phase')):return self.file(s.ROOT/'index.html','text/html; charset=utf-8')
         if path=='/':return self.file(s.ROOT/'landing.html','text/html; charset=utf-8')
+        if path=='/manifest.webmanifest':return self.file(s.ROOT/'manifest.webmanifest','application/manifest+json')
+        if path=='/.well-known/assetlinks.json':return self.file(s.ROOT/'android-assetlinks.json','application/json')
+        if path in {'/mobile-ui.js','/prediction-ui.js','/mobile.css'}:return self.file(s.ROOT/path.lstrip('/'),'text/css' if path.endswith('.css') else 'text/javascript')
         if re.fullmatch(r'/assets/token-art-[a-f0-9]{20}\.webp',path):
             target=token_images.file(path.rsplit('/',1)[-1])
             if not target:raise s.Problem('Artwork not found',404)

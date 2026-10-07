@@ -1,0 +1,35 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.rallydot.app'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.rallydot.app'
+        minSdk 24
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0'
+    }
+    signingConfigs {
+        release {
+            if (System.getenv('RALLY_ANDROID_KEYSTORE')) {
+                storeFile file(System.getenv('RALLY_ANDROID_KEYSTORE'))
+                storePassword System.getenv('RALLY_ANDROID_STORE_PASSWORD')
+                keyAlias 'rally'
+                keyPassword System.getenv('RALLY_ANDROID_STORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies { implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.4' }

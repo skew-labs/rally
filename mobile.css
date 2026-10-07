@@ -1,0 +1,36 @@
+/* Android touch and viewport rules share the existing Rally layout system. */
+@media(max-width:760px){
+ html{scroll-padding-top:72px}
+ html :is(.r-icon-button,.r-theme-button,.r-header-create,.r-search-launch){min-width:48px;min-height:48px}
+ html :is(.r-field,.lp-field) :is(input,select,textarea),html .rx-search input{font-size:16px}
+ html :is(.r-field,.lp-field) :is(input,select){min-height:48px}
+ html :is(button,a){-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+ html :is(.r-modal,.r-trade-scroll,.r-checkout-scroll){overscroll-behavior-y:contain}
+ html .r-overlay{top:var(--r-viewport-top,0px);bottom:auto;height:var(--r-viewport-height,100dvh);box-sizing:border-box}
+ html .r-modal,html .rx-preview-modal,html .rx-post-modal{max-height:calc(var(--r-viewport-height,100dvh) - 12px)!important}
+ html .r-trade-panel,html .r-nad-panel{height:calc(var(--r-viewport-height,100dvh) - 12px);max-height:calc(var(--r-viewport-height,100dvh) - 12px);bottom:0}
+ html .r-modal-head{flex-shrink:0;min-height:64px}
+ html .r-checkout-footer{flex-shrink:0}
+ html body[data-keyboard] :is(.r-mobile-nav,.r-compose-fab){display:none!important}
+ html body[data-keyboard] .r-overlay{padding-top:8px}
+ html body[data-keyboard] .r-checkout-scroll{min-height:0}
+ html body[data-keyboard] .r-checkout-footer{padding-block:10px}
+ html body[data-keyboard] .r-checkout-footer .r-btn{min-height:48px}
+ html body[data-installed]{background:var(--paper)}
+ html body[data-installed] .r-header{height:calc(60px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top)}
+ html body[data-installed] .r-mobile-nav{inset:auto 0 0;width:100%;height:calc(64px + env(safe-area-inset-bottom));padding:4px 8px calc(4px + env(safe-area-inset-bottom));border:0;border-top:1px solid var(--line);border-radius:0;background:var(--paper);backdrop-filter:none;box-shadow:none}
+ html body[data-installed] .r-mobile-nav a{min-height:56px;font-size:10px;gap:4px}
+ html body[data-installed]:not([data-view=swipe]) .r-workspace>#main{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+ html body[data-installed] .r-compose-fab{bottom:calc(80px + env(safe-area-inset-bottom))}
+ html body[data-installed][data-view=swipe] #app>.r-layout{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+ html body[data-installed][data-view=swipe][data-swipe-keyboard] #app>.r-layout{padding-bottom:8px}
+ html body[data-installed] .r-checkout-token-footer{bottom:calc(64px + env(safe-area-inset-bottom))}
+ html body[data-installed] .r-mobile-nav .r-motion-glider{border-radius:16px}
+}
+@media(max-width:760px) and (max-height:500px){
+ html .r-modal-head{min-height:52px;padding-block:8px}
+ html .r-checkout-reference,html .r-checkout-context{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ html body[data-installed] :is(button,a){transition:none}
+}
