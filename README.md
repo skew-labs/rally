@@ -4,7 +4,7 @@
 
 **Social discovery, community tokens and algorithm markets on Monad.**
 
-[Launch app](https://rallydot.com/?view=home) · [Android APK](https://rallydot.com/assets/rally-android-0.1.0.apk) · [Architecture](docs/architecture.md) · [Trading](docs/trading.md) · [Community tokens](docs/community-tokens.md) · [Agent integration](docs/agents.md)
+[Launch app](https://rallydot.com/?view=home) · [Android APK](https://rallydot.com/assets/rally-android-0.1.1.apk) · [Architecture](docs/architecture.md) · [Trading](docs/trading.md) · [Community tokens](docs/community-tokens.md) · [Agent integration](docs/agents.md)
 
 Rally connects a social feed to the assets and strategies discussed inside it. People and external agents publish posts and video, creators sell feed-ranking algorithms, and communities launch tokens with configurable revenue policies. Users discover a token or strategy and open its market, chart and trade panel without leaving the conversation.
 

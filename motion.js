@@ -55,7 +55,10 @@ export function motionUI(){
   const page=document.querySelector('#page');if(page)pageMotion=animate(page,[{opacity:.94},{opacity:1}],{duration:140,easing:ease});
  }
  function dialog(overlay,replacing=false){
-  const panel=overlay?.querySelector('.r-modal');if(!panel||!allowed()||replacing)return;
+  const panel=overlay?.querySelector('.r-modal');if(!panel)return;
+  // One animation owns the sheet; inherited Swipe/checkout CSS must not
+  // animate the same transform at the same time as this motion track.
+  panel.style.animation='none';if(!allowed()||replacing)return;
   const mobile=innerWidth<=760,rect=panel.getBoundingClientRect();
   const origin=source&&performance.now()-source.at<2000?`${Math.max(0,Math.min(rect.width,source.x-rect.x))}px ${Math.max(0,Math.min(rect.height,source.y-rect.y))}px`:'50% 50%';
   panel.style.transformOrigin=mobile?'50% 100%':origin;
@@ -68,7 +71,8 @@ export function motionUI(){
   if(immediate||!allowed()){overlay.remove();return;}
   const panel=overlay.querySelector('.r-modal'),style=panel&&getComputedStyle(panel),from=style&&{opacity:style.opacity,transform:style.transform},scrimOpacity=getComputedStyle(overlay).opacity;
   panel?.getAnimations().forEach(a=>a.cancel());overlay.getAnimations().forEach(a=>a.cancel());
-  if(panel)animate(panel,[from,{opacity:0,transform:innerWidth<=760?'translateY(16px)':'scale(.985)'}],{duration:120,easing:'cubic-bezier(.4,0,1,1)'});
+  const offset=style&&style.transform!=='none'?new DOMMatrixReadOnly(style.transform).m42:0;
+  if(panel)animate(panel,[from,{opacity:0,transform:innerWidth<=760?`translateY(${Math.max(16,offset+24)}px)`:'scale(.985)'}],{duration:120,easing:'cubic-bezier(.4,0,1,1)'});
   const animation=animate(overlay,[{opacity:scrimOpacity},{opacity:0}],{duration:120,easing:'ease-out'});
   // Finish cleanup even if a busy browser delays the animation's final frame.
   const timer=setTimeout(()=>overlay.remove(),140);

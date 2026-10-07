@@ -9,6 +9,8 @@ The browser owns cookies, passkeys, uploads, embedded-wallet signing and externa
 - Installed mode uses a stable bottom navigation bar and system safe areas.
 - Sheets use the visible viewport when the keyboard opens. Background navigation hides during input.
 - Android Back closes the top sheet before leaving its market. Nested asset pickers keep the underlying trade open.
+- Drag a sheet header downward to dismiss it; short drags return to their starting position. Keyboard input, pending financial actions and submitted trades block this gesture.
+- Sheet entry and dismissal use one interruptible motion track. Touch controls give immediate pressed feedback and respect reduced-motion preferences.
 - Swipe reuses the existing bounded card window, gesture handling and reduced-motion controls.
 - Financial preparation, wallet authorization, deadlines and receipt verification are the existing application handlers.
 
@@ -16,7 +18,7 @@ Authentication and trading require a network connection. This package does not c
 
 ## Build
 
-Requirements: JDK 17, Android SDK 36, build tools, and the pinned Gradle wrapper. Minimum Android version is 7.0 (API 24); target API is 36. The launcher uses Android Browser Helper 2.7.4. Build on a suitable remote Linux host.
+Requirements: JDK 17, Android SDK 36, build tools, and the pinned Gradle wrapper. Minimum Android version is 7.0 (API 24); target API is 36. The launcher uses Android Browser Helper 2.7.4. Release builds use R8 code optimization and resource shrinking; retain each build's mapping file privately for crash analysis. Build on a suitable remote Linux host.
 
 ```sh
 cd android
@@ -32,6 +34,10 @@ Release signing uses `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD`
 Publish the release certificate's SHA-256 fingerprint in `android-assetlinks.json`, served at `/.well-known/assetlinks.json`, before testing trusted fullscreen mode. A replacement signing key requires updating that association and affects application upgrades. Reuse the existing release key for subsequent APKs.
 
 The public web manifest describes installed display mode and brand icons. Mobile-specific presentation lives in `mobile-ui.js` and `mobile.css`; it has no account or financial authority.
+
+## Release 0.1.1
+
+The signed APK is [available here](https://rallydot.com/assets/rally-android-0.1.1.apk). It uses the same package and release certificate as 0.1.0 for in-place upgrades. The optimized package is 567,003 bytes, compared with 3,767,185 bytes for the previous release.
 
 ## Design references
 
