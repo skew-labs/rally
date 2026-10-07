@@ -4,6 +4,7 @@ from eth_utils import keccak
 from eth_abi import decode
 import json
 import service as s
+import wallet_execution
 
 PERIOD=30*86400
 TRANSFER_TOPIC='0x'+keccak(text='Transfer(address,address,uint256)').hex()
@@ -121,7 +122,7 @@ def record(who,data):
         observed=s.rpc('eth_getTransactionByHash',[tx])
         if not observed:raise s.Problem('Transaction is not indexed yet. Retry the same hash.',409,'transaction_pending')
         target=row['recipient'] if terms(row) else s.USDC
-        if observed['from'].lower()!=row['wallet'] or (observed.get('to') or '').lower()!=target or observed.get('input','').lower()!=calldata(row) or int(observed.get('value','0x0'),16)!=0:raise s.Problem('Transaction does not match this checkout',409)
+        wallet_execution.verified_call(tx,{'from':row['wallet'],'to':target,'data':calldata(row),'value':'0x0'},observed)
         try:
             with s.connection() as db:
                 updated=db.execute('UPDATE invoices SET tx=?,state=? WHERE id=? AND tx IS NULL',(tx,'submitted',row['id'])).rowcount
@@ -179,15 +180,12 @@ def history(who):
 def approval_check(who,data):
     row=owned(who,data.get('invoice'));t=terms(row)
     if not t:raise s.Problem('This checkout does not need an allowance')
-    import community_tokens as ct
     tx=str(data.get('tx') or '').lower()
     if not s.re.fullmatch('0x[0-9a-f]{64}',tx):raise s.Problem('Invalid transaction hash')
     observed=s.rpc('eth_getTransactionByHash',[tx])
-    expected=ct.call('approve',['address','uint256'],[t['vault'],int(row['amount_raw'])])
     if not observed:return {'state':'pending','tx':tx}
-    if observed['from'].lower()!=row['wallet'] or (observed.get('to') or '').lower()!=s.USDC or observed.get('input','').lower()!=expected or int(observed.get('value','0x0'),16):raise s.Problem('Approval does not match this checkout',409)
-    r=s.rpc('eth_getTransactionReceipt',[tx])
-    if not r:return {'state':'pending','tx':tx}
-    b=s.rpc('eth_getBlockByNumber',[r['blockNumber'],False])
-    if not b or b['hash'].lower()!=r['blockHash'].lower():return {'state':'pending','tx':tx}
+    try:r=wallet_execution.approval_receipt(tx,row['wallet'],s.USDC,t['vault'],row['amount_raw'],observed)
+    except s.Problem as error:
+        if error.code=='transaction_pending':return {'state':'pending','tx':tx}
+        raise
     return {'state':'confirmed' if int(r['status'],16)==1 else 'failed','tx':tx}

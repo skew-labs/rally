@@ -17,7 +17,12 @@ def config():
     app = os.environ.get('RALLY_PRIVY_APP_ID', '').strip()
     client = os.environ.get('RALLY_PRIVY_CLIENT_ID', '').strip()
     valid = bool(re.fullmatch(r'[a-zA-Z0-9_-]{8,128}', app))
-    return {'enabled': valid, 'appId': app if valid else None,
+    bridge='/assets/auth/privy-bridge.js'
+    try:
+        entry=json.loads((s.ROOT/'assets/auth/manifest.json').read_text())['entry']
+        if re.fullmatch(r'privy-bridge-[A-Z0-9]{8}\.js',entry) and (s.ROOT/'assets/auth'/entry).is_file():bridge='/assets/auth/'+entry
+    except (OSError,ValueError,KeyError,TypeError):pass
+    return {'enabled': valid, 'appId': app if valid else None, 'bridgeURL':bridge,
             'clientId': client if re.fullmatch(r'[a-zA-Z0-9_-]{8,128}', client) else None,
             'loginMethods': ['email', 'google', 'wallet'], 'chainId': 143}
 

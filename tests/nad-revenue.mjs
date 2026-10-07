@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import {ethers} from 'ethers';
-import ganache from 'ganache';
+import {evm} from './evm.mjs';
 const stage=new URL('..',import.meta.url).pathname,art=JSON.parse(fs.readFileSync(stage+'/build/revenue-contracts.json')).contracts;
-const network=ganache.provider({chain:{chainId:143,hardfork:'shanghai'},wallet:{totalAccounts:4},logging:{quiet:true}}),provider=new ethers.BrowserProvider(network);provider.pollingInterval=10;
+const network=await evm(),provider=new ethers.BrowserProvider(network);provider.pollingInterval=10;
 const [creator,buyer,stranger]=await Promise.all([0,1,2].map(i=>provider.getSigner(i))),owner=await creator.getAddress(),payer=await buyer.getAddress();let checks=0;
 const ok=(v,label)=>{assert(v,label);checks++;};const tx=async p=>(await p).wait();
 async function revert(p,label){try{await tx(p)}catch{checks++;return}throw Error('Expected revert '+label);}

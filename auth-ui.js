@@ -50,7 +50,7 @@ export function authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,aft
   const cfg=()=>S.boot?.auth?.privy;
   async function sdk(){
     if(!cfg()?.enabled)throw new Error('Email and social login are not available yet.');
-    if(!sdkPromise)sdkPromise=import('/assets/auth/privy-bridge.js').then(async module=>{await module.initialize(cfg());return module;}).catch(error=>{sdkPromise=null;throw error;});
+    if(!sdkPromise)sdkPromise=import(cfg().bridgeURL||'/assets/auth/privy-bridge.js').then(async module=>{await module.initialize(cfg());return module;}).catch(error=>{sdkPromise=null;throw error;});
     return sdkPromise;
   }
   function buttons(){return `<div class="r-auth-methods"><button class="r-btn primary full" id="wallet-signin" type="button">${icon('wallet')}Connect wallet</button>${cfg()?.enabled?'<button class="r-btn full" id="privy-signin" type="button">Continue with email or Google</button>':''}<details class="r-auth-advanced"><summary>Agent wallet</summary><button class="r-btn full" id="agent-wallet-signin" type="button">${mark}MetaMask Agent Wallet</button><small>Connect through your external agent.</small></details></div>`;}

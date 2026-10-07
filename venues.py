@@ -5,6 +5,7 @@ from eth_abi import encode,decode
 from eth_utils import keccak
 import service as s
 import transaction_preflight
+import wallet_execution
 
 PERPL='0x34b6552d57a35a1d042ccae1951bd1c370112a6f'
 CASTORA='0x9e1e6f277df3f2cd150ae1e08b05f45b3297be6d'
@@ -59,10 +60,10 @@ def named(item,value):
     if isinstance(value,tuple):return list(value)
     return value
 
-def read(venue,name,args=(),wallet=None,allow_missing=False):
+def read(venue,name,args=(),wallet=None,allow_missing=False,block='latest'):
     tx={'to':{'perpl':PERPL,'castora':CASTORA,'getters':GETTERS}[venue],'data':call_data(venue,name,args)}
     if wallet:tx['from']=wallet
-    response=s.rpc_response('eth_call',[tx,'latest'])
+    response=s.rpc_response('eth_call',[tx,block])
     if response.get('error'):
         error=response['error'];missing='0x03a0e277'+str(args[0])[2:].lower().rjust(64,'0') if allow_missing else None
         if allow_missing and venue=='perpl' and name=='getAccountByAddr' and error.get('code')==3 and str(error.get('data','')).lower()==missing:return None
@@ -131,7 +132,7 @@ def plan(who,data):
             else:
                 if not status['account'] or amount>status['account']['balanceCNS']-status['account']['lockedBalanceCNS']:raise s.Problem('Not enough available exchange collateral',409)
                 method='withdrawCollateral'
-            calldata=call_data(venue,method,[amount]);summary={'action':kind,'amount':s.units(amount,6),'asset':'AUSD'}
+            calldata=call_data(venue,method,[amount]);summary={'action':kind,'amount':s.units(amount,6),'asset':'AUSD','accountId':status['account']['accountId'] if status['account'] else None}
         elif kind=='order':
             if not status['account']:raise s.Problem('Deposit AUSD to open your Perpl account first',409,'perpl_account_required')
             if status['account']['frozen']:raise s.Problem('This exchange account is frozen',409)
@@ -220,7 +221,7 @@ def record(who,data):
         return prior
     tx=s.rpc('eth_getTransactionByHash',[txhash]);expected=p['transaction']
     if not tx:raise s.Problem('Transaction not indexed yet. Retry the same hash.',409,'transaction_pending')
-    if (tx.get('from') or '').lower()!=row['wallet'] or (tx.get('to') or '').lower()!=(expected.get('to') or '').lower() or tx.get('input','').lower()!=expected['data'].lower() or int(tx.get('value','0x0'),16)!=int(expected['value'],16):raise s.Problem('Transaction does not match your reviewed plan',409)
+    wallet_execution.verified_call(txhash,{**expected,'from':row['wallet']},tx)
     if row['venue']=='nadrevenue':__import__('nad_revenue').transaction_check(p,tx)
     ident=s.uid()
     try:s.write('INSERT INTO execution_records VALUES(?,?,?,?,?,?,?)',(ident,row['user_id'],row['id'],txhash,'submitted',None,s.now()))
@@ -230,13 +231,12 @@ def record(who,data):
 def check_approval(who,data):
     row,p=owned(who,data.get('plan'));approval=p['approval'];txhash=str(data.get('tx','')).lower()
     if not approval or not s.re.fullmatch(r'0x[0-9a-f]{64}',txhash):raise s.Problem('Invalid approval reference')
-    tx=s.rpc('eth_getTransactionByHash',[txhash]);expected='0x095ea7b3'+approval['spender'][2:].rjust(64,'0')+hex(int(approval['amountRaw']))[2:].rjust(64,'0')
+    tx=s.rpc('eth_getTransactionByHash',[txhash])
     if not tx:return {'state':'pending'}
-    if str(tx.get('from','')).lower()!=row['wallet'] or str(tx.get('to','')).lower()!=approval['token'] or str(tx.get('input','')).lower()!=expected or int(tx.get('value','0x0'),16):raise s.Problem('Approval does not match your reviewed amount',409)
-    receipt=s.rpc('eth_getTransactionReceipt',[txhash])
-    if not receipt:return {'state':'pending'}
-    block=s.rpc('eth_getBlockByNumber',[receipt['blockNumber'],False])
-    if not block or block.get('hash','').lower()!=receipt.get('blockHash','').lower():return {'state':'pending'}
+    try:receipt=wallet_execution.approval_receipt(txhash,row['wallet'],approval['token'],approval['spender'],approval['amountRaw'],tx)
+    except s.Problem as error:
+        if error.code=='transaction_pending':return {'state':'pending'}
+        raise
     return {'state':'approved' if int(receipt['status'],16)==1 else 'failed','receipt':receipt}
 
 def predictions():
@@ -284,7 +284,7 @@ def my_predictions(who,offset=0):
     return {'predictions':items,'nextOffset':offset+10 if len(records)==10 else None,'wallet':address}
 
 def reconcile(ident):
-    row=s.one('SELECT r.*,p.venue,p.kind,p.payload FROM execution_records r JOIN execution_plans p ON r.plan=p.id WHERE r.id=?',(ident,))
+    row=s.one('SELECT r.*,p.venue,p.kind,p.payload,p.wallet FROM execution_records r JOIN execution_plans p ON r.plan=p.id WHERE r.id=?',(ident,))
     if row and row['venue'] in {'nadfees','nadrevenue'}:
         if row['state'] not in {'finalized','failed','invalid'}:
             return __import__('launch_fees' if row['venue']=='nadfees' else 'nad_revenue').reconcile(row)
@@ -311,13 +311,15 @@ def reconcile(ident):
     outcome={'receipt':receipt,'businessState':'check_venue_result','events':[],'reviewExpiredAtInclusion':int(block['timestamp'],16)>payload['expires']}
     address=PERPL if row['venue']=='perpl' else CASTORA
     for log in receipt.get('logs',[]):
-        if (log.get('address') or '').lower()!=address or not log.get('topics'):continue
+        if log.get('removed') or (log.get('address') or '').lower()!=address or not log.get('topics'):continue
         for event in (e for e in abi(row['venue']) if e['type']=='event' and not e.get('anonymous')):
             signature=event['name']+'('+','.join(typ(x) for x in event['inputs'])+')'
             if log['topics'][0].lower()!='0x'+keccak(text=signature).hex():continue
             try:
                 indexed=[x for x in event['inputs'] if x.get('indexed')];plain=[x for x in event['inputs'] if not x.get('indexed')]
+                if len(log['topics'])!=1+len(indexed):continue
                 values=decode([typ(x) for x in plain],bytes.fromhex(log['data'][2:]))
+                if encode([typ(x) for x in plain],values).hex()!=log['data'][2:].lower():continue
                 fields={x['name']:named(x,v) for x,v in zip(plain,values)}
                 for x,t in zip(indexed,log['topics'][1:]):fields[x['name']]=named(x,decode([typ(x)],bytes.fromhex(t[2:]))[0])
                 outcome['events'].append({'name':event['name'],'fields':fields})
@@ -341,8 +343,12 @@ def reconcile(ident):
         else:outcome['businessState']='venue_result_pending'
     elif row['venue']=='perpl':
         event_name='CollateralDeposit' if summary['action']=='deposit' else 'CollateralWithdrawal'
-        matches=[e for e in events if e['name']==event_name and e['fields']['amountCNS']==raw(summary['amount'],6)]
-        if len(matches)==1:outcome.update(businessState='collateral_'+summary['action'],exchangeBalanceAUSD=s.units(matches[0]['fields']['balanceCNS'],6))
+        account=read('perpl','getAccountByAddr',[row['wallet']],row['wallet'],allow_missing=True,block=receipt['blockNumber'])
+        account_id=account.get('accountId') if account and account['accountAddr'].lower()==row['wallet'] else None
+        matches=[e for e in events if e['name']==event_name and e['fields']['amountCNS']==raw(summary['amount'],6) and e['fields']['accountId']==account_id and (summary.get('accountId') is None or summary['accountId']==account_id)]
+        sender,recipient=(row['wallet'],PERPL) if summary['action']=='deposit' else (PERPL,row['wallet'])
+        transfers=[log for log in receipt.get('logs',[]) if not log.get('removed') and (log.get('address') or '').lower()==AUSD and len(log.get('topics',[]))==3 and log['topics'][0].lower()=='0x'+keccak(text='Transfer(address,address,uint256)').hex() and '0x'+log['topics'][1][-40:].lower()==sender and '0x'+log['topics'][2][-40:].lower()==recipient and int(log.get('data','0x0'),16)==raw(summary['amount'],6)]
+        if len(matches)==1 and len(transfers)==1:outcome.update(businessState='collateral_'+summary['action'],exchangeBalanceAUSD=s.units(matches[0]['fields']['balanceCNS'],6))
     elif row['venue']=='castora':
         if summary['action']=='predict':
             matches=[e for e in events if e['name']=='Predicted' and e['fields']['poolId']==summary['pool'] and e['fields']['predicter'].lower()==payload['transaction']['from'] and e['fields']['predictionPrice']==raw(summary['predictionPrice'],8)]

@@ -1,7 +1,16 @@
 {
   "private": true,
-  "scripts": {"build": "node build.mjs"},
-  "overrides": {"viem": {"ws": "8.21.3"}},
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "overrides": {
+    "viem": {
+      "ws": "8.21.3"
+    },
+    "decode-uri-component": "0.5.0",
+    "uuid": "11.1.1",
+    "query-string": "9.5.1"
+  },
   "dependencies": {
     "@privy-io/node": "^0.35.0",
     "@privy-io/react-auth": "^3.47.0",

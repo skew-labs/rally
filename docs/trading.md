@@ -60,7 +60,9 @@ Approval and trade can be separate wallet requests when a token allowance is nee
 
 `transaction_preflight.py` checks funding and simulation before a wallet request. Gas estimates are bounded and included in the required native balance. Approval verification checks the exact token/spender/owner/amount; an unrelated approval cannot activate a launch or purchase.
 
-`wallet_execution.py` accepts an exact direct call. For a smart-account wrapper, it requires a finalized canonical receipt and a bounded `callTracer` trace matching the outer transaction, with exactly one matching expected call. Missing trace capability leaves the result unresolved rather than accepting a guessed wrapper.
+`wallet_execution.py` accepts an exact direct call. For a smart-account wrapper, it requires a finalized canonical receipt and a bounded `callTracer` trace matching the outer transaction, with exactly one matching expected call. Spot, venue orders, community launches and subscription payments use this same boundary. Missing trace capability leaves the result unresolved rather than accepting a guessed wrapper.
+
+Shared venue and subscription approval checks require finality plus exactly one nonremoved ERC-20 Approval event for the reviewed owner, token, spender and amount. Perpl collateral reconciliation binds the event to the wallet's exchange account at the transaction block and requires the corresponding exact AUSD transfer into the exchange or back to the wallet. Receipt decoding rejects removed logs, unexpected indexed topics and noncanonical ABI payloads. Venue reconcilers receive the wallet stored with the reviewed plan.
 
 An observed hash is not automatically a successful order. Reconciliation must match the requested transaction and verify the applicable token delivery, pool/vault creation or position state. A reverted or noncanonical receipt cannot be promoted to delivered state. Keep unresolved hashes and check them again; do not blindly send a replacement.
 
@@ -68,4 +70,4 @@ An observed hash is not automatically a successful order. Reconciliation must ma
 
 `GET /api/mainnet` exposes bounded cached network/deployment/dependency checks. It is useful for interface status, not authority to spend and not a funded acceptance test.
 
-Fixture simulations exercise inputs, failure paths and contracts with synthetic state. Read-only provider checks can establish deployment identity or quote availability. Only finalized, independently reconciled owner-authorized transactions establish actual token issuance, holdings, creator receipts or a complete perpetual deposit/order/close/withdraw cycle. The repository makes no universal mainnet-fill claim.
+Fixture simulations exercise inputs, failure paths and contracts with synthetic state. Read-only provider checks establish at-time deployment identity or quote availability. Finalized, independently reconciled transactions establish issuance, holdings, creator receipts or venue position changes for that record. See the specific [mainnet receipts](verification.md#reconciled-mainnet-records).

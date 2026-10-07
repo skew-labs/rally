@@ -20,7 +20,11 @@ Custom token-launch LP positions belong to the creator and are not automatically
 
 ## Dependency status
 
-At the 2026-10-08 publication check, the optional Privy client dependency graph reported 23 moderate npm advisories, with no high or critical advisory after a compatible `ws` patch override for viem dependencies. These remaining upstream advisories are not resolved by the application tests. This scoped check is not a complete dependency/security audit of the repository or a claim that every reported package is exercised in the browser bundle. Development-only EVM tooling has a separate dependency graph.
+The 2026-10-08 dependency verification reports **zero known advisories** in both locked npm graphs and the resolved Python application requirements. The checks include development dependencies; advisory suppressions are not used.
+
+The wallet bridge uses patched UUID, URI-parser and WebSocket dependencies. Compatibility checks exercise UUID bounds, wallet connection URI parsing and bounded malformed-input decoding. Versioned bridge bundles prevent an updated deployment from reusing the previous entry module. Contract tests run on a disposable loopback Anvil instance instead of the retired Ganache dependency graph. Solidity remains pinned to 0.8.28, with its temporary-file dependency patched; the resulting contract artifacts are unchanged.
+
+Run `npm run audit`, `npm run test:auth-dependencies` and `pip-audit -r requirements.txt` in the isolated verification environment. These are dependency advisory checks, not an independent protocol audit.
 
 ## Reporting
 

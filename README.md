@@ -72,6 +72,7 @@ Use Python 3.12+, Node.js 22+, and a Linux host for the resource-limited workers
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
+python -m pip install --upgrade pip==26.2
 pip install -r requirements.txt
 npm ci
 npm run build
@@ -88,6 +89,8 @@ Open `http://127.0.0.1:4186/?view=home`. The server binds to loopback. [Developm
 ```sh
 npm test
 npm run test:contracts
+npm run test:auth-dependencies
+npm run audit
 npx playwright install chromium
 npm run test:ui
 ```
@@ -110,6 +113,8 @@ Python tests use disposable databases. Contract tests use an isolated EVM and mo
 ## Deployment and verification boundaries
 
 The live app is [rallydot.com](https://rallydot.com). The public source is a cleaned application release: owner-specific funding-test tooling and operational records are excluded. Configuration and private runtime state must be supplied independently.
+
+The existing RALLY community launch and 0.01 USDC purchase have been independently rechecked against Monad finality, exact calls and asset delivery. The [mainnet receipt table](docs/verification.md#reconciled-mainnet-records) gives their transaction hashes and verified scope.
 
 A catalog entry is not a tradable market. A reference price is not an executable quote. A successful transaction receipt alone is not proof of a fill, creator income or realized profit. Venue availability, market liquidity, oracle access and issuer permissions can prevent a route from executing. The adapter matrix and these limits are documented in [Trading](docs/trading.md).
 

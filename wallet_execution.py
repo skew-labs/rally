@@ -4,6 +4,7 @@ Never submit transactions. A relay envelope is not proof of the user's call:
 require a canonical receipt and an exact CALL frame from the reviewed wallet.
 """
 import service as s
+from eth_utils import keccak
 
 def lower(value):return str(value or '').lower()
 def number(value):
@@ -19,6 +20,22 @@ def finalized_receipt(tx):
     if not block or not final or lower(block['hash'])!=lower(r['blockHash']) or number(final['number'])<number(r['blockNumber']):
         raise s.Problem('Waiting for finality. Check the same hash.',409,'transaction_pending')
     return r
+
+def approval_receipt(tx,wallet,token,spender,amount,observed=None):
+    """One canonical, finalized allowance for the exact reviewed call."""
+    wallet,token,spender=map(lower,(wallet,token,spender));amount=int(amount)
+    expected={'from':wallet,'to':token,'value':'0x0',
+        'data':'0x095ea7b3'+spender[2:].rjust(64,'0')+hex(amount)[2:].rjust(64,'0')}
+    verified_call(tx,expected,observed)
+    receipt=finalized_receipt(tx)
+    if number(receipt['status'])==1:
+        topic='0x'+keccak(text='Approval(address,address,uint256)').hex()
+        events=[l for l in receipt.get('logs',[]) if not l.get('removed')
+            and lower(l.get('address'))==token and len(l.get('topics',[]))==3
+            and lower(l['topics'][0])==topic and lower('0x'+l['topics'][1][-40:])==wallet
+            and lower('0x'+l['topics'][2][-40:])==spender and number(l.get('data','0x0'))==amount]
+        if len(events)!=1:raise s.Problem('The exact token allowance was not verified',409,'approval_unverified')
+    return receipt
 
 def exact(frame,expected):
     return (lower(frame.get('from'))==lower(expected['from']) and lower(frame.get('to'))==lower(expected['to'])
