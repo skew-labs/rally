@@ -53,7 +53,9 @@ export function motionUI(){
   panel?.getAnimations().forEach(a=>a.cancel());overlay.getAnimations().forEach(a=>a.cancel());
   if(panel)animate(panel,[from,{opacity:0,transform:innerWidth<=760?'translateY(16px)':'scale(.985)'}],{duration:120,easing:'cubic-bezier(.4,0,1,1)'});
   const animation=animate(overlay,[{opacity:scrimOpacity},{opacity:0}],{duration:120,easing:'ease-out'});
-  animation.finished.catch(()=>{}).finally(()=>overlay.remove());
+  // Finish cleanup even if a busy browser delays the animation's final frame.
+  const timer=setTimeout(()=>overlay.remove(),140);
+  animation.finished.catch(()=>{}).finally(()=>{clearTimeout(timer);overlay.remove();});
  }
  function begin(){return {id:++route,start:performance.now()};}
  function finish(ticket,view){
