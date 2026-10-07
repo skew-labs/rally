@@ -3,10 +3,17 @@ html .r-swipe-entry{display:inline-flex;align-items:center;gap:7px;padding:9px 1
 html .r-swipe-entry .icon{width:17px;height:17px}
 html body[data-view="swipe"] .r-rail,html body[data-view="swipe"] .r-compose-fab{display:none}
 html:has(body[data-view="swipe"]){scrollbar-gutter:auto}
-html body[data-view="swipe"] .r-layout{grid-template-columns:218px minmax(0,640px);max-width:1084px}
-html body[data-view="swipe"] #main{padding:0;border:0;background:transparent;overflow:visible}
-html body[data-view="swipe"] #page{overflow:visible;border:0;border-radius:0;min-height:0;padding-bottom:0}
-html .r-swipe{position:relative;max-width:540px;margin:auto;height:100dvh;display:grid;grid-template-rows:68px minmax(0,1fr) 44px;font-family:var(--r-font)}
+/* One viewport owner replaces independent header/card height offsets. */
+html body[data-view="swipe"]{height:var(--swipe-viewport-height,100dvh);overflow:hidden}
+html body[data-view="swipe"] #app>.r-layout{height:var(--swipe-viewport-height,100dvh);padding-block:16px 12px;align-items:stretch}
+html body[data-view="swipe"] .r-sidebar{height:100%;min-height:0;overflow-y:auto;scrollbar-width:none;padding-top:16px}
+html body[data-view="swipe"] .r-workspace{height:100%;min-height:0;padding-top:0;grid-template-rows:minmax(0,1fr);align-items:stretch}
+html body[data-view="swipe"] .r-workspace>#main{height:100%;min-height:0;padding:0;border:0;background:transparent;overflow:visible}
+html body[data-view="swipe"] #page{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:visible;border:0;border-radius:0;min-height:0;padding:0;background:transparent;box-shadow:none}
+html body[data-view="swipe"] #page>.rx-home-head{width:100%;max-width:540px;margin:0 auto;padding:0 0 8px;background:transparent}
+html body[data-view="swipe"] #page>.rx-home-head>div{display:none}
+html body[data-view="swipe"] #page>.rx-home-head .rx-home-tabs{width:100%;max-width:none;margin:0}
+html body[data-view="swipe"] .r-swipe{position:relative;width:100%;max-width:540px;min-height:0;height:100%;margin:0 auto;display:grid;grid-template-rows:56px minmax(0,1fr) 44px;font-family:var(--r-font)}
 html .r-swipe-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px}
 html .r-swipe-head .r-icon-button,html .r-swipe-head .r-theme-button{width:44px;height:44px;min-width:44px;border-radius:50%}
 html .r-swipe-tabs{position:relative;display:grid;grid-template-columns:repeat(3,1fr);flex:1;min-width:0;max-width:280px;padding:3px;border:1px solid var(--line);border-radius:100px;background:var(--canvas)}
@@ -17,63 +24,71 @@ html .r-swipe-deck{min-height:0;overflow-y:auto;overflow-x:hidden;scroll-snap-ty
 html .r-swipe-deck.is-paging{user-select:none}
 html .r-swipe-card video,html .r-swipe-card input,html .r-swipe-card select,html .r-swipe-card textarea,html .r-swipe-card [data-swipe-ticket],html .r-swipe-card .r-quick-error,html .r-swipe-card.copy-expanded .r-swipe-copy{touch-action:pan-y pinch-zoom}
 html .r-swipe-deck::-webkit-scrollbar{display:none}
-html .r-swipe-card{height:100%;min-height:100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;position:relative;padding:20px 24px 18px;overflow:hidden;background:var(--paper)}
+html .r-swipe-card{height:100%;min-height:100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;position:relative;padding:22px;gap:16px;overflow:hidden;background:var(--paper);container:swipe-card/size}
 html .r-swipe-card.is-dragging{will-change:transform;user-select:none;z-index:2}
 html .r-swipe-intent{position:absolute;top:74px;left:50%;padding:11px 23px;border-radius:100px;transform:translateX(-50%);color:#fff;background:#147c59;box-shadow:0 3px 14px #0002;font-size:18px;font-weight:750;opacity:var(--drag-progress,0);pointer-events:none;z-index:4}
 html .r-swipe-card.is-settling .r-swipe-intent{transition:opacity 180ms ease-out}
 html .r-swipe-card.drag-left .r-swipe-intent{background:#b9384c}
 html .r-swipe-card[data-kind="prediction"].drag-left .r-swipe-intent{background:var(--text);color:var(--paper)}
 html .r-swipe-spacer{pointer-events:none;overflow-anchor:none}
-html .r-swipe-content{display:flex;flex:1;min-height:0;flex-direction:column;gap:16px;overflow:hidden}
+html .r-swipe-content{display:flex;flex:1;min-height:104px;flex-direction:column;gap:14px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:none}
+html .r-swipe-content::-webkit-scrollbar{display:none}
 html .r-swipe-author{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;min-height:44px}
 html .r-swipe-author>button:first-child{display:flex;align-items:center;gap:11px;text-align:left;min-width:0;min-height:44px}
+html .r-swipe-author>button:first-child>span:last-child{min-width:0}
+html .r-swipe-author :is(b,small){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 html .r-swipe-author .r-avatar{width:38px;height:38px}
 html .r-swipe-author .r-icon-button{height:44px;width:44px;border-radius:50%}
-html .r-swipe-author b{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:650}
+html .r-swipe-author b{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:550}
 html .r-swipe-author small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
 html .r-swipe-author em{font-style:normal;color:var(--muted);font-size:10px;padding:2px 5px;border-radius:5px;background:var(--soft)}
-html .r-swipe-art{display:flex;height:150px;min-height:80px;max-height:30%;flex:0 1 150px;align-items:center;justify-content:center;gap:20px;border-radius:18px;background:var(--canvas);padding:16px}
-html .r-swipe-token{display:inline-block;position:relative;width:32px;height:32px;flex-shrink:0}
-html .r-swipe-token .r-token,html .r-swipe-token .r-token-fallback{position:absolute;inset:0}
-html .r-swipe-art .r-swipe-token,html .r-swipe-art .r-token,html .r-swipe-art .r-token-fallback{width:72px;height:72px}
-html .r-swipe-art .r-token,html .r-swipe-art .r-token-fallback{border-radius:50%;object-fit:contain;font-size:20px}
-html .r-swipe-art>span:last-child:not(.r-swipe-token){font-size:36px;font-weight:750;letter-spacing:-1.1px;overflow:hidden;text-overflow:ellipsis}
-html .r-swipe-caption{display:flex;flex-direction:column;min-height:0;flex:0 1 auto}
-html .r-swipe-copy{display:-webkit-box;-webkit-line-clamp:9;-webkit-box-orient:vertical;overflow:hidden;min-height:0;font-size:18px;line-height:1.5;letter-spacing:-.2px;overflow-wrap:anywhere;flex:0 1 auto;overscroll-behavior-y:auto;scrollbar-width:thin}
+html .r-swipe-art{display:flex;min-height:104px;flex:0 0 auto;align-items:center;justify-content:center;gap:18px;padding:20px}
+html .r-swipe-token{--token-size:32px;display:inline-flex;position:relative;width:var(--token-size);height:var(--token-size);flex:0 0 var(--token-size)}
+html .r-swipe-token>.r-token-art{--token-size:inherit;width:100%;height:100%;flex-basis:100%}
+html .r-swipe-token .r-token,html .r-swipe-token .r-token-fallback{width:100%;height:100%;border-radius:50%;object-fit:contain}
+html .r-swipe-art .r-swipe-token{--token-size:68px}
+html .r-swipe-art>span:last-child:not(.r-swipe-token){font-size:32px;font-weight:550;letter-spacing:-1px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+html .r-swipe-card:not([data-swipe-post]) .r-swipe-content{justify-content:safe center}
+html .r-swipe-caption{display:flex;flex-direction:column;flex:0 0 auto;min-height:0}
+html .r-swipe-copy{display:-webkit-box;-webkit-line-clamp:var(--swipe-lines,6);-webkit-box-orient:vertical;overflow:hidden;font-size:17px;line-height:1.55;letter-spacing:-.2px;overflow-wrap:anywhere;flex:0 0 auto;overscroll-behavior-y:contain;scrollbar-width:thin}
 html .r-swipe-expand{align-self:flex-start;min-height:44px;color:var(--muted);font-size:13px;font-weight:600;padding:7px 0;flex-shrink:0}
 html .r-swipe-expand[hidden]{display:none}
-html .r-swipe-card.copy-expanded .r-swipe-caption{flex:1}
+html .r-swipe-card.copy-expanded .r-swipe-caption{flex:0 0 auto}
 html .r-swipe-card.copy-expanded .r-swipe-art{display:none}
-html .r-swipe-card.copy-expanded .r-swipe-copy{display:block;overflow:auto;flex:1}
-html .r-swipe-source{display:inline-flex;align-self:flex-start;align-items:center;gap:8px;font-size:12px;color:var(--muted);flex-shrink:0;padding:8px 11px;border-radius:100px;background:var(--canvas);min-height:44px;max-width:100%;margin-top:0}
+html .r-swipe-card.copy-expanded .r-swipe-copy{display:block;overflow:visible;flex:0 0 auto}
+html .r-swipe-source{display:inline-flex;align-self:flex-start;align-items:center;gap:7px;font-size:11px;color:var(--muted);flex-shrink:1;min-width:0;padding:8px 0;min-height:44px;max-width:100%;margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html .r-swipe-source .icon{width:14px;height:14px}
 html .r-swipe-source .icon:last-child{margin-left:8px}
 html .r-swipe-media{flex:1;min-height:100px;max-height:55%;display:flex;align-items:center;justify-content:center;background:var(--canvas);border-radius:18px;overflow:hidden}
 html .r-swipe-media .r-media{width:100%;height:100%;object-fit:contain;margin:0;border:0;border-radius:0}
 html .r-swipe-card.has-media .r-swipe-copy{-webkit-line-clamp:4;font-size:16px;line-height:1.45}
 html .r-swipe-card.copy-expanded .r-swipe-media{max-height:40%}
-html .r-swipe-market-heading{margin:4px 0}
-html .r-swipe-market-heading h1{font-size:27px;letter-spacing:-.7px;margin:0;font-weight:700}
+html .r-swipe-market-heading{margin:0;text-align:center}
+html .r-swipe-market-heading h1{font-size:24px;letter-spacing:-.7px;margin:0;font-weight:550}
 html .r-swipe-market-heading p{font-size:13px;color:var(--muted);margin:7px 0 0}
-html .r-swipe-card footer{padding-top:16px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;max-height:100%}
-html .r-swipe-card footer>.r-swipe-market,html .r-swipe-card footer>.r-swipe-social,html .r-swipe-card footer>.r-swipe-directions{flex-shrink:0}
-html .r-swipe-market{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line);padding:14px 0 4px}
+html .r-swipe-card footer{flex:0 1 auto;display:flex;flex-direction:column;gap:10px;min-height:0;max-height:calc(100% - 120px);border-top:1px solid var(--line);padding-top:14px}
+html .r-swipe-card footer>.r-swipe-market,html .r-swipe-card footer>.r-swipe-directions{flex-shrink:0}
+html .r-swipe-market{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;padding:0}
 html .r-swipe-market>div:first-child{display:flex;align-items:center;gap:10px;min-width:0}
 html .r-swipe-market .r-token,html .r-swipe-market .r-token-fallback{width:32px;height:32px}
-html .r-swipe-market b{display:block;font-size:16px;font-weight:650}
+html .r-swipe-market b{display:block;font-size:15px;font-weight:550}
 html .r-swipe-price [data-meme-cap]{font-size:20px;font-weight:600}
 html .r-swipe-price [data-meme-cap]:after{content:' Mcap / FDV';font-size:10px;font-weight:400;color:var(--muted);letter-spacing:0}
-html .r-swipe-art .r-token-art{--token-size:72px}
 html .r-swipe-market small{font-size:11px;color:var(--muted);display:block;margin-top:3px}
 html .r-swipe-market b small{display:inline;font-size:12px}
-html .r-swipe-price{text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
-html .r-swipe-social{display:flex;gap:6px;align-items:center;min-height:48px;padding:1px 0 6px;margin-left:-9px}
+html .r-swipe-market>div:first-child>span:last-child{min-width:0}
+html .r-swipe-market>div:first-child :is(b,small){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html .r-swipe-price{text-align:right;font-variant-numeric:tabular-nums;min-width:0;max-width:52%;flex-shrink:0}
+html .r-swipe-price b{overflow-wrap:anywhere}
+html .r-swipe-engagement{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;min-width:0}
+html .r-swipe-social{display:flex;gap:2px;align-items:center;min-height:44px;margin-left:-8px;flex-shrink:0}
+html .r-swipe-social:empty{display:none}
 html .r-swipe-social button{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--text);min-width:44px;min-height:44px;padding:9px;border-radius:50%;transition:transform 120ms ease-out}
 html .r-swipe-social button:active{transform:scale(.9)}
 html .r-swipe-social .icon{width:21px;height:21px}
 html .r-swipe-social .liked{color:var(--red)}
 html .r-swipe-directions{display:flex;gap:10px;min-height:52px}
-html .r-swipe-direction{display:flex;flex:1;align-items:center;justify-content:center;gap:10px;border-radius:100px;padding:14px 12px;font-size:16px;font-weight:700;min-height:52px;transition:transform 120ms cubic-bezier(.22,1,.36,1);border:1px solid transparent}
+html .r-swipe-direction{display:flex;flex:1;min-width:0;align-items:center;justify-content:center;gap:8px;border-radius:100px;padding:12px;font-size:15px;font-weight:550;min-height:52px;transition:transform 120ms cubic-bezier(.22,1,.36,1);border:1px solid transparent}
 html .r-swipe-direction.buy{color:#fff;background:#147c59}
 html .r-swipe-direction.sell{color:#b9384c;background:var(--paper);border-color:var(--line)}
 html .r-swipe-direction.buy:hover{color:#fff;background:#106546}
@@ -83,7 +98,7 @@ html .r-swipe-direction.skip{background:var(--soft);color:var(--muted)}
 html .r-swipe-direction:active{transform:scale(.97)}
 html .r-swipe-direction .icon{width:18px;height:18px}
 html .r-swipe-unavailable{display:flex;flex:1;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:100px;background:var(--canvas);font-size:12px;color:var(--muted);padding:8px;text-align:center}
-html .r-swipe-pool{display:grid;gap:13px;padding:14px 0;font-size:14px}
+html .r-swipe-pool{display:grid;flex-shrink:0;gap:12px;padding:14px 0;font-size:14px}
 html .r-swipe-pool>div{display:flex;align-items:center;justify-content:space-between;gap:12px}
 html .r-swipe-pool span,html .r-swipe-pool>small{color:var(--muted);font-size:12px}
 html .r-swipe-pool time{font-size:12px}
@@ -118,11 +133,72 @@ html body[data-view="swipe"] .r-modal,html body[data-view="swipe"] .r-trade-pane
 @keyframes swipe-scrim-in{from{opacity:0}to{opacity:1}}
 @keyframes swipe-refresh-spin{to{transform:rotate(360deg)}}
 @keyframes swipe-skeleton-pulse{50%{opacity:.5}}
-@media(max-width:1100px){html .r-swipe-step{right:-46px}html body[data-view="swipe"] .r-layout{gap:26px}}
+@media(max-width:1100px){html .r-swipe-step{right:-46px}}
 @media(max-width:900px){html .r-swipe-step{display:none}html body[data-view="swipe"] .r-layout{max-width:850px}}
-@media(max-width:760px){html body[data-view="swipe"] .r-header,html body[data-view="swipe"] .r-mobile-nav{display:none}html body[data-view="swipe"]{padding:0;overflow:hidden}html body[data-view="swipe"] .r-layout{display:block;padding:0;margin:0}html body[data-view="swipe"] #main{margin:0;min-height:0}html .r-swipe{height:100dvh;grid-template-rows:calc(60px + env(safe-area-inset-top)) minmax(0,1fr) calc(44px + env(safe-area-inset-bottom));max-width:none}html .r-swipe-head{padding:env(safe-area-inset-top) 8px 0;background:var(--paper)}html .r-swipe-deck{border:0;border-radius:0}html .r-swipe-card{padding:16px 20px 12px}html .r-swipe-progress{padding:0 8px env(safe-area-inset-bottom) 20px;background:var(--paper)}html .r-swipe-copy{font-size:17px}html .r-swipe-tabs button{font-size:12px}html .r-swipe-content{gap:14px}}
-@media(max-height:700px){html .r-swipe-art{min-height:65px;height:100px;flex-basis:100px;padding:10px}html .r-swipe-art .r-swipe-token,html .r-swipe-art .r-token,html .r-swipe-art .r-token-fallback{width:52px;height:52px}html .r-swipe-art>span:last-child:not(.r-swipe-token){font-size:29px}html .r-swipe-content{gap:9px}html .r-swipe-pool{gap:8px;padding:8px 0}html .r-swipe-card footer{padding-top:8px}html .r-swipe-direction{min-height:48px;padding:12px 10px}html .r-swipe-copy{font-size:16px}html .r-swipe-source{min-height:44px;padding:6px 10px}}
-@media(min-width:761px) and (max-width:930px){html body[data-view="swipe"] .r-layout{grid-template-columns:64px minmax(0,640px);gap:22px;max-width:774px;padding:0 20px}}
+@media(max-width:760px){
+ html body[data-view="swipe"] .r-header{display:none}
+ html body[data-view="swipe"] .r-mobile-nav{display:grid!important}
+ html body[data-view="swipe"] #app>.r-layout{display:block;padding:calc(8px + env(safe-area-inset-top)) 12px calc(84px + env(safe-area-inset-bottom));margin:0}
+ html body[data-view="swipe"] #main{margin:0}
+ html body[data-view="swipe"] #page>.rx-home-head{max-width:none;padding:0 0 4px}
+ html body[data-view="swipe"] .r-swipe{max-width:none;grid-template-rows:54px minmax(0,1fr) 44px}
+ html .r-swipe-deck{border:1px solid var(--line);border-radius:22px}
+ html .r-swipe-head{padding:0}
+ html .r-swipe-card{padding:18px;gap:12px}
+ html .r-swipe-tabs{max-width:280px;border:0;padding:3px;background:var(--soft)}
+ html .r-swipe-tabs button{font-size:12px;min-height:40px}
+ html .r-swipe-tabs button[aria-pressed=true]{font-weight:550}
+ html .r-swipe-progress{padding:0 4px}
+ html .r-swipe-progress button{margin-right:-4px}
+ html .r-swipe-content{gap:12px}
+ html body[data-view="swipe"][data-swipe-keyboard] .r-mobile-nav{display:none!important}
+ html body[data-view="swipe"][data-swipe-keyboard] #app>.r-layout{padding-bottom:8px}
+ html body[data-view="swipe"][data-swipe-keyboard] #page>.rx-home-head{display:none}
+ html body[data-view="swipe"][data-swipe-keyboard] .r-swipe{grid-template-rows:54px minmax(0,1fr) 0}
+ html body[data-view="swipe"][data-swipe-keyboard] .r-swipe-progress,html body[data-view="swipe"][data-swipe-keyboard] .r-swipe-content{display:none}
+ html body[data-view="swipe"][data-swipe-keyboard] .r-swipe-card footer{height:100%;max-height:none}
+}
+@media(max-width:760px) and (max-height:650px){html body[data-view="swipe"] #page>.rx-home-head{display:none}}
+@container swipe-card (max-height:480px){
+ html .r-swipe-card .r-swipe-content{gap:8px;min-height:104px}
+ html .r-swipe-card footer{max-height:calc(100% - 116px);padding-top:8px;gap:8px}
+ html .r-swipe-card .r-swipe-copy{-webkit-line-clamp:3;font-size:15px}
+ html .r-swipe-card .r-swipe-art{padding:8px;min-height:76px}
+ html .r-swipe-card .r-swipe-art .r-swipe-token{--token-size:48px}
+ html .r-swipe-card .r-swipe-art>span:last-child{font-size:26px}
+ html .r-swipe-card .r-swipe-market-heading h1{font-size:20px}
+ html .r-swipe-card .r-swipe-directions,.r-swipe-card .r-swipe-direction{min-height:48px}
+ html .r-swipe-card [data-swipe-ticket]{padding-block:0}
+}
+@container swipe-card (min-height:640px){html .r-swipe-card .r-swipe-copy{--swipe-lines:10}}
+/* Landscape and short desktop windows keep reading and execution side by side. */
+@media(max-height:560px) and (min-width:600px){
+ html body[data-view="swipe"] #page>.rx-home-head{display:none}
+ html body[data-view="swipe"] .r-swipe{max-width:860px;grid-template-rows:48px minmax(0,1fr) 36px}
+ html .r-swipe-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.9fr);gap:18px;padding:16px}
+ html .r-swipe-card .r-swipe-content{min-height:0;height:100%}
+ html .r-swipe-card footer{height:100%;max-height:none;border-top:0;border-left:1px solid var(--line);padding:0 0 0 18px;gap:8px}
+ html .r-swipe-market{min-height:44px}
+ html .r-swipe-progress button{height:36px}
+ html .r-swipe-step{display:none}
+}
+@media(max-height:560px) and (min-width:600px) and (max-width:760px){
+ html body[data-view="swipe"] #app>.r-layout{padding:12px 12px 12px 80px}
+ html body[data-view="swipe"] .r-mobile-nav{inset:12px auto 12px 10px;width:56px;height:auto;min-height:0;grid-template-columns:1fr;grid-template-rows:repeat(5,1fr);padding:4px;border-radius:20px}
+ html body[data-view="swipe"] .r-mobile-nav a{width:46px;min-height:44px;justify-content:center}
+ html body[data-view="swipe"] .r-mobile-nav a>span:not(.r-avatar){display:none}
+}
+@media(max-height:500px) and (max-width:599px){
+ html body[data-view="swipe"] #app>.r-layout{padding-bottom:64px}
+ html body[data-view="swipe"] .r-mobile-nav{height:52px;min-height:52px;padding-block:3px}
+ html body[data-view="swipe"] .r-mobile-nav a{min-height:44px}
+ html body[data-view="swipe"] .r-mobile-nav a>span:not(.r-avatar){display:none}
+ html body[data-view="swipe"] .r-swipe{grid-template-rows:48px minmax(0,1fr) 0}
+ html body[data-view="swipe"] .r-swipe-progress{display:none}
+ html .r-swipe-card{padding:12px;gap:8px}
+ html .r-swipe-card .r-swipe-content{min-height:80px}
+ html .r-swipe-card footer{max-height:calc(100% - 88px)}
+}
 @media(prefers-reduced-motion:reduce){html .r-swipe-deck{scroll-behavior:auto}html .r-swipe-tab-pill,html .r-swipe-tabs button,html .r-swipe-direction,html .r-swipe-social button,html .r-swipe-intent{transition:none}html body[data-view="swipe"] .r-overlay,html body[data-view="swipe"] .r-modal,html body[data-view="swipe"] .r-trade-panel,html .r-swipe-skeleton,html .r-swipe-progress button:disabled .icon{animation:none}}
 
 html[data-theme="dark"] .r-swipe-direction.sell{color:#f29aaa;border-color:#5d303b}
@@ -168,9 +244,11 @@ html .r-swipe-direction:disabled{opacity:.48;cursor:default;transform:none}
 html .r-swipe-direction.sell.quick-selected{color:#fff;background:#b9384c;border-color:transparent}
 html .r-swipe-direction.sell.quick-selected:hover{background:#9d3041}
 html .has-quick-ticket .r-swipe-social{min-height:44px;padding-bottom:0}
-html .has-quick-ticket .r-swipe-content{overflow:hidden;touch-action:pan-y pinch-zoom}
+html .r-swipe-content.is-scrollable{touch-action:pan-y pinch-zoom}
+html .r-swipe-content.is-scrollable[data-scroll-edge="start"]{touch-action:pan-down pinch-zoom}
+html .r-swipe-content.is-scrollable[data-scroll-edge="end"]{touch-action:pan-up pinch-zoom}
+html .r-swipe-engagement:has(.r-swipe-social:empty):not(:has(.r-swipe-source)){display:none}
 @media(max-width:420px){html .r-quick-fields{gap:6px}html .r-quick-amount{flex-basis:100%}html .r-quick-perp .r-quick-amount{flex-basis:auto;padding:0 8px;gap:6px}html .r-quick-perp .r-quick-amount>span{font-size:10px}html .r-quick-presets{width:100%}html .r-quick-presets button,html .r-quick-presets>span{flex:1}html .r-quick-perp input,html .r-quick-perp .r-quick-placeholder{font-size:16px}html .r-quick-perp b{max-width:45px}}
-@media(max-height:650px){html .has-quick-ticket .r-swipe-art{display:none}html .has-quick-ticket .r-swipe-caption{min-height:0;flex-shrink:1}html .has-quick-ticket .r-swipe-copy{-webkit-line-clamp:3;min-height:0}html .has-quick-ticket .r-swipe-content{gap:7px}html .has-quick-ticket .r-swipe-market{padding:8px 0 4px}html .has-quick-ticket footer{padding-top:4px}html [data-swipe-ticket]{padding:4px 0 6px}html .r-quick-presets button{min-height:44px}}
 /* The trade dock keeps its footprint while the quote changes. */
 html .r-quick-summary{min-height:36px;padding:2px 1px;line-height:1.5}
 html .r-quick-summary[data-state="idle"] b,html .r-quick-summary[data-state="loading"] b{color:var(--muted)}
@@ -211,6 +289,7 @@ html .r-quick-summary>small{min-height:16.5px}
   html [data-swipe-ticket][data-kind="spot"] .r-quick-amount{position:relative;flex-basis:auto;min-height:58px;padding:14px 10px 0}
   html [data-swipe-ticket][data-kind="spot"] .r-quick-amount>span{position:absolute;top:6px;left:10px;font-size:10px}
   html [data-swipe-ticket][data-kind="spot"] .r-quick-amount input{height:40px}
+  html [data-swipe-ticket][data-kind="spot"] .r-quick-placeholder{line-height:40px}
   html [data-swipe-ticket][data-kind="spot"] .r-quick-amount b{font-size:11px}
   html [data-swipe-ticket][data-kind="spot"] .r-quick-presets{width:auto;flex-shrink:0}
   html [data-swipe-ticket][data-kind="spot"] .r-quick-presets button{min-width:44px;flex:none;font-size:12px;padding:0 10px}

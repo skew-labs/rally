@@ -29,9 +29,6 @@ html .rx-home-tabs button[aria-current=page]:after{transform:scaleX(1)}
 html body[data-home-section=markets] #page>.r-page-head,html body[data-view=explore] #page>.r-page-head{display:none}
 html body[data-home-section=feed] .r-feed-toolbar{position:relative;top:0}
 html body[data-view=launchpad] #page>.rx-home-head,html body[data-view=launch] #page>.rx-home-head,html body[data-view=payments] #page>.rx-home-head,html body[data-view=analytics] #page>.rx-home-head{padding:0;margin-bottom:24px;background:transparent}
-html body[data-view=swipe] #page>.rx-home-head{padding-block:12px 0;max-width:540px;margin:auto;background:transparent}
-html body[data-view=swipe] .r-swipe{height:calc(100dvh - 148px);grid-template-rows:58px minmax(0,1fr) 32px}
-html body[data-view=swipe] .r-workspace>#main{padding-bottom:0}
 html .r-modal{animation:rx-sheet-in 210ms var(--rx-ease)}
 html .r-trade-panel,html .r-nad-panel{animation:rx-panel-in 220ms var(--rx-ease)}
 @keyframes rx-sheet-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
@@ -163,14 +160,6 @@ html .rx-leader-compare .icon{height:14px;width:14px}
  html .rx-home-head .rx-head-actions{gap:0}
  html .rx-home-head .rx-head-actions .r-icon-button{height:36px;min-width:36px;width:36px}
  html body[data-home-section=feed] .r-feed-toolbar{margin-top:6px}
- html body[data-view=swipe] #page>.rx-home-head{padding:8px 16px 0;max-width:none}
- html body[data-view=swipe] #page>.rx-home-head>div{display:none}
- html body[data-view=swipe] #page>.rx-home-head .rx-home-tabs{margin-top:0}
- html body[data-view=swipe] .r-swipe{height:calc(100dvh - 116px - env(safe-area-inset-bottom));grid-template-rows:54px minmax(0,1fr) 28px;padding:0 10px;max-width:none}
- html body[data-view=swipe] .r-header{display:none}
- html body[data-view=swipe] .r-mobile-nav{display:grid!important}
- html body[data-view=swipe] .r-workspace>#main{padding-bottom:0;min-height:0}
- html body[data-view=swipe] .r-swipe-deck{border-radius:18px}
  html .rx-discover-head,html .rx-leader-head{padding:16px 16px 12px;top:0}
  html .rx-discover-head h1,html .rx-leader-head h1{font-size:25px}
  html .rx-discover-head>div:first-child{margin-bottom:12px}

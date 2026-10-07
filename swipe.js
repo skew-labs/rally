@@ -3,7 +3,7 @@ import { swipeTrade } from './swipe-trade.js';
 // Social discovery stays separate from order review and wallet approval.
 export function swipeUI(c){
   const {S,$,api,esc,icon,logo,avatar,usd,age,mediaCard,safeURL,token,navigate,notify}=c;
-  let generation=0,deadlineTimer,metricsTimer,items=[],active=0,loadingMore=false,request,motion,paging,events,resize,deckHeight=0,busy=false,entryKey=null;
+  let generation=0,deadlineTimer,metricsTimer,items=[],active=0,loadingMore=false,request,motion,paging,events,resize,deckHeight=0,busy=false,entryKey=null,layoutFrame=0;
   const cache=new Map(),positions=new Map(),playheads=new Map();
   const quick=swipeTrade({...c,releaseInteraction:()=>{busy=false;}});
   const cacheKey=()=>(S.boot.me?.id||'guest')+':'+S.boot.activeFeed+':'+S.mode+':'+S.boot.watches.join(',');
@@ -19,7 +19,7 @@ export function swipeUI(c){
   const key=(tab=S.swipeTab)=>cacheKey()+':'+tab;
   const remember=()=>{if(items.length)positions.set(key(),active);};
   function save(tab,data){cache.delete(key(tab));cache.set(key(tab),{...data,time:Date.now()});while(cache.size>4)cache.delete(cache.keys().next().value);}
-  function dispose(){remember();quick.dispose();generation++;request?.abort();events?.abort();resize?.disconnect();motion?.dispose();paging?.dispose();paging=null;clearTimeout(deadlineTimer);clearTimeout(metricsTimer);document.querySelectorAll('.r-swipe-card').forEach(el=>media(el,false));loadingMore=false;}
+  function dispose(){remember();quick.dispose();generation++;request?.abort();events?.abort();resize?.disconnect();resize=null;motion?.dispose();paging?.dispose();paging=null;cancelAnimationFrame(layoutFrame);layoutFrame=0;document.body.style.removeProperty('--swipe-viewport-height');document.body.removeAttribute('data-swipe-keyboard');clearTimeout(deadlineTimer);clearTimeout(metricsTimer);document.querySelectorAll('.r-swipe-card').forEach(el=>media(el,false));loadingMore=false;}
   const stats=(t,m)=>t.nadfun&&!m?c.nad.metrics(t):`<b>${usd(m?m.mark:t.price)}</b><small>${m?esc(m.priceSource):t.price?'Reference price':'Quote in order'}</small>`;
   async function refreshMetrics(seq){
     if(seq!==generation||S.view!=='swipe'||S.swipeTab!=='spot')return;
@@ -37,7 +37,7 @@ export function swipeUI(c){
   function author(p){return `<div class="r-swipe-author"><button data-action="profile" data-id="${esc(p.author.id)}">${avatar(p.author)}<span><b>${esc(p.author.name)}${p.author.kind==='agent'?'<em>Agent</em>':''}</b><small>@${esc(p.author.handle)} · ${age(p.created)}</small></span></button><button class="r-icon-button" data-action="post-menu" data-id="${esc(p.id)}" aria-label="Post options">${icon('ellipsis')}</button></div>`;}
   function postContent(p,index){
     if(!p)return '';
-    return `<div class="r-swipe-caption"><div class="r-swipe-copy" id="swipe-copy-${index}" tabindex="0">${esc(p.text.replace(/(?:^|\n)\s*https:\/\/[^\s<>]+\s*$/, '').trim()).replace(/\n/g,'<br>')}</div><button class="r-swipe-expand" data-action="swipe-expand" data-id="${index}" aria-controls="swipe-copy-${index}" aria-expanded="false" hidden>Read more</button></div>${source(p)}`;
+    return `<div class="r-swipe-caption"><div class="r-swipe-copy" id="swipe-copy-${index}" tabindex="0">${esc(p.text.replace(/(?:^|\n)\s*https:\/\/[^\s<>]+\s*$/, '').trim()).replace(/\n/g,'<br>')}</div><button class="r-swipe-expand" data-action="swipe-expand" data-id="${index}" aria-controls="swipe-copy-${index}" aria-expanded="false" hidden>Read more</button></div>`;
   }
   function actions(item,index){
     const button=(side,label,style)=>`<button class="r-swipe-direction ${style} ${style==='buy'&&hasTicket(item)?'quick-selected':''}" data-action="swipe-order" data-id="${index}" data-side="${side}" aria-label="${label} in this card. Wallet approval required.">${style==='sell'||style==='skip'?icon('back'):''}<span>${label}</span>${style==='buy'?icon('arrow'):''}</button>`;
@@ -65,10 +65,10 @@ export function swipeUI(c){
   }
   function card(item,index){
     const p=item.post,t=item.asset,m=item.market,pool=item.pool;
-    const visual=p?.media?`<div class="r-swipe-media">${mediaCard(p.media,p.author.name).replace(/<video\b([^>]*?)\bsrc=/,'<video$1data-src=')}</div>`:t?`<div class="r-swipe-art">${artwork(t,index===active)}<span>${esc(t.symbol)}</span></div>`:'';
+    const visual=p?.media?`<div class="r-swipe-media">${mediaCard(p.media,p.author.name).replace(/<video\b([^>]*?)\bsrc=/,'<video$1data-src=')}</div>`:t&&!p?`<div class="r-swipe-art">${artwork(t,index===active)}<span>${esc(t.symbol)}</span></div>`:'';
     const identity=t?`<div class="r-swipe-market"><div>${artwork(t)}<span><b>${esc(t.symbol)}${m?'<small> Perp</small>':''}</b><small>${esc(m?m.venue+' · '+(m.venue==='LeverUp'?'USDC':'AUSD'):pool?'Castora · Price prediction':t.venue||'Monad · Spot')}</small></span></div><div class="r-swipe-price" data-swipe-metrics>${stats(t,m)}</div></div>`:'';
     const poolInfo=pool?`<div class="r-swipe-pool"><div><span>Pool #${pool.id}</span><b>${esc(state(pool))}</b></div><div><span>Stake</span><b>${esc(pool.stake)} ${esc(pool.stakeAsset)}</b></div><div><span>${state(pool)==='Open'?'Closes':'Snapshot'}</span><time datetime="${new Date((state(pool)==='Open'?pool.close:pool.snapshot)*1000).toISOString()}">${esc(when(state(pool)==='Open'?pool.close:pool.snapshot))}</time></div><small>${pool.feeBps/100}% fee · ${pool.predictions} entries</small></div>`:'';
-    return `<article class="r-swipe-card ${p?.media?'has-media':''} ${hasTicket(item)?'has-quick-ticket':''}" data-swipe-index="${index}" data-kind="${item.kind}" ${p?`data-swipe-post="${esc(p.id)}"`:''} aria-label="${esc(p?p.author.name+' post':pool?'Prediction pool '+pool.id:t.symbol+' perpetual')}" aria-roledescription="slide"><div class="r-swipe-intent" aria-hidden="true"></div><div class="r-swipe-content">${p?author(p):''}${visual}${p?postContent(p,index):`<div class="r-swipe-market-heading"><h1>${esc(t?.name||t?.symbol||pool?.asset||'Market')}</h1><p>${m?'Perpetual · Monad':'Price prediction · Monad'}</p></div>`}${poolInfo}</div><footer>${identity}<div class="r-swipe-social">${p?`<button data-action="swipe-like" data-id="${esc(p.id)}" class="${p.liked?'liked':''}" aria-label="${p.liked?'Unlike':'Like'} post">${icon('heart')}<span>${p.likes||''}</span></button><button data-action="reply" data-id="${esc(p.id)}" aria-label="Reply to post">${icon('chat')}<span>${p.replies||''}</span></button><button data-action="share" data-id="${esc(p.id)}" aria-label="Copy post link">${icon('share')}</button>`:''}</div><div data-swipe-ticket>${ticketPreview(item)}</div><div class="r-swipe-directions">${actions(item,index)}</div></footer></article>`;
+    return `<article class="r-swipe-card ${p?.media?'has-media':''} ${hasTicket(item)?'has-quick-ticket':''}" data-swipe-index="${index}" data-kind="${item.kind}" ${p?`data-swipe-post="${esc(p.id)}"`:''} aria-label="${esc(p?p.author.name+' post':pool?'Prediction pool '+pool.id:t.symbol+' perpetual')}" aria-roledescription="slide"><div class="r-swipe-intent" aria-hidden="true"></div><div class="r-swipe-content">${p?author(p):''}${visual}${p?postContent(p,index):`<div class="r-swipe-market-heading"><h1>${esc(t?.name||t?.symbol||pool?.asset||'Market')}</h1><p>${m?'Perpetual · Monad':'Price prediction · Monad'}</p></div>`}${poolInfo}<div class="r-swipe-engagement">${p?source(p):''}<div class="r-swipe-social">${p?`<button data-action="swipe-like" data-id="${esc(p.id)}" class="${p.liked?'liked':''}" aria-label="${p.liked?'Unlike':'Like'} post">${icon('heart')}<span>${p.likes||''}</span></button><button data-action="reply" data-id="${esc(p.id)}" aria-label="Reply to post">${icon('chat')}<span>${p.replies||''}</span></button><button data-action="share" data-id="${esc(p.id)}" aria-label="Copy post link">${icon('share')}</button>`:''}</div></div></div><footer>${identity}<div data-swipe-ticket data-kind="${item.kind}">${ticketPreview(item)}</div><div class="r-swipe-directions">${actions(item,index)}</div></footer></article>`;
   }
   function media(el,selected){
     el.querySelectorAll('video').forEach(v=>{
@@ -82,12 +82,17 @@ export function swipeUI(c){
     el.toggleAttribute('data-active',selected);
   }
   function syncMedia(){if(S.view==='swipe')$('#swipe-deck')?.querySelectorAll('[data-swipe-index]').forEach(el=>media(el,Number(el.dataset.swipeIndex)===active));}
-  function captions(elements){const updates=[];for(const el of elements){const copy=$('.r-swipe-copy',el),button=$('.r-swipe-expand',el);if(copy&&button&&!el.classList.contains('copy-expanded'))updates.push([button,copy.scrollHeight<=copy.clientHeight+1]);}for(const [button,hidden] of updates)button.hidden=hidden;}
+  function captions(elements){
+    const updates=[];for(const el of elements){const copy=$('.r-swipe-copy',el),button=$('.r-swipe-expand',el);if(copy&&button&&!el.classList.contains('copy-expanded'))updates.push([button,copy.scrollHeight<=copy.clientHeight+1]);}
+    for(const [button,hidden] of updates)if(button.hidden!==hidden)button.hidden=hidden;
+    for(const el of elements){const content=$('.r-swipe-content',el);if(content){content.classList.toggle('is-scrollable',content.scrollHeight>content.clientHeight+1);readingEdge(content);}}
+  }
+  function readingEdge(content){const edge=content.scrollTop<=1?'start':content.scrollTop+content.clientHeight>=content.scrollHeight-1?'end':'middle';if(content.dataset.scrollEdge!==edge)content.dataset.scrollEdge=edge;}
   function windowCards(){
     const deck=$('#swipe-deck');if(!deck||!items.length||!deckHeight)return;
     const start=Math.max(0,Math.min(active-2,items.length-5)),end=Math.min(items.length,start+5);
     const existing=new Map([...deck.querySelectorAll('[data-swipe-index]')].map(el=>[Number(el.dataset.swipeIndex),el]));
-    for(const [index,el] of existing)if(index<start||index>=end){media(el,false);el.remove();existing.delete(index);}
+    for(const [index,el] of existing)if(index<start||index>=end){resize?.unobserve($('.r-swipe-content',el));media(el,false);el.remove();existing.delete(index);}
     const before=$('.r-swipe-spacer.before',deck),after=$('.r-swipe-spacer.after',deck);
     before.style.height=start*deckHeight+'px';after.style.height=(items.length-end)*deckHeight+'px';
     const measured=[];for(let i=start;i<end;i++){
@@ -100,8 +105,9 @@ export function swipeUI(c){
       if(Math.abs(i-active)<=1)el.querySelectorAll('img').forEach(img=>{img.loading='eager';});
       if(added||resized)measured.push(el);
     }
-    captions(measured);
     const selected=$('[data-swipe-index="'+active+'"]',deck);if(selected)quick.mount(items[active],selected,()=>Number(selected.dataset.swipeIndex)===active);
+    if(selected&&!measured.includes(selected))measured.push(selected);captions(measured);
+    if(resize)for(const el of measured)resize.observe($('.r-swipe-content',el));
     deck.dataset.total=items.length;deck.dataset.windowStart=start;updatePosition();
   }
   function scheduleDeadline(){
@@ -124,13 +130,27 @@ export function swipeUI(c){
     deckHeight=deck.clientHeight;deck.innerHTML='<div class="r-swipe-spacer before" aria-hidden="true"></div><div class="r-swipe-spacer after" aria-hidden="true"></div>';
     events=new AbortController();windowCards();deck.scrollTop=active*deckHeight;
     deck.addEventListener('dragstart',e=>e.preventDefault(),{signal:events.signal});
+    deck.addEventListener('scroll',e=>{if(e.target.classList?.contains('r-swipe-content'))readingEdge(e.target);},{capture:true,passive:true,signal:events.signal});
     const available=()=>S.view==='swipe'&&!S.modal&&!S.trade&&!busy&&!quick.locked;
     paging=swipePaging({deck,index:()=>active,count:()=>items.length,available:()=>available()&&!motion?.isDragging(),select:index=>{
       if(index!==active){motion?.cancel();active=index;windowCards();remember();}
       if(items.length-active<3&&S.swipeTab==='spot'&&S.swipeCursor)more().catch(()=>{});
     }});
     motion=swipeMotion({deck,choice,commit:(index,side)=>order(index,side,true),paging,available});
-    resize=new ResizeObserver(()=>{const height=deck.clientHeight;if(height&&height!==deckHeight){motion.cancel();deckHeight=height;windowCards();paging.cancel();}});resize.observe(deck);
+    const viewport=()=>{
+      const height=window.visualViewport?.height||innerHeight,editing=document.activeElement?.matches('input,textarea,select');
+      document.body.style.setProperty('--swipe-viewport-height',height+'px');
+      document.body.toggleAttribute('data-swipe-keyboard',Boolean(editing&&innerHeight-height>120));
+    };
+    const scheduleLayout=()=>{if(layoutFrame)return;layoutFrame=requestAnimationFrame(()=>{
+      layoutFrame=0;viewport();const height=deck.clientHeight;
+      if(height&&height!==deckHeight){motion.cancel();deckHeight=height;windowCards();paging.cancel();}
+      captions([...deck.querySelectorAll('[data-swipe-index]')]);
+    });};
+    resize=new ResizeObserver(scheduleLayout);resize.observe(deck);deck.querySelectorAll('.r-swipe-content').forEach(el=>resize.observe(el));
+    window.visualViewport?.addEventListener('resize',scheduleLayout,{signal:events.signal});
+    window.addEventListener('resize',scheduleLayout,{signal:events.signal});
+    deck.addEventListener('focusin',scheduleLayout,{signal:events.signal});deck.addEventListener('focusout',scheduleLayout,{signal:events.signal});scheduleLayout();
     const seq=generation;document.fonts.ready.then(()=>{if(seq===generation&&S.view==='swipe')captions([...deck.querySelectorAll('[data-swipe-index]')]);});
     scheduleDeadline();
   }
@@ -198,7 +218,7 @@ export function swipeUI(c){
     else if(action==='swipe-more')await more();
     else if(action==='swipe-prev'||action==='swipe-next')await step(action==='swipe-prev'?-1:1);
     else if(action==='swipe-like'){const p=S.posts.find(p=>p.id===id);if(p)await c.needAccount(async()=>{const r=await api('/api/reaction',{post:id,kind:'like',active:!p.liked});Object.assign(p,r);document.querySelectorAll('[data-action=swipe-like]').forEach(b=>{if(b.dataset.id===id){b.classList.toggle('liked',p.liked);b.setAttribute('aria-label',p.liked?'Unlike post':'Like post');$('span',b).textContent=p.likes||'';}});});}
-    else if(action==='swipe-expand'){const card=$('[data-swipe-index="'+Number(id)+'"]');if(card){const expanded=el.getAttribute('aria-expanded')!=='true';el.setAttribute('aria-expanded',String(expanded));el.textContent=expanded?'Show less':'Read more';card.classList.toggle('copy-expanded',expanded);}}
+    else if(action==='swipe-expand'){const card=$('[data-swipe-index="'+Number(id)+'"]');if(card){const expanded=el.getAttribute('aria-expanded')!=='true';el.setAttribute('aria-expanded',String(expanded));el.textContent=expanded?'Show less':'Read more';card.classList.toggle('copy-expanded',expanded);captions([card]);}}
     else if(action==='swipe-order')await order(Number(id),el.dataset.side);
     return true;
   }

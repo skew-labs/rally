@@ -14,14 +14,16 @@ export function swipePaging({deck,index,count,select,available}){
     deck.querySelectorAll('[data-swipe-index]').forEach(el=>{el.inert=Number(el.dataset.swipeIndex)!==target;});
     tween=null;drag=null;deck.classList.remove('is-paging');deck.style.removeProperty('scroll-snap-type');
   }
-  function to(target){
+  function to(target,velocity=null){
     target=limit(target);const from=deck.scrollTop,end=target*height();stop();drag=null;own();
     if(reduced.matches||Math.abs(end-from)<.5){rest(target);return;}
-    const duration=Math.max(180,Math.min(300,180+Math.abs(end-from)/height()*100));
-    tween={target,from,end,start:performance.now(),duration};
+    const duration=Math.max(160,Math.min(280,160+Math.abs(end-from)/height()*120));
+    // Preserve release speed while decelerating to rest, with no overshoot.
+    const tangent=velocity===null?3:Math.max(0,Math.min(3,velocity*duration/(end-from)));
+    tween={target,from,end,start:performance.now(),duration,tangent};
     const tick=now=>{
       if(!tween||disposed)return;
-      const t=tween,p=Math.min(1,(now-t.start)/t.duration),eased=1-Math.pow(1-p,3);
+      const t=tween,p=Math.min(1,(now-t.start)/t.duration),eased=p*p*(3-2*p)+t.tangent*p*(1-p)*(1-p);
       deck.scrollTop=t.from+(t.end-t.from)*eased;
       if(p<1)frame=requestAnimationFrame(tick);else{frame=0;rest(t.target);}
     };frame=requestAnimationFrame(tick);
@@ -44,7 +46,7 @@ export function swipePaging({deck,index,count,select,available}){
     const h=height(),i=drag.index,distance=deck.scrollTop-i*h;
     const flick=Math.abs(dy)>28&&Math.abs(velocity)>.38&&Math.sign(-velocity)===Math.sign(distance);
     const accepted=!cancelled&&(Math.abs(distance)>Math.max(48,h*.18)||flick);
-    to(accepted?i+Math.sign(distance):i);
+    to(accepted?i+Math.sign(distance):i,-velocity);
   }
   function cancel(){stop();drag=null;rest(index());}
   function observe(){
@@ -58,7 +60,7 @@ export function swipePaging({deck,index,count,select,available}){
     const control=e.target.closest('input,textarea,select,[contenteditable="true"],video');
     if(control){if(control.matches('input')&&e.cancelable)e.preventDefault();return;}
     const direction=Math.sign(e.deltaY);if(!direction)return;
-    const inner=e.target.closest('.copy-expanded .r-swipe-copy,.r-quick-error,[data-swipe-ticket]');
+    const inner=e.target.closest('.r-swipe-content.is-scrollable,.r-quick-error,[data-swipe-ticket]');
     if(inner&&inner.scrollHeight>inner.clientHeight+1&&(direction>0?inner.scrollTop+inner.clientHeight<inner.scrollHeight-1:inner.scrollTop>1))return;
     if(e.cancelable)e.preventDefault();
     const now=performance.now();
@@ -99,16 +101,19 @@ export function swipeMotion({deck,choice,commit,available,paging}){
   }
   function down(e){
     if(!e.isPrimary){cancel();return;}
-    if(settling||!available()||e.button!==0||e.target.closest('input,textarea,select,video,[contenteditable="true"],.copy-expanded .r-swipe-copy,.r-quick-error,[data-swipe-ticket]'))return;
+    if(settling||!available()||e.button!==0||e.target.closest('input,textarea,select,video,[contenteditable="true"],.r-quick-error,[data-swipe-ticket]'))return;
     const card=e.target.closest('[data-swipe-index]');if(!card)return;
-    suppress=null;drag={card,id:e.pointerId,index:Number(card.dataset.swipeIndex),x:e.clientX,y:e.clientY,dx:0,dy:0,width:deck.clientWidth,axis:null,horizontal:!e.target.closest('button,a,summary'),samples:[{x:e.clientX,y:e.clientY,t:performance.now()}]};
+    suppress=null;drag={card,id:e.pointerId,index:Number(card.dataset.swipeIndex),x:e.clientX,y:e.clientY,dx:0,dy:0,width:deck.clientWidth,axis:null,nativeScroll:e.target.closest('.r-swipe-content.is-scrollable'),horizontal:!e.target.closest('button,a,summary'),samples:[{x:e.clientX,y:e.clientY,t:performance.now()}]};
   }
   function move(e){
     if(!drag||drag.id!==e.pointerId)return;
     const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
     if(!drag.axis){
       if(Math.max(Math.abs(dx),Math.abs(dy))<10)return;
-      if(Math.abs(dy)>Math.abs(dx)*1.15){if(!paging?.begin()){cancel();return;}drag.axis='y';}
+      if(Math.abs(dy)>Math.abs(dx)*1.15){
+        const inner=drag.nativeScroll,canRead=inner&&(dy<0?inner.scrollTop+inner.clientHeight<inner.scrollHeight-1:inner.scrollTop>1);
+        if(canRead||!paging?.begin()){cancel();return;}drag.axis='y';
+      }
       else if(Math.abs(dx)>Math.abs(dy)*1.15&&drag.horizontal){drag.axis='x';drag.card.classList.add('is-dragging');}
       else if(Math.max(Math.abs(dx),Math.abs(dy))<24)return;
       else{cancel();return;}
@@ -136,7 +141,7 @@ export function swipeMotion({deck,choice,commit,available,paging}){
     const accepted=Boolean(intent&&(Math.abs(current.dx)>=Math.max(68,current.width*.22)||flick));
     current.card.classList.add('is-settling');current.card.style.setProperty('--drag-progress','0');
     if(!reduced.matches){
-      const duration=accepted?220:330,omega=accepted?38:30,damping=.88,frequency=omega*Math.sqrt(1-damping*damping),x=current.visualX||0,v=Math.max(-1400,Math.min(1400,velocity*1000));
+      const duration=accepted?180:240,omega=accepted?42:36,damping=.9,frequency=omega*Math.sqrt(1-damping*damping),x=current.visualX||0,v=Math.max(-1400,Math.min(1400,velocity*1000));
       // Sample the damped spring once at release, never in a pointer move.
       const frames=Array.from({length:24},(_,i)=>{const offset=i/23,t=duration*offset/1000,position=i===23?0:Math.exp(-damping*omega*t)*(x*Math.cos(frequency*t)+(v+damping*omega*x)/frequency*Math.sin(frequency*t));return {offset,transform:`translate3d(${position}px,0,0)`};});
       animation=current.card.animate(frames,{duration,easing:'linear'});
