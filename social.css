@@ -7,9 +7,9 @@ html body{background:var(--canvas)}
 html button:hover:not(:disabled){color:var(--text)}
 html a:hover{color:var(--text)}
 html .r-btn{font-size:13px;font-weight:600;border-radius:10px;min-height:38px;padding:9px 16px}
-html .r-btn:hover:not(:disabled){background:var(--soft)}
+html .r-btn:where(:hover:not(:disabled)){background:var(--soft)}
 html .r-btn.primary{background:var(--text);border-color:var(--text);color:var(--paper)}
-html .r-btn.primary:hover:not(:disabled){background:var(--solid-hover);border-color:var(--solid-hover);color:var(--paper)}
+html .r-btn.primary:where(:hover:not(:disabled)){background:var(--solid-hover);border-color:var(--solid-hover);color:var(--paper)}
 html .r-btn.small{font-size:12px;min-height:34px}
 html .r-btn.subtle{background:var(--canvas);color:var(--text)}
 html .r-header{display:none}
@@ -292,7 +292,7 @@ html .is-selected .r-feed-actions>.r-feed-use{border-color:var(--line)}
 html .r-post-actions .reposted{color:#0c7d54}
 
 html .r-btn.primary{background:var(--solid);border-color:var(--solid);color:var(--on-solid)}
-html .r-btn.primary:hover:not(:disabled){background:var(--solid-hover);border-color:var(--solid-hover);color:var(--on-solid)}
+html .r-btn.primary:where(:hover:not(:disabled)){background:var(--solid-hover);border-color:var(--solid-hover);color:var(--on-solid)}
 html .r-sidebar .r-brand-row{display:flex;align-items:center;justify-content:space-between;margin:0 7px 30px 12px;gap:16px}
 html .r-sidebar .r-brand-row .r-brand{margin:0;width:auto}
 html .r-theme-button{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:var(--muted);flex-shrink:0}
@@ -343,8 +343,6 @@ html .r-prediction-filters{display:flex;gap:8px;padding:0 24px 15px;flex-wrap:wr
 html .r-prediction-filters button{display:inline-flex;gap:7px;align-items:center;min-height:34px;padding:7px 12px;border:1px solid var(--line);border-radius:20px;font-size:12px;color:var(--muted)}
 html .r-prediction-filters button[aria-pressed="true"]{color:var(--text);background:var(--soft);border-color:var(--secondary-ink)}
 html .r-prediction-filters span{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
-html .r-prediction-notice{padding:0 24px 16px;color:var(--muted);font-size:12px}
-html .r-prediction-list{padding:0 24px}
 html .r-prediction-card{grid-template-columns:minmax(0,1fr) auto;gap:12px 16px;padding:19px 0}
 html .r-prediction-identity{display:flex;align-items:center;gap:11px;min-width:0}
 html .r-prediction-identity .r-token,html .r-prediction-identity .r-token-fallback{width:34px;height:34px;flex-shrink:0}
@@ -361,9 +359,7 @@ html .r-prediction-state{font-size:11px;color:var(--muted)}
 html .r-prediction-list .r-empty{padding:40px 0}
 html .r-prediction-list .r-empty h2{font-size:16px}
 @media(max-width:600px){
- html .r-prediction-list{padding:0 16px}
  html .r-prediction-filters{padding:0 16px 15px}
- html .r-prediction-notice{padding:0 16px 14px}
  html .r-prediction-card{gap:12px 8px}
  html .r-prediction-detail{grid-column:1/-1;grid-row:2}
  html .r-prediction-actions{grid-column:1/-1;grid-row:3;justify-self:start;text-align:left}

@@ -10,7 +10,7 @@
 :root[data-theme="dark"]{--bg:#0c0d10;--canvas:#0c0d10;--paper:#15161a;--panel:#1b1c21;--raised:#222329;--soft:#24252b;--line:#303137;--text:#f5f5f7;--muted:#a4a5ae;--faint:#898b95;--solid:#f5f5f7;--solid-hover:#dedee4;--on-solid:#15161a;--link:#b9a7ff}
 :root[data-theme="light"]{--canvas:#f5f6f8;--panel:#f7f8fa;--raised:#f1f2f5;--soft:#eef0f4;--line:#e7e9ee;--link:#6551d8}
 html .r-btn.primary{background:var(--text);border-color:var(--text);color:var(--paper)}
-html .r-btn.primary:hover:not(:disabled){background:var(--solid-hover);border-color:var(--solid-hover);color:var(--paper)}
+html .r-btn.primary:where(:hover:not(:disabled)){background:var(--solid-hover);border-color:var(--solid-hover);color:var(--paper)}
 html .r-modal.ct-create-modal{width:860px;max-width:min(860px,calc(100vw - 48px));max-height:min(760px,calc(100dvh - 48px))}
 html .ct-create-scroll{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:28px;align-items:start;padding-bottom:24px}
 .ct-create-main{min-width:0}

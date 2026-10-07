@@ -25,9 +25,10 @@ html :is(h1,h2,h3){font-weight:600;letter-spacing:-.65px}
 html h1{font-size:25px;line-height:1.2}
 html button{font-weight:500}
 html :is(.r-btn,.lp-primary,.lp-secondary){font-weight:550;border-radius:100px;min-height:44px;box-shadow:none}
-html .r-btn:not(.primary):not(.r-buy):not(.r-sell){border-color:transparent;background:var(--soft)}
+/* Neutral controls must not override the colors of a trading action. */
+html .r-btn:where(:not(.primary):not(.r-buy):not(.r-sell)){border-color:transparent;background:var(--soft);color:var(--text)}
 html .r-btn.primary{background:var(--solid);border-color:transparent;color:var(--on-solid)}
-html .r-btn.primary:hover:not(:disabled){color:var(--on-solid)}
+html .r-btn.primary:where(:hover:not(:disabled)){background:var(--solid-hover);color:var(--on-solid)}
 html .r-btn.selected{background:var(--r-nav-active);color:var(--link)}
 html :is(.r-btn,.lp-primary,.lp-secondary,.r-icon-button){transition:background-color 150ms ease,color 150ms ease,transform 130ms var(--rx-ease)}
 html :is(.r-btn,.lp-primary,.lp-secondary):active:not(:disabled){transform:scale(.975)}
