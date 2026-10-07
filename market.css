@@ -26,6 +26,82 @@ html .r-prediction-filters button[aria-pressed=true]{border-color:transparent;ba
 html .r-prediction-filters span{color:var(--secondary-ink)}
 html .r-prediction-list .r-prediction-card{padding:20px;gap:16px;border-radius:20px}
 html .r-prediction-actions>small{min-width:0;line-height:1.5}
+
+/* Prediction prices, pool terms and execution use one readable hierarchy. */
+html .r-prediction-shell{padding-top:16px;min-width:0}
+html .r-prediction-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 var(--space) 18px}
+html .r-prediction-heading>div{display:grid;gap:5px;min-width:0}
+html .r-prediction-heading b{font-size:17px;font-weight:550;letter-spacing:-.3px}
+html [data-prediction-sync]{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+html [data-prediction-sync]:before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);flex:none}
+html [data-prediction-sync][data-state=delayed]:before{background:var(--muted)}
+html .r-prediction-heading>.r-icon-button{background:var(--soft);border-radius:50%;width:44px;height:44px;flex:none}
+html .r-prediction-references{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:0 var(--space)}
+html .r-prediction-reference{display:grid;gap:12px;align-content:start;text-align:left;min-width:0;min-height:98px;padding:16px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+html .r-prediction-reference>span{display:flex;gap:8px;align-items:center;min-width:0}
+html .r-prediction-reference .r-token-art{--token-size:24px;width:24px;height:24px;flex:none}
+html .r-prediction-reference .r-token-art :is(.r-token,.r-token-fallback){width:24px;height:24px}
+html .r-prediction-reference b{font-size:12px;font-weight:500}
+html .r-prediction-reference strong{font-size:19px;font-weight:500;letter-spacing:-.5px;white-space:nowrap;min-width:0;font-variant-numeric:tabular-nums}
+html .r-prediction-price-source{display:block;font-size:10px;color:var(--muted);padding:10px var(--space) 24px}
+html .r-prediction-shell .r-prediction-filters{display:flex;gap:20px;overflow:auto;padding-bottom:14px;scrollbar-width:none}
+html .r-prediction-shell .r-prediction-filters button{background:transparent;border-radius:0;position:relative;padding:0;min-height:44px;white-space:nowrap;color:var(--muted);gap:6px}
+html .r-prediction-shell .r-prediction-filters button[aria-pressed=true]{background:transparent;color:var(--text)}
+html .r-prediction-shell .r-prediction-filters button[aria-pressed=true]:after{content:'';position:absolute;inset:auto 0 0;height:2px;border-radius:2px;background:var(--brand)}
+html .r-prediction-shell .r-prediction-filters span{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+html .r-prediction-shell .r-prediction-list{gap:14px;padding-top:4px}
+html .r-prediction-shell .r-prediction-card{background:var(--paper);border-radius:18px;gap:18px;padding:20px}
+html .r-prediction-identity>div{min-width:0;flex:1}
+html .r-prediction-identity h2{font-size:15px;line-height:1.4;font-weight:550;letter-spacing:-.2px;overflow-wrap:anywhere}
+html .r-prediction-identity small{display:block;font-size:10px;color:var(--muted);margin-top:3px}
+html .r-prediction-identity .r-token-art{--token-size:34px;width:34px;height:34px;flex:none}
+html .r-prediction-identity .r-token-art :is(.r-token,.r-token-fallback){width:34px;height:34px}
+html .r-prediction-state{flex:none;font-size:10px;border-radius:100px;background:var(--soft);color:var(--muted);padding:5px 8px}
+html .r-prediction-card[data-state=open] .r-prediction-state{background:var(--trade-buy-soft);color:var(--trade-buy-ink)}
+html .r-prediction-shell .r-prediction-question{font-size:16px;font-weight:500;line-height:1.5;letter-spacing:-.3px}
+html .r-prediction-terms{margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+html .r-prediction-terms dt{font-size:10px;color:var(--muted);margin-bottom:6px}
+html .r-prediction-terms dd{font-size:13px;font-weight:500;margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+html .r-prediction-actions{border-top:1px solid var(--line);padding-top:14px;min-height:58px}
+html .r-prediction-actions>small{font-size:11px;color:var(--muted)}
+html .r-prediction-actions [data-action=predict]{background:var(--trade-buy);color:#fff;min-width:96px}
+html .r-prediction-empty{grid-column:1/-1;display:flex;align-items:center;flex-direction:column;text-align:center;padding:44px 20px 48px;min-width:0}
+html .r-prediction-empty>.icon{width:32px;height:32px;color:var(--muted);margin-bottom:18px;stroke-width:1.5}
+html .r-prediction-empty h2{font-size:18px;font-weight:550;letter-spacing:-.3px;margin:0 0 8px}
+html .r-prediction-empty p{font-size:13px;line-height:1.6;color:var(--muted);max-width:260px;margin:0 0 20px}
+html .r-prediction-empty .r-btn{font-size:12px;min-height:44px;padding-inline:18px}
+html .r-prediction-shell>.r-data-foot{margin:0;padding:12px var(--space) 24px;font-size:10px;gap:12px}
+html .r-prediction-shell .r-data-foot .r-text-button{min-height:44px}
+html .r-predict-asset{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+html .r-predict-asset b,html .r-predict-asset small{display:block}
+html .r-predict-asset b{font-size:16px;font-weight:550}
+html .r-predict-asset small{font-size:11px;color:var(--muted);margin-top:5px}
+html .r-predict-reference{display:grid;grid-template-columns:1fr auto;gap:6px;font-size:12px;color:var(--muted);margin-bottom:20px}
+html .r-predict-reference b{font-weight:500;color:var(--text);font-variant-numeric:tabular-nums}
+html .r-predict-reference small{grid-column:1/-1;font-size:10px}
+html .r-prediction-order .r-predict-price{padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:18px;font-size:12px;color:var(--muted);margin:0}
+html .r-prediction-order .r-predict-price input{border:0;background:transparent;box-shadow:none;font-size:36px;letter-spacing:-1px;font-weight:450;padding:12px 0 0;min-width:0;font-variant-numeric:tabular-nums}
+html .r-prediction-order .r-predict-price input:focus-visible{outline:0}
+html .r-predict-price:focus-within{border-color:var(--trade-buy);box-shadow:0 0 0 1px var(--trade-buy)}
+html [data-predict-reference]{display:block;min-height:44px;color:var(--trade-buy-ink);font-size:12px}
+html .r-predict-terms{display:grid;gap:14px;margin:24px 0 16px}
+html .r-predict-terms>div{display:flex;justify-content:space-between;gap:16px;font-size:12px}
+html .r-predict-terms dt{color:var(--muted)}
+html .r-predict-terms dd{margin:0;font-weight:500;font-variant-numeric:tabular-nums;text-align:right}
+html .r-predict-note{font-size:11px;color:var(--muted);line-height:1.5}
+html .r-prediction-order .r-checkout-footer>.r-btn.primary{background:var(--trade-buy);color:#fff}
+@media(max-width:1000px){html .r-prediction-references{gap:8px}html .r-prediction-reference{padding:12px}html .r-prediction-reference strong{font-size:17px}}
+@media(max-width:600px){
+ html .r-prediction-heading{padding-bottom:16px}
+ html .r-prediction-references{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ html .r-prediction-reference{min-height:76px;padding:12px 14px;gap:7px}
+ html .r-prediction-reference strong{font-size:18px}
+ html .r-prediction-price-source{padding-bottom:16px}
+ html .r-prediction-shell .r-prediction-list{gap:12px}
+ html .r-prediction-shell .r-prediction-card{padding:18px}
+ html .r-prediction-empty{padding-block:24px}
+ html .r-prediction-empty>.icon{display:none}
+}
 @media(max-width:600px){
  html .r-prediction-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
  html .r-prediction-filters button{justify-content:center;min-width:0;padding-inline:6px;gap:5px;white-space:nowrap}

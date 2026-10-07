@@ -1,7 +1,7 @@
 // Bounded, interruptible UI motion. No network, account or wallet authority.
 export function motionUI(){
  const ease='cubic-bezier(.22,.8,.24,1)',reduced=matchMedia('(prefers-reduced-motion:reduce)');
- const previous=new Map(),active=new Set();let source,route=0,pageMotion,resizeFrame=0;
+ const previous=new Map(),active=new Set();let source,route=0,pageMotion,resizeFrame=0,sectionFrame=0;
  const allowed=()=>!document.hidden&&!reduced.matches;
  function animate(element,frames,options){
   const animation=element.animate(frames,options);active.add(animation);
@@ -31,7 +31,24 @@ export function motionUI(){
   glider(mobile,mobile?.querySelector('a.active'),'mobile',true,withMotion);
   glider(desktop,desktop?.querySelector('a.active'),'desktop',false,withMotion);
  }
- function sections(withMotion=true){const host=document.querySelector('.rx-home-tabs');glider(host,host?.querySelector('[aria-current=page]'),'sections',false,withMotion);}
+ function underline(host,target,key,withMotion){
+  if(!host||!target||!host.getClientRects().length)return;
+  let shape=host.querySelector(':scope>.r-motion-underline');
+  if(!shape){shape=document.createElement('span');shape.className='r-motion-underline';shape.setAttribute('aria-hidden','true');host.append(shape);}
+  const parent=host.getBoundingClientRect(),rect=target.getBoundingClientRect(),current={x:rect.x-parent.x+host.scrollLeft,width:rect.width};
+  let old=previous.get(key);if(old&&shape.getAnimations().length){const visible=shape.getBoundingClientRect();old={x:visible.x-parent.x+host.scrollLeft,width:visible.width};}
+  previous.set(key,current);host.classList.add('r-motion-tabs');shape.getAnimations().forEach(a=>a.cancel());
+  Object.assign(shape.style,{left:current.x+'px',width:current.width+'px'});
+  if(old&&withMotion&&allowed()&&Math.abs(old.x-current.x)>.5)animate(shape,[{transform:`translateX(${old.x-current.x}px) scaleX(${old.width/current.width})`},{transform:'none'}],{duration:190,easing:ease});
+ }
+ function sections(withMotion=true){
+  const host=document.querySelector('.rx-home-tabs');glider(host,host?.querySelector('[aria-current=page]'),'sections',false,withMotion);
+  for(const selector of ['.r-tabs','.r-community-tabs','.r-profile-tabs','.r-prediction-filters']){
+   const tabs=document.querySelector('#page '+selector),target=tabs?.querySelector('button.active,button[aria-pressed=true]');
+   if(tabs&&target&&tabs.scrollWidth>tabs.clientWidth){const t=target.getBoundingClientRect(),h=tabs.getBoundingClientRect();if(t.x<h.x||t.right>h.right)tabs.scrollTo({left:tabs.scrollLeft+t.x-h.x-(tabs.clientWidth-t.width)/2,behavior:withMotion&&allowed()?'smooth':'instant'});}
+   underline(tabs,target,selector,withMotion);
+  }
+ }
  function enterPage(){
   navigation();sections();pageMotion?.cancel();
   if(!allowed())return;
@@ -70,6 +87,14 @@ export function motionUI(){
  }
  const resized=()=>{if(resizeFrame)return;resizeFrame=requestAnimationFrame(()=>{resizeFrame=0;navigation(false);sections(false);});};
  window.addEventListener('resize',resized,{passive:true});
+ // Changes to a selected tab share one interruptible indicator. Price and
+ // countdown text updates do not animate or replace the page.
+ const sectionObserver=new MutationObserver(records=>{
+  const selector='.r-tabs,.r-community-tabs,.r-profile-tabs,.r-prediction-filters';
+  if(sectionFrame||!records.some(r=>r.type==='attributes'&&r.target.matches('button')&&r.target.parentElement?.matches(selector)||r.type==='childList'&&[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches?.(selector)||n.querySelector?.(selector)))))return;
+  sectionFrame=requestAnimationFrame(()=>{sectionFrame=0;sections();});
+ });
+ sectionObserver.observe(document.querySelector('#app'),{childList:true,subtree:true,attributes:true,attributeFilter:['class','aria-pressed']});
  reduced.addEventListener('change',()=>{if(reduced.matches)active.forEach(a=>a.cancel());resized();});
  return {navigation,sections,enterPage,dialog,dismiss,begin,finish};
 }

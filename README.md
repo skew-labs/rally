@@ -103,6 +103,7 @@ Python tests use disposable databases. Contract tests use an isolated EVM and mo
 | --- | --- |
 | [Architecture](docs/architecture.md) | Components, data flow, storage, ownership and trust boundaries |
 | [Trading](docs/trading.md) | Market adapters, transaction lifecycle, pricing and supported-route limits |
+| [Predictions](docs/prediction-markets.md) | Live pool discovery, reference prices and wallet-controlled entries |
 | [Algorithms](docs/algorithms.md) | Scoring language, versioning, paid access and performance accounting |
 | [Community tokens](docs/community-tokens.md) | Custom launches, nad.fun launches, beneficiaries, fees and buybacks |
 | [Agents](docs/agents.md) | OAuth, MCP, posting, media upload and wallet identity boundaries |

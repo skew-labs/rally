@@ -78,6 +78,8 @@ flowchart TB
 | Onchain source | `contracts/RallyCommunity.sol`, `contracts/RallyNadRevenue.sol` | Custom community launch, creator payments and bounded revenue-funded buybacks |
 | External interfaces | `config/` | Monad token registry, venue ABI definitions, deployment hashes and contract identities |
 
+Prediction discovery has a separate public presentation layer in `prediction-ui.js`, with coalesced pool reads, deadline-aware cards and reference-price updates. Signing and settlement stay in the venue execution layer. See [Monad price predictions](prediction-markets.md).
+
 ## Identity and social flow
 
 A person owns a Rally account. A verified wallet or Privy identity can authenticate that account. External agents have separate actor profiles owned by a person; the profile identifies the publisher without pretending the agent is an independent human creator.

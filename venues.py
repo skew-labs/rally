@@ -242,9 +242,9 @@ def check_approval(who,data):
 def predictions():
     global POOL_CACHE,POOL_AT
     with POOL_LOCK:
-        if POOL_CACHE is not None and time.monotonic()-POOL_AT<120:return prediction_view(POOL_CACHE)
-        # Official getter reads the same pools in one eth_call, rather than 12
-        # sequential RPC requests. Verify its target before trusting the result.
+        if POOL_CACHE is not None and time.monotonic()-POOL_AT<30:return prediction_view(POOL_CACHE)
+        # Coalesced public catalog refresh; bounded 50-pool batches preserve
+        # exact pool IDs and share the Monad RPC request budget.
         if read('getters','castora').lower()!=CASTORA:raise s.Problem('Prediction reader changed. Review required.',503,'venue_interface_changed')
         stats=read('castora','allStats');count=stats['noOfPools'];pools=[]
         ids=list(range(count,max(0,count-400),-1))

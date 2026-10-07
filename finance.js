@@ -1,3 +1,5 @@
+import {predictionUI} from './prediction-ui.js';
+
 export function financeUI(c) {
   const {S,$,api,esc,icon,usd,age,modal,closeModal,needAccount,walletReady,receipt,notify,boot,navigate,pageHeader,empty,loading}=c;
   const address=a=>a?.slice(0,6)+'…'+a?.slice(-4);
@@ -223,44 +225,21 @@ export function financeUI(c) {
     const data=await api('/api/leverup/positions?'+new URLSearchParams({market:id}));
     modal('LeverUp positions',data.positions.length?data.positions.map(p=>`<div class="r-order-row"><span><b>${esc(p.pair)} · ${p.isLong?'Long':'Short'}</b><small>${esc(p.quantity)} · Entry ${usd(p.entry)}</small><small>${esc(p.marginAmount)} ${p.marginToken.toLowerCase()==='0xfd44b35139ae53fff7d8f2a9869c503d987f00d1'?'LVUSD':'margin tokens'}</small></span><button class="r-btn small" data-action="leverup-close" data-id="${esc(p.positionHash)}" data-market="${esc(id)}" ${p.earliestCloseTime>Date.now()/1000||p.marginToken.toLowerCase()!=='0xfd44b35139ae53fff7d8f2a9869c503d987f00d1'?'disabled':''}>Close</button></div>`).join(''):'<p class="r-note">No open positions in this market.</p>');
   });}
-  let predictionRequest,predictionDeadlineTimer;
+  const Prediction=predictionUI(c,perpData);
   const predictionTime=t=>timeFormat.format(new Date(t*1000));
-  const predictionState=p=>p.state==='settled'?'settled':p.close>Date.now()/1000?'open':'awaiting_settlement';
-  async function predictions(host,q,refresh=false){
-    if(!refresh&&S.predictions&&Math.abs(Date.now()/1000-S.predictions.fetchedAt)<120){renderPredictions(host,q);return;}
-    // Share the in-flight read when a user types or switches tabs. Only the
-    // latest visible view may render; failed requests remain retryable.
-    if(!predictionRequest)predictionRequest=api('/api/predictions').then(d=>{S.predictions=d;return d;}).finally(()=>{predictionRequest=null;});
-    await predictionRequest;renderPredictions(host,q);
-  }
-  function renderPredictions(host,q){
-    if(!host?.isConnected||S.marketTab!=='prediction'||S.filter.toLowerCase()!==q)return;
-    const d=S.predictions,all=d.pools.map(p=>({...p,state:predictionState(p)}));
-    clearTimeout(predictionDeadlineTimer);
-    const closes=all.filter(p=>p.state==='open').map(p=>p.close*1000-Date.now()+1);
-    if(closes.length)predictionDeadlineTimer=setTimeout(()=>{
-      if((S.view==='explore'||S.view==='home'&&S.homeSection==='markets')&&S.marketTab==='prediction')renderPredictions($('#market-list'),S.filter.toLowerCase());
-    },Math.max(1,Math.min(2147483647,...closes)));
-    if(!S.predictionStatus)S.predictionStatus=all.some(p=>p.state==='open')?'open':'settled';
-    const matching=all.filter(p=>(p.asset+' '+p.assetId+' '+(c.token(p.assetId)?.name||'')+' '+p.id).toLowerCase().includes(q)&&(!S.watchOnly||(S.boot?.watches||[]).includes(p.assetId)));
-    const filters=[['open','Open',matching.filter(p=>p.state==='open').length],['recent','History',matching.length],['settled','Resolved',matching.filter(p=>p.state==='settled').length]];
-    const pools=matching.filter(p=>S.predictionStatus==='recent'||p.state===S.predictionStatus);
-    host.innerHTML=`<div class="r-data-label">Castora · Price predictions <button class="r-btn small" data-action="my-predictions">My predictions</button></div><div class="r-prediction-filters" role="group" aria-label="Prediction status">${filters.map(([id,label,count])=>`<button data-action="prediction-status" data-id="${id}" aria-pressed="${S.predictionStatus===id}">${label}<span>${count}</span></button>`).join('')}</div>${!all.some(p=>p.state==='open')?`<div class="r-prediction-notice" role="status">No open pools · ${d.scannedPools||d.pools.length} checked${d.scope==='latest_400'?' of '+d.totalPools:''}. Fixed-stake USD price predictions.</div>`:''}<div class="r-prediction-list">${pools.map(p=>{
-      const asset=p.assetInfo||(p.predictionReviewed?c.token(p.assetId):null),label=p.asset.length>15?'Price prediction':p.asset;
-      return `<article class="r-prediction-card" data-prediction-pool="${p.id}" data-state="${p.state}"><div class="r-prediction-identity">${c.logo(asset||{symbol:'?'},true)}<div><h2>${esc(label)}${asset?' / USD':''}</h2><small>Castora · Pool #${p.id}</small></div></div><p class="r-prediction-question">${label==='Price prediction'?'USD price':esc(label)+' price'} on ${esc(date(p.snapshot))}</p>${p.state==='settled'?`<div class="r-prediction-result">${usd(p.settlementPrice)}<small>Settled price · ${p.winners??'—'} ${p.winners===1?'winner':'winners'}</small></div>`:`<div class="r-prediction-result">${esc(p.stake||'—')} ${esc(p.stakeAsset.length>15?address(p.stakeAsset):p.stakeAsset)}<small>Entry stake</small></div>`}<div class="r-prediction-stats"><span>${p.predictions} ${p.predictions===1?'entry':'entries'}</span><span>${p.feeBps/100}% pool fee</span></div><div class="r-prediction-actions"><small>${p.state==='open'?'Closes '+esc(predictionTime(p.close)):p.state==='settled'?'Settled':'Awaiting settlement'}</small>${p.state==='open'?`<button class="r-btn small primary" data-action="predict" data-id="${p.id}" ${p.stakeReviewed&&p.predictionReviewed?'':'disabled'}>Predict price</button>`:asset?`<button class="r-btn small" data-action="${p.assetInfo?'prediction-detail':'market-detail'}" data-id="${esc(p.assetInfo?p.id:p.assetId)}">Chart</button>`:''}</div></article>`;
-    }).join('')||empty(q||S.watchOnly?'No pools found':S.predictionStatus==='open'?'No open pools':'No settled pools',q?'Try an asset or pool number.':'')} </div><div class="r-data-foot"><span>${d.scope==='all'?'All '+d.totalPools:d.pools.length+' of '+d.totalPools} pools · Updated ${age(d.fetchedAt)}</span><button class="r-text-button" data-action="refresh-predictions">Refresh</button></div>`;
-  }
-  document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&(S.view==='explore'||S.view==='home'&&S.homeSection==='markets')&&S.marketTab==='prediction'&&S.predictions){
-      renderPredictions($('#market-list'),S.filter.toLowerCase());
-      predictions($('#market-list'),S.filter.toLowerCase()).catch(()=>{});
-    }
-  });
+  const predictionState=Prediction.state;
+  const predictions=Prediction.read;
+  const refreshPredictions=Prediction.refresh;
   function predict(id,price=null){
     const pool=S.predictions?.pools.find(p=>String(p.id)===String(id));if(!pool)return;
     if(predictionState(pool)!=='open'||!pool.predictionReviewed||!pool.stakeReviewed){notify('This pool is not open for entries');return;}
-    modal('Predict '+esc(pool.asset),`<form id="prediction-form">${fields([['Pool','#'+pool.id],['Stake',pool.stake+' '+pool.stakeAsset],['Closes',predictionTime(pool.close)],['Snapshot',predictionTime(pool.snapshot)]])}<label class="r-field">Your price · USD<input name="price" type="text" inputmode="decimal" placeholder="0.00" required><small>Up to 8 decimals</small></label><div class="r-form-error" role="alert"></div><button class="r-btn primary full" type="submit">Predict price</button></form>`);
+    const reference=Prediction.reference(pool),fresh=Prediction.fresh(reference);
+    modal('Predict '+esc(pool.asset),`<form id="prediction-form"><div class="r-predict-asset">${c.logo(pool.assetInfo||c.token(pool.assetId),true)}<span><b>${esc(pool.asset)} / USD</b><small>${esc(predictionTime(pool.snapshot))}</small></span></div><div class="r-predict-reference"><span>Current reference</span><b>${fresh?usd(reference.mark):'—'}</b><small>Perpl mark · Not the settlement price</small></div><label class="r-field r-predict-price">Your price · USD<input name="price" type="text" inputmode="decimal" placeholder="0.00" required autocomplete="off"></label>${fresh?'<button type="button" class="r-text-button" data-predict-reference>Use current price</button>':''}<dl class="r-predict-terms"><div><dt>Entry</dt><dd>${esc(pool.stake+' '+pool.stakeAsset)}</dd></div><div><dt>Pool fee</dt><dd>${pool.feeBps/100}%</dd></div><div><dt>Closes</dt><dd>${esc(predictionTime(pool.close))}</dd></div></dl><p class="r-predict-note">Entry stays in the pool until settlement.</p><div class="r-form-error" role="alert"></div><button class="r-btn primary full" type="submit">Predict</button></form>`,'r-prediction-order');
+    const useReference=$('[data-predict-reference]');if(useReference)useReference.onclick=()=>{const value=Prediction.reference(pool);if(!Prediction.fresh(value))return;const form=$('#prediction-form');form.elements.price.value=Number(value.mark).toFixed(8).replace(/0+$/,'').replace(/\.$/,'');c.checkout.valid(form);form.elements.price.focus({preventScroll:true});};
     if(price!=null){$('#prediction-form').elements.price.value=price;c.checkout.valid($('#prediction-form'));}
+    const form=$('#prediction-form'),dialog=S.modal;let deadline;
+    const checkDeadline=()=>{clearTimeout(deadline);if(!form.isConnected)return;if(predictionState(pool)!=='open'){form.querySelector('[type=submit]').disabled=true;form.querySelector('.r-predict-note').textContent='This pool has closed';return;}deadline=setTimeout(checkDeadline,Math.max(1,Math.min(2147483647,pool.close*1000-Date.now()+1)));};
+    const cleanup=dialog.cleanup;dialog.cleanup=()=>{clearTimeout(deadline);cleanup?.();};form.addEventListener('input',()=>queueMicrotask(checkDeadline));checkDeadline();
     $('#prediction-form').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget;if(form.dataset.pending==='true')return;const button=$('[type=submit]',form),price=form.elements.price.value;c.checkout.formBusy(form,true);button.disabled=true;try{if(predictionState(pool)!=='open')throw new Error('This pool has closed');await needAccount(async()=>{if(!await walletReady())return;await review(await api('/api/execution/plan',{venue:'castora',kind:'predict',pool:id,price}));});}catch(e){if(form.isConnected)$('.r-form-error',form).textContent=e.message;}finally{c.checkout.formBusy(form,false);}};
   }
   function myPredictions(){needAccount(async()=>{
@@ -312,5 +291,5 @@ export function financeUI(c) {
     }
     return false;
   }
-  return {feeds,createFeed,perpData,perps,refreshPerps,predictions,stocks,handle,resume,review,submitInline,uncertainInline,recoverInline,pending:()=>[...pending(),...c.spotPending()],openPerpl:perplOrder,perplAsset,openPrediction:predict};
+  return {feeds,createFeed,perpData,perps,refreshPerps,predictions,refreshPredictions,stocks,handle,resume,review,submitInline,uncertainInline,recoverInline,pending:()=>[...pending(),...c.spotPending()],openPerpl:perplOrder,perplAsset,openPrediction:predict};
 }

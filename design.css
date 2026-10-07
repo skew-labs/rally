@@ -33,6 +33,12 @@ html .r-btn.selected{background:var(--r-nav-active);color:var(--link)}
 html :is(.r-btn,.lp-primary,.lp-secondary,.r-icon-button){transition:background-color 150ms ease,color 150ms ease,transform 130ms var(--rx-ease)}
 html :is(.r-btn,.lp-primary,.lp-secondary):active:not(:disabled){transform:scale(.975)}
 html :is(.r-icon-button,.r-theme-button){color:var(--secondary-ink)}
+html .r-icon-button:active:not(:disabled){transform:scale(.94)}
+html .r-icon-button{transition:background-color 130ms ease,transform 130ms var(--rx-ease)}
+html :is(button,a,input,select,textarea):focus-visible{outline:2px solid var(--link);outline-offset:3px}
+html .r-motion-tabs{position:relative;isolation:isolate}
+html .r-motion-tabs>button:after{display:none!important}
+html .r-motion-underline{position:absolute;bottom:0;height:2px;background:var(--brand);border-radius:2px;transform-origin:left center;pointer-events:none}
 html :is(.r-profile-avatar,.r-token-art,.r-venue-mark){position:relative}
 html :is(.r-profile-avatar>img,.r-token-art>.r-token,.r-venue-mark>img){position:absolute;opacity:0;z-index:1}
 html .r-profile-avatar>img{top:50%;left:50%;transform:translate(-50%,-50%)}
@@ -299,5 +305,5 @@ html .r-compose-fab .icon{color:var(--on-solid);width:23px;height:23px}
 @media(prefers-reduced-motion:reduce){
  html :is(.r-btn,.lp-primary,.lp-secondary,.r-icon-button,.rx-tile>img,.r-mobile-nav a,.r-sidebar nav a){transition:none}
  html :is(.r-modal,.r-trade-panel,.r-nad-panel,.r-overlay){animation:none}
- html :is(.r-btn,.lp-primary,.lp-secondary):active{transform:none}
+ html :is(.r-btn,.lp-primary,.lp-secondary,.r-icon-button):active{transform:none}
 }
