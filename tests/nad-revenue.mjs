@@ -1,0 +1,33 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import {ethers} from 'ethers';
+import ganache from 'ganache';
+const stage=new URL('..',import.meta.url).pathname,art=JSON.parse(fs.readFileSync(stage+'/build/revenue-contracts.json')).contracts;
+const network=ganache.provider({chain:{chainId:143,hardfork:'shanghai'},wallet:{totalAccounts:4},logging:{quiet:true}}),provider=new ethers.BrowserProvider(network);provider.pollingInterval=10;
+const [creator,buyer,stranger]=await Promise.all([0,1,2].map(i=>provider.getSigner(i))),owner=await creator.getAddress(),payer=await buyer.getAddress();let checks=0;
+const ok=(v,label)=>{assert(v,label);checks++;};const tx=async p=>(await p).wait();
+async function revert(p,label){try{await tx(p)}catch{checks++;return}throw Error('Expected revert '+label);}
+async function deploy(name,args=[]){const a=art[name],c=await new ethers.ContractFactory(a.abi,a.bytecode,creator).deploy(...args);await c.waitForDeployment();return c;}
+const usdc=await deploy('MockQuote'),wmon=await deploy('MockNadAsset'),token=await deploy('MockNadAsset'),dex=await deploy('MockFactory'),router=await deploy('MockRouter',[await dex.getAddress()]),nad=await deploy('MockNadBuy',[await wmon.getAddress()]);
+const u=await usdc.getAddress(),w=await wmon.getAddress(),t=await token.getAddress(),r=await router.getAddress(),n=await nad.getAddress();
+await tx(usdc.mint(owner,100_000_000_000n));await tx(wmon.mint(owner,1_000_000n*10n**18n));await tx(usdc.approve(r,100_000_000_000n));await tx(wmon.approve(r,1_000_000n*10n**18n));
+const deadline=async()=>BigInt((await network.request({method:'eth_getBlockByNumber',params:['latest',false]})).timestamp)+120n;
+await tx(router.addLiquidity(u,w,100_000_000_000n,1_000_000n*10n**18n,0,0,owner,await deadline()));
+const floor=9900n*10n**18n,vault=await deploy('RallyNadRevenueVault',[owner,u,w,t,r,n,2000,10000,100,floor,1_000_000n]),address=await vault.getAddress(),burn='0x000000000000000000000000000000000000dEaD';
+ok(await vault.creator()===owner,'creator fixed');ok(await vault.communityToken()===t,'nad token fixed');ok(await vault.nadRouter()===n,'route fixed');
+await tx(usdc.mint(payer,100_000_000n));await tx(usdc.connect(buyer).approve(address,100_000_000n));let serial=0;const feed=ethers.id('fixture-feed'),pay=(amount=10_000_000n,nonce=1n)=>vault.connect(buyer).pay(ethers.id('invoice-'+(++serial)),feed,amount,nonce,{gasLimit:3_000_000});
+const before=await usdc.balanceOf(owner);await tx(pay());ok(await usdc.balanceOf(owner)-before===8_000_000n,'creator receives 80%');ok(await vault.pendingBuyback()===2_000_000n,'warmup reserves 20%');ok(await vault.tokensBought()===0n,'no simulated income invented');
+await revert(vault.connect(buyer).pay(ethers.id('invoice-1'),feed,10_000_000n,1n),'replay');await revert(pay(10_000_000n,2n),'wrong policy');
+await revert(vault.connect(stranger).setPolicy(2000,10000,100,floor,1_000_000n),'creator only');await revert(vault.autoExecute(),'self only');
+await revert(vault.executeBuyback(await deadline()),'warmup');await network.request({method:'evm_increaseTime',params:[601]});await network.request({method:'evm_mine',params:[]});
+await tx(vault.connect(stranger).executeBuyback(await deadline(),{gasLimit:3_000_000}));ok(await vault.quoteSpent()===1_000_000n,'batch cap');ok(await vault.pendingBuyback()===1_000_000n,'remaining reserve');ok(await vault.tokensBought()>0n,'tokens delivered');ok(await token.balanceOf(burn)===await vault.tokensBurned(),'burn address independently reconciled');ok(await token.totalSupply()===await vault.tokensBought(),'sink does not reduce supply');
+ok(await usdc.allowance(address,r)===0n,'USDC allowance cleared');ok(await wmon.allowance(address,n)===0n,'WMON allowance cleared');ok(await wmon.balanceOf(address)===0n,'no residual quote');
+await tx(nad.setRate(1));const reserve=await vault.pendingBuyback(),spent=await vault.quoteSpent();await tx(pay());ok(await vault.pendingBuyback()===reserve+2_000_000n,'price limit queues');ok(await vault.quoteSpent()===spent,'below floor cannot spend');ok(await usdc.balanceOf(address)===await vault.pendingBuyback(),'failed buy reserve backed');
+await tx(nad.setRate(1000));await tx(nad.setPartial(true));await tx(pay());ok(await vault.quoteSpent()===spent,'partial quote consumption reverts atomically');ok(await wmon.balanceOf(address)===0n,'failed buy rollback clears WMON');await tx(nad.setPartial(false));
+await tx(vault.setPaused(true));await tx(pay());ok(await vault.quoteSpent()===spent,'paused payments still queue');await revert(vault.connect(stranger).setPaused(false),'pause creator only');await tx(vault.setPaused(false));
+await revert(vault.executeBuyback(0),'expired');await revert(vault.setPolicy(10001,10000,100,floor,1_000_000n),'bad buyback');await revert(vault.setPolicy(2000,10001,100,floor,1_000_000n),'bad burn');await revert(vault.setPolicy(2000,10000,0,floor,1_000_000n),'zero slippage');await revert(vault.setPolicy(2000,10000,501,floor,1_000_000n),'high slippage');await revert(vault.setPolicy(2000,10000,100,0,1_000_000n),'zero price floor');await revert(vault.setPolicy(2000,10000,100,floor,1n),'dust cap');
+await tx(vault.setPolicy(0,0,100,floor,1_000_000n));await revert(pay(10_000_000n,1n),'old invoice after policy update');const payout=await usdc.balanceOf(owner),oldReserve=await vault.pendingBuyback();await tx(pay(10_000_000n,2n));ok(await usdc.balanceOf(owner)-payout===10_000_000n,'zero buyback full payout');ok(await vault.pendingBuyback()<=oldReserve,'old reserve only on execution');
+await tx(vault.setPolicy(10000,0,100,floor,1_000_000n));const balance=await token.balanceOf(owner);await tx(pay(10_000_000n,3n));ok(await token.balanceOf(owner)>balance,'unburned tokens reach creator');
+ok(!vault.interface.fragments.some(f=>['withdraw','sweep','rescue','setRouter'].includes(f.name)),'no arbitrary reserve withdrawal or route changes');
+await network.disconnect();const result={ok:true,checks,environment:'isolated EVM fixtures; not mainnet settlement',financialTransactions:0,walletSignatures:0,sourceHashes:Object.fromEntries(['RallyCommunity.sol','RallyNadRevenue.sol','Mocks.sol','NadMocks.sol'].map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(stage+'/contracts/'+f)).digest('hex')]))};fs.writeFileSync(stage+'/build/revenue-tests.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));

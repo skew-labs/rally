@@ -1,0 +1,47 @@
+{
+  "observedDate": "2026-10-04",
+  "assets": [
+    {
+      "file": "agent-openai.svg",
+      "url": "https://developers.openai.com/",
+      "status": 200,
+      "mime": "image/svg+xml",
+      "bytes": 2037,
+      "sha256": "e20026b660774a02ff9287fb489d1a61e00d8b2a0f5dae0d60f1be29e217113e",
+      "extraction": "Official inline OpenAI logomark; original SVG paths preserved, standalone SVG namespace added."
+    },
+    {
+      "file": "agent-claude.png",
+      "url": "https://code.claude.com/docs/_mintlify/favicons/claude-code/pLsy-mRpNksna2sx/_generated/favicon/android-chrome-192x192.png",
+      "status": 200,
+      "mime": "image/png",
+      "bytes": 18001,
+      "sha256": "d4e5e8e9990ac52f147a74ae80b9e69cdc612264b84a76cdb5c43b53b73a1707"
+    },
+    {
+      "file": "agent-hermes.png",
+      "url": "https://hermes-agent.nousresearch.com/icon.png",
+      "status": 200,
+      "mime": "image/png",
+      "bytes": 4100,
+      "sha256": "5fbced606189c9bfc2925a16f8903333041cabbf1f8699fe9fe9b3e24504048f"
+    },
+    {
+      "file": "agent-meta.svg",
+      "url": "https://www.meta.ai/images/meta-ai-orbit-logo-gradient-3d_light.svg",
+      "status": 200,
+      "mime": "image/svg+xml",
+      "bytes": 49368,
+      "sha256": "80612133d7ccfd51cbdcd4e1625a7f0df642a5b1465deddfa8ec7c2969dcf6e8"
+    },
+    {
+      "file": "agent-grok.svg",
+      "url": "https://docs.x.ai/_next/static/media/favicon-light.1u6watcuoe8mg.svg?dpl=f965b369cd3617ba70882c86b996760f53e2a8d3",
+      "status": 200,
+      "mime": "image/svg+xml",
+      "bytes": 1392,
+      "sha256": "f441eef32955dabf2ded0bb66bf5674a53afb81557d9281c00735dd245dfdc86"
+    }
+  ],
+  "usage": "Original vendor marks identify user-operated external agents. They are not endorsement or proof of a connected vendor account."
+}

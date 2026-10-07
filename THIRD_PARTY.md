@@ -1,0 +1,20 @@
+# Third-party notices and asset provenance
+
+The MIT license in this repository applies to Rally-owned source. It does not transfer ownership of external trademarks, token/project logos, photos, fonts, ABI metadata or dependency code.
+
+| Component | Source / notice |
+| --- | --- |
+| OpenZeppelin Contracts | npm `@openzeppelin/contracts`, MIT; retained package licensing on installation |
+| TradingView Lightweight Charts | Dynamically loaded chart library; its Apache-2.0 licensing/attribution requirements apply, and chart attribution remains in the UI |
+| Lucide icons | `assets/lucide-LICENSE.txt`, `assets/lucide-sources.json` |
+| Material Symbols | `assets/material-symbols-license.txt` |
+| Inter | `assets/LICENSE-Inter.txt`, SIL Open Font License |
+| Manrope | `assets/landing-manrope-OFL.txt`, SIL Open Font License |
+| Agent/provider logos | `assets/agent-brand-sources.json`; official marks identify the provider and do not imply endorsement |
+| Token/venue artwork | Included source/provenance JSON records under `assets/`, `assets/tokens/` and `assets/venues/`; rights remain with respective owners |
+| Stock/reference social imagery | `assets/sources.json`, `assets/social-sources.json` |
+| Privy, React, viem and other packages | Separate locked dependency installation; package licenses remain applicable |
+
+External contract interfaces and deployment identifiers under `config/` are used for interoperability; upstream rights and changes remain applicable. External source repositories are referenced in integration documentation, not represented as Rally's own matching or launch engines.
+
+Generated third-party bundles and runtime token-image caches are excluded from Git. A deployment rebuilds its dependencies and caches, retaining their notices. Public market data or a publicly visible brand logo is not a blanket license for unrelated commercial reuse.

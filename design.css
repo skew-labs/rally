@@ -1,0 +1,307 @@
+/* Rally product system: content before chrome, one motion language, bounded surfaces.
+   Reference review: Threads public web, FOMO public product images, Apple HIG. */
+:root{
+ --r-font:Inter,-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+ --rx-ease:cubic-bezier(.22,.8,.24,1);--sheet-radius:26px;
+ --brand:#765af2;--space:28px;
+}
+:root[data-theme=light]{
+ --canvas:#f6f6f8;--paper:#fff;--bg:#fff;--panel:#f9f9fb;--raised:#efeff3;--soft:#f0f0f4;
+ --line:#ececf0;--text:#202024;--secondary-ink:#55555e;--muted:#71717b;--faint:#9999a3;
+ --accent:#765af2;--link:#6346db;--primary:#202024;--solid:#202024;--solid-hover:#35353d;--on-solid:#fff;
+ --green:#188461;--red:#d94c60;--r-nav-active:#eeeafa;
+ --r-sheet-shadow:0 32px 100px #11112324,0 2px 10px #1111230a;
+}
+:root[data-theme=dark]{
+ --canvas:#101013;--paper:#18181c;--bg:#18181c;--panel:#1e1e23;--raised:#2c2c34;--soft:#24242b;
+ --line:#2a2a32;--text:#ededf2;--secondary-ink:#c3c3ce;--muted:#a0a0b0;--faint:#858594;
+ --accent:#ad96ff;--link:#b7a2ff;--primary:#ededf2;--solid:#ededf2;--solid-hover:#fff;--on-solid:#18181c;
+ --green:#75d1ad;--red:#ff8797;--r-nav-active:#302a43;
+ --r-sheet-shadow:0 32px 100px #0006,0 2px 10px #0003;
+}
+html{font-feature-settings:'cv02','cv03','cv04','cv11';-webkit-font-smoothing:antialiased}
+html :is(button,input,textarea,select){font-family:var(--r-font)}
+html :is(h1,h2,h3){font-weight:600;letter-spacing:-.65px}
+html h1{font-size:25px;line-height:1.2}
+html button{font-weight:500}
+html :is(.r-btn,.lp-primary,.lp-secondary){font-weight:550;border-radius:100px;min-height:44px;box-shadow:none}
+html .r-btn:not(.primary):not(.r-buy):not(.r-sell){border-color:transparent;background:var(--soft)}
+html .r-btn.primary{background:var(--solid);border-color:transparent;color:var(--on-solid)}
+html .r-btn.primary:hover:not(:disabled){color:var(--on-solid)}
+html .r-btn.selected{background:var(--r-nav-active);color:var(--link)}
+html :is(.r-btn,.lp-primary,.lp-secondary,.r-icon-button){transition:background-color 150ms ease,color 150ms ease,transform 130ms var(--rx-ease)}
+html :is(.r-btn,.lp-primary,.lp-secondary):active:not(:disabled){transform:scale(.975)}
+html :is(.r-icon-button,.r-theme-button){color:var(--secondary-ink)}
+html :is(.r-profile-avatar,.r-token-art,.r-venue-mark){position:relative}
+html :is(.r-profile-avatar>img,.r-token-art>.r-token,.r-venue-mark>img){position:absolute;opacity:0;z-index:1}
+html .r-profile-avatar>img{top:50%;left:50%;transform:translate(-50%,-50%)}
+html .r-token-art>.r-token,html .r-venue-mark>img{inset:0;margin:auto}
+html :is(.r-profile-avatar>img.is-loaded,.r-token-art>.r-token.is-loaded,.r-venue-mark>img.is-loaded){opacity:1}
+html :is(.r-avatar-fallback,.r-token-art>.r-token-fallback,.r-venue-fallback){position:absolute;inset:0}
+html :is(.r-market-number,.r-number,.nad-price,.rx-preview-performance,.rx-leader-return){font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+html body[data-view] .r-layout{grid-template-columns:208px minmax(0,1fr);gap:36px;max-width:1480px;padding-inline:28px}
+html .r-workspace #page{border:0;border-radius:24px;box-shadow:0 1px 3px #11112303}
+html body:is([data-view=launchpad],[data-view=launch],[data-view=payments],[data-view=analytics]) .r-workspace #page{border:0;border-radius:24px}
+html .r-sidebar{padding-top:32px}
+html .r-brand{font-weight:650;font-size:30px;letter-spacing:-1.7px}
+html .r-brand span{background:var(--brand)}
+html .r-sidebar nav[aria-label="Main navigation"],html .r-mobile-nav{position:relative;isolation:isolate}
+html .r-sidebar nav a{max-width:208px;min-height:50px;font-size:15px;gap:14px;font-weight:450;border-radius:16px}
+html .r-sidebar nav a.active{background:transparent;font-weight:550}
+html .r-sidebar nav .icon{width:24px;height:24px}
+html .r-motion-glider{position:absolute;z-index:-1;pointer-events:none;background:var(--r-nav-active);border-radius:16px;transform-origin:left center}
+html .r-sidebar .r-post-button{max-width:208px;min-height:46px;font-size:14px;margin-top:20px}
+html .r-nav-secondary{border-top:0;margin-top:20px;padding-top:8px}
+html .r-nav-secondary a{font-weight:450;font-size:13px!important}
+html .r-side-section{margin-top:24px}
+html .r-kicker{font-size:11px;font-weight:500}
+html .r-community-link{font-size:12px}
+html :is(.r-section-title h2,.r-rail-section>h2){font-weight:500}
+html .r-page-head{padding:26px var(--space) 20px;min-height:80px}
+html :is(.rx-home-head h1,.rx-discover-head h1,.rx-leader-head h1){font-size:27px;font-weight:600;letter-spacing:-.8px}
+html .rx-home-head{padding:24px var(--space) 12px}
+html .rx-brand-dot{background:var(--brand);width:5px;height:5px}
+html .rx-home-tabs{display:flex;border:0;border-radius:100px;padding:4px;background:var(--soft);gap:4px;max-width:420px;margin-top:20px;overflow:visible;isolation:isolate}
+html .rx-home-tabs button{flex:1;min-height:40px;padding:0 18px;font-size:13px;font-weight:500;border-radius:100px;position:relative;background:transparent;z-index:1}
+html .rx-home-tabs button[aria-current=page]{font-weight:550;color:var(--text)}
+html .rx-home-tabs button:after{display:none}
+html .rx-home-tabs .r-motion-glider{border-radius:100px;background:var(--paper);box-shadow:0 2px 6px #11112308;z-index:0}
+html .r-tabs{border-color:var(--line);padding-inline:var(--space);gap:26px;min-height:48px}
+html .r-tabs button{font-size:13px;font-weight:450;min-height:48px;padding-block:12px}
+html .r-tabs button.active{font-weight:550}
+html .r-tabs button.active:after{background:var(--brand);height:2px;border-radius:2px}
+html .r-market-tools{padding:16px var(--space) 8px;gap:12px;align-items:center}
+html :is(.r-input-search,.rx-search,.lp-search){border:0;background:var(--soft);border-radius:100px;min-height:46px;height:46px;padding:0 16px;box-shadow:none}
+html :is(.r-input-search,.lp-search) input{min-height:44px;height:44px;font-size:13px;background:transparent;border:0;padding:0}
+html .r-input-search>.icon{width:18px;height:18px}
+html .r-market-tools>.r-btn{min-height:44px;height:44px;padding:10px 16px;font-size:12px;gap:6px}
+html .nad-list-head{padding:12px var(--space);border-bottom:0}
+html :is(.nad-filters,.r-market-scope>div){gap:6px}
+html .nad-filters button{border-radius:100px;font-size:12px;font-weight:450;min-height:40px;padding:0 12px}
+html .nad-filters button.selected{background:var(--soft);font-weight:550}
+html .nad-progress-track{height:3px;background:var(--soft)}
+html .nad-progress-track i{background:var(--brand)}
+html .nad-table tbody tr{height:80px}
+html .r-market-table td{border-color:var(--line);font-weight:450}
+html .r-market-table :is(.r-coin-cell b,.r-market-identity b){font-size:14px;font-weight:550;letter-spacing:-.2px}
+html .r-market-table .r-number{font-weight:500}
+html .r-market-table th{font-size:11px;font-weight:450;color:var(--muted)}
+html :is(.r-market-table .r-btn.small,.r-market-scope button){font-weight:500;border-radius:100px}
+html .r-market-scope{border-bottom:0;padding:12px var(--space)}
+html .r-pill{font-weight:450;border-radius:100px;border-color:transparent;background:var(--soft)}
+html .r-market-coverage{border-top:0;color:var(--muted)}
+html .r-data-foot{border-top:0}
+html .r-feed-toolbar .r-page-head{padding:10px var(--space);min-height:60px}
+html .r-feed-heading b{font-size:17px;font-weight:550}
+html .r-feed-toolbar .r-swipe-entry{border:0;background:var(--soft);border-radius:100px;font-weight:500}
+html .r-algorithm-shelf{border-bottom:0}
+html .r-home-algorithms{padding-top:14px;padding-bottom:12px;border-bottom:0}
+html .r-home-algorithms h2{font-weight:550;font-size:12px}
+html .r-post{padding:24px var(--space) 20px}
+html .r-person b{font-weight:550;font-size:14px}
+html .r-person small{font-size:11px}
+html :is(.r-post-body,.r-post-actions,.r-post-asset,.r-link-card,.r-media){margin-left:0;width:100%}
+html .r-post-body{font-size:15px;line-height:1.65;margin-block:16px 18px;letter-spacing:-.18px;font-weight:400}
+html .r-post-actions{gap:20px;padding-top:12px}
+html .r-post-actions button{font-weight:450;color:var(--muted)}
+html .r-post-actions .icon{width:21px;height:21px;stroke-width:1.65}
+html .r-link-card{border:0;background:transparent;padding:0;min-height:44px;margin-top:8px}
+html .r-post-asset{background:var(--panel);border:0;border-radius:18px;padding:14px}
+html .r-post-asset b{font-weight:550}
+html .r-media{border:0;border-radius:18px;margin-top:12px}
+html .r-repost-context{margin-left:0}
+html .r-read-more{font-weight:500}
+html .r-community-directory{gap:18px}
+html .r-community-card{border:0;background:var(--panel);border-radius:20px}
+html .r-community-card-info b{font-weight:550}
+html .r-community-card-info>span{font-size:12px;line-height:1.6}
+html .r-community-card-foot .r-btn{min-height:40px;background:var(--paper)}
+html .r-community-cover.monad{background:#efebff}
+:root[data-theme=dark] .r-community-cover.monad{background:#302544}
+html .r-agent-wallet-card{margin:12px var(--space) 0;border:0;border-radius:20px;padding:20px;background:var(--panel)}
+html .r-agent-wallet-card b{font-weight:550}
+html .r-agent-wallet-card small{font-size:11px}
+html .r-agent-suggestions button{border:0;background:var(--panel);border-radius:18px}
+html .r-agent-suggestions button b{font-weight:550;font-size:14px}
+html .r-agent-brand-mark{border:0}
+html .r-agent-directory .r-agent-card{border:0;border-radius:20px}
+html .r-account-card h2{font-size:24px;font-weight:550;letter-spacing:-.6px}
+html .r-account-options>button,html .r-account-options>a{font-size:13px;font-weight:450;border-color:var(--line);min-height:58px}
+html .r-account-options .icon{stroke-width:1.65;width:21px;height:21px}
+html .ct-account-card,html .cr-account{border:0;background:var(--panel);border-radius:20px}
+html .rx-discover-head,html .rx-leader-head{border-bottom:0;padding:26px var(--space) 18px}
+html .rx-discover-head>div:first-child{margin-bottom:20px}
+html .rx-search input{font-size:14px}
+html .rx-discover-filters,html .rx-leader-filters{gap:6px;margin-top:14px}
+html .rx-discover-filters button,html .rx-leader-filters button{border:0;border-radius:100px;min-height:40px;font-size:12px;font-weight:450;padding-inline:16px}
+html .rx-discover-filters button[aria-pressed=true],html .rx-leader-filters button[aria-pressed=true]{background:var(--soft);color:var(--text);font-weight:550}
+html .rx-grid{gap:6px;padding:0 var(--space)}
+html .rx-tile{border-radius:14px;background:var(--panel)}
+html .rx-tile:has(>img.is-loaded:not([hidden])) .rx-tile-fallback{visibility:hidden}
+html .rx-tile-fallback{background:var(--soft);padding:22px;gap:12px}
+html .rx-tile-fallback>b{font-weight:500;line-height:1.5;letter-spacing:-.4px}
+html .rx-tile-type{background:#1a1a2280;border-radius:100px;height:25px;width:25px}
+html .rx-tile-bottom{padding:40px 16px 14px;background:linear-gradient(transparent,#13131bc9)}
+html .rx-tile-bottom>b{font-weight:550;font-size:14px;margin-bottom:7px}
+html .rx-tile-bottom strong{font-weight:550;font-size:20px}
+html .rx-tile-author{font-weight:450;background:#11131b80;border-radius:100px;padding:4px 8px;text-shadow:none}
+html .rx-grid-skeleton>div{border-radius:14px}
+html .rx-leader-head>div>span{font-size:11px}
+html .rx-leader-person b{font-weight:550}
+html .rx-leader-return b{font-weight:550}
+html .rx-leader-empty{padding-top:64px;padding-bottom:40px}
+html .rx-leader-empty h2{font-weight:550}
+html .rx-leader-empty>.icon{color:var(--brand)}
+html .rx-leader-method{font-size:11px}
+html .r-overlay{background:#15152150;backdrop-filter:none;animation:none}
+html .r-modal{background:var(--paper);border:0;border-radius:26px;box-shadow:var(--r-sheet-shadow);animation:none;overflow-x:clip}
+html .r-modal-head h2{font-size:18px;font-weight:550;letter-spacing:-.4px}
+html .r-modal-head>.r-icon-button{background:var(--soft);width:44px;min-width:44px;height:44px;min-height:44px;border-radius:100px}
+html .r-modal-head>.r-icon-button .icon{width:18px;height:18px}
+html .rx-preview-modal>.r-modal-head,html .rx-post-modal .r-modal-head{border-bottom:0;padding:18px 24px}
+html .rx-preview-performance{border-top:0;margin-bottom:16px;padding-top:8px}
+html .rx-preview-performance strong{font-weight:550}
+html .rx-preview-performance b{font-weight:500}
+html .rx-preview-post p{font-size:15px;line-height:1.65}
+html .rx-preview-footer{border-top:0;background:var(--paper)}
+html .rx-preview-locked h3{font-weight:550}
+html .rx-paywall-mark{border:0;border-radius:20px;background:var(--r-nav-active);color:var(--link)}
+html .r-asset-modal .r-asset-price strong{font-size:38px;font-weight:500;letter-spacing:-1.2px}
+html .r-asset-summary b{font-weight:550}
+html .r-asset-facts b{font-weight:500}
+html .r-mini-periods{gap:8px}
+html .r-mini-periods button{font-size:12px;font-weight:450;min-height:44px;min-width:44px}
+html .r-mini-periods [aria-pressed=true]{font-weight:550;background:var(--soft)}
+html .r-asset-actions button{border-radius:100px;min-height:48px;font-weight:550}
+html .r-trade-scrim{background:#15152150;backdrop-filter:none}
+html .r-trade-head{border-bottom:0}
+html .r-trade-head b{font-size:16px;font-weight:550}
+html .r-trade-head>.r-icon-button{background:var(--soft);border-radius:100px}
+html .r-trade-price h2{font-size:30px;font-weight:500;letter-spacing:-1px}
+html .r-checkout-sides{padding:4px;border-radius:100px;gap:4px}
+html .r-checkout-sides button{border-radius:100px;font-weight:550;min-height:42px}
+html .r-checkout-spot :is(.r-swap-input,.r-swap-output){background:var(--panel);border:0;border-radius:22px;padding:20px}
+html .r-checkout-spot .r-swap-input input{font-weight:450;font-size:36px;letter-spacing:-1px}
+html .r-checkout-spot .r-swap-output b{font-weight:450;font-size:28px}
+html .r-checkout-presets{gap:6px}
+html .r-checkout-presets button{border:0;border-radius:100px;background:var(--soft);font-size:12px}
+html .r-checkout-presets button.selected{background:var(--r-nav-active);color:var(--link)}
+html .r-checkout-fold{border-color:var(--line)}
+html .r-checkout-fold>summary{font-weight:500}
+html .r-checkout-footer{border-top:0}
+html .r-checkout-footer>.r-btn{border-radius:100px;min-height:52px;font-weight:550}
+html .r-order-directions button{font-weight:550}
+html .r-order-modal :is(.r-field input,.r-field select){border-radius:14px;background:var(--soft);border-color:transparent}
+html .r-nad-content .nad-token-title h1{font-weight:550}
+html .r-nad-content .nad-price [data-meme-cap]{font-weight:500;font-size:32px}
+html .r-checkout-nad .nad-amount{border:0;border-radius:22px;background:var(--panel)}
+html .r-checkout-nad .nad-amount input{font-weight:450;font-size:36px}
+html .lp-head h1{font-size:28px;font-weight:550}
+html .lp-tools select{border-color:transparent;background:var(--soft);border-radius:100px}
+html .lp-card{border:0;border-radius:20px;background:var(--panel)}
+html .lp-art{border-radius:16px}
+html .lp-field :is(input,select,textarea){border-color:transparent;background:var(--soft);border-radius:14px}
+html .lp-step h2{font-weight:550}
+html .lp-token-name b{font-weight:550}
+html .r-compose-fab{background:var(--solid);color:var(--on-solid);border:0;border-radius:100px;box-shadow:0 6px 20px #11112316}
+html .r-compose-fab .icon{color:var(--on-solid);width:23px;height:23px}
+@media(hover:hover){
+ html .rx-tile:hover{filter:none}html .rx-tile:hover>img{transform:scale(1.025)}
+ html .r-community-card:hover,html .lp-card:hover{background:var(--soft)}
+}
+@media(min-width:761px){
+ html body[data-view=swipe] #page>.rx-home-head{padding-top:16px;margin-bottom:12px}
+ html body[data-view=swipe] .r-swipe{height:calc(100dvh - 188px)}
+ html .r-trade-panel,html .r-nad-panel{top:12px;right:12px;height:calc(100dvh - 24px);max-height:calc(100dvh - 24px);border:0;border-radius:26px;box-shadow:var(--r-sheet-shadow);overflow:hidden}
+}
+@media(min-width:761px) and (max-width:1000px){
+ html body[data-view] .r-layout{grid-template-columns:64px minmax(0,1fr);padding-inline:18px;gap:18px}
+ html .r-sidebar nav a{justify-content:center;padding:12px 0;max-width:64px}
+ html .r-sidebar nav a span{display:none}html .r-sidebar .r-post-button{max-width:64px}
+ html .r-sidebar nav .r-motion-glider{border-radius:18px}
+}
+@media(max-width:760px){
+ :root{--space:20px}
+ html body[data-view] .r-layout{display:block;padding:0;max-width:none}
+ html .r-workspace{padding-top:0}
+ html .r-workspace #page,html body:is([data-view=launchpad],[data-view=launch],[data-view=payments],[data-view=analytics]) .r-workspace #page{border-radius:0;box-shadow:none;border:0}
+ html .r-workspace>#main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+ html .r-header{border:0;height:60px;min-height:60px;padding-inline:20px;background:var(--paper)}
+ html .r-header .r-brand{font-size:27px}
+ html .r-header .r-theme-button,html .r-header .r-search-launch,html .r-header .r-header-create{height:40px;width:40px;min-width:40px}
+ html .r-header #account-button{font-weight:500;font-size:11px;min-height:36px;padding:8px 14px}
+ html .r-mobile-nav{position:fixed;inset:auto 10px calc(8px + env(safe-area-inset-bottom));width:calc(100% - 20px);height:64px;min-height:64px;padding:5px 4px 4px;border:1px solid var(--line);border-radius:24px;background:color-mix(in srgb,var(--paper) 94%,transparent);backdrop-filter:blur(16px);box-shadow:0 4px 20px #1111230c;isolation:isolate}
+ html .r-mobile-nav a{font-size:9px;font-weight:450;min-height:48px;gap:5px;background:transparent;border-radius:18px}
+ html .r-mobile-nav a.active{font-weight:550;background:transparent}
+ html .r-mobile-nav .r-motion-glider{border-radius:16px;z-index:-1}
+ html .r-mobile-nav .icon{width:23px;height:23px}
+ html .rx-home-head{padding:4px 20px 10px}
+ html .rx-home-tabs{margin-top:0;gap:2px;width:100%;max-width:none;padding:4px}
+ html .rx-home-tabs button{min-height:44px;font-size:12px;padding-inline:10px}
+ html .r-tabs{gap:24px;padding-inline:20px;min-height:46px}
+ html .r-tabs button{min-height:46px;font-size:12px}
+ html .r-market-tools{padding:12px 20px 4px;gap:8px}
+ html .r-market-tools>.r-btn{font-size:0;width:44px;min-width:44px;padding:10px}
+ html .r-market-tools>.r-btn .icon{width:20px;height:20px}
+ html .r-market-tools .r-input-search{height:44px;min-height:44px;padding-inline:14px}
+ html .r-market-tools input{font-size:12px;min-height:42px;height:42px}
+ html .nad-list-head{padding:8px 20px}
+ html .nad-list-head>.r-btn{min-height:40px;height:40px;width:40px;min-width:40px}
+ html .nad-filters button{min-height:40px;padding-inline:11px;font-size:11px}
+ html .nad-table tbody tr{height:80px}
+ html .r-market-table :is(.r-coin-cell b,.r-market-identity b){font-size:13px;font-weight:550}
+ html .nad-table td:first-child{padding-left:20px}
+ html .nad-progress-cell{width:88px}
+ html .r-post{padding:24px 20px 20px}
+ html #timeline>.r-post{padding-block:24px 20px}
+ html .r-post-body{font-size:15px;line-height:1.6;margin-block:14px 16px}
+ html .r-feed-toolbar .r-page-head{min-height:54px;padding-block:6px}
+ html .r-feed-heading b{font-size:16px}
+ html .r-feed-toolbar .r-swipe-entry{font-size:11px}
+ html .r-feed-toolbar .r-tabs{min-height:44px}
+ html .r-feed-toolbar .r-tabs button{min-height:44px}
+ html .r-person b{font-size:14px;font-weight:550}
+ html .r-person small{font-size:11px}
+ html .r-community-directory{padding:20px;gap:14px}
+ html .r-agent-wallet-card{margin-inline:20px;padding:18px 16px;gap:12px}
+ html .r-agent-wallet-card .r-btn{min-height:42px;font-size:12px;padding-inline:16px}
+ html .rx-discover-head,html .rx-leader-head{padding:24px 20px 16px}
+ html .rx-discover-head h1,html .rx-leader-head h1{font-size:26px;font-weight:550}
+ html .rx-discover-head>div:first-child{margin-bottom:16px}
+ html .rx-search{min-height:44px;height:44px}
+ html .rx-search input{font-size:12px}
+ html .rx-discover-filters,html .rx-leader-filters{margin-top:10px;gap:4px}
+ html .rx-discover-filters button,html .rx-leader-filters button{min-height:40px;padding-inline:13px;font-size:11px}
+ html .rx-grid{padding:0 4px;gap:4px}
+ html .rx-tile,html .rx-grid-skeleton>div{border-radius:10px}
+ html .rx-tile-bottom{padding:28px 10px 10px}
+ html .rx-tile-bottom>b{font-size:11px;font-weight:550}
+ html .rx-tile-bottom strong{font-size:16px;font-weight:550}
+ html .rx-tile-type{height:22px;width:22px}
+ html .rx-tile-fallback{padding:14px 12px}
+ html .rx-tile-fallback>b{font-size:12px;font-weight:450;line-height:1.45;letter-spacing:-.2px}
+ html .rx-tile-author{font-size:9px;padding:3px 6px;bottom:8px;left:8px}
+ html .r-compose-fab{width:46px;height:46px;right:20px;bottom:calc(90px + env(safe-area-inset-bottom))}
+ html .r-modal{max-height:calc(100dvh - 16px);border-radius:26px 26px 0 0;box-shadow:var(--r-sheet-shadow)}
+ html .r-overlay{align-items:flex-end;padding:16px 0 0}
+ html .r-modal:not(.rx-preview-modal):not(.rx-post-modal){width:100%;margin:0}
+ html .rx-preview-modal,html .rx-post-modal{border-radius:26px 26px 0 0!important;max-height:94dvh}
+ html .rx-preview-modal>.r-modal-head,html .rx-post-modal .r-modal-head{padding:18px 20px 12px}
+ html .rx-preview-identity{padding-inline:20px}
+ html .rx-preview-performance{margin-inline:20px;gap:24px}
+ html .rx-preview-performance strong{font-size:30px;font-weight:500}
+ html .rx-preview-post{padding:20px}
+ html .rx-preview-footer{padding-inline:20px}
+ html .r-trade-panel,html .r-nad-panel{border:0;border-radius:26px 26px 0 0;overflow:hidden;max-height:96dvh;height:96dvh}
+ html body[data-view=swipe] #page>.rx-home-head{padding:12px 20px 8px}
+ html body[data-view=swipe] .r-swipe{height:calc(100dvh - 148px - env(safe-area-inset-bottom));padding-inline:12px;grid-template-rows:48px minmax(0,1fr) 28px}
+ html body[data-view=swipe] .r-swipe-deck{border-radius:24px}
+ html body:is([data-view=launchpad],[data-view=launch],[data-view=payments],[data-view=analytics]) #page>.rx-home-head{padding-bottom:4px;margin-bottom:16px}
+ html .lp-head h1{font-size:26px;font-weight:550}
+}
+@media(prefers-reduced-transparency:reduce){html .r-mobile-nav{background:var(--paper);backdrop-filter:none}}
+@media(prefers-reduced-motion:reduce){
+ html :is(.r-btn,.lp-primary,.lp-secondary,.r-icon-button,.rx-tile>img,.r-mobile-nav a,.r-sidebar nav a){transition:none}
+ html :is(.r-modal,.r-trade-panel,.r-nad-panel,.r-overlay){animation:none}
+ html :is(.r-btn,.lp-primary,.lp-secondary):active{transform:none}
+}

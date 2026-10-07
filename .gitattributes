@@ -1,0 +1,11 @@
+* text=auto
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.mp4 binary
+*.woff2 binary
+assets/** linguist-vendored
+config/**/*.json linguist-vendored
+auth-client/package-lock.json linguist-generated
+package-lock.json linguist-generated

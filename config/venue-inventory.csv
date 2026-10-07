@@ -1,0 +1,92 @@
+registry_key,name,categories,project_url,docs_url,unverified_or_blocker
+0x,0x,DeFi::DEX;DeFi::DEX Aggregator;DeFi::Launchpads;DeFi::Memecoin;DeFi::Stableswap;DeFi::Trading Interfaces;DeFi::Cross Chain,https://0x.org/,https://0x.org/docs,Provider access or an executable route is required
+1inch,1inch,DeFi::DEX Aggregator;DeFi::DEX;DeFi::Intents;DeFi::Trading Interfaces,https://1inch.io/,https://docs.1inch.io/,Provider access or an executable route is required
+aave_v3,Aave V3,DeFi::Lending;DeFi::Stablecoin,https://aave.com/,https://aave.com/docs,Provider access or an executable route is required
+aegis,Aegis,DeFi::DEX,https://aegis.markets,https://docs.aegis.markets,Provider access or an executable route is required
+aeon,Aeon,DeFi::DEX,https://www.aeon.fun/hooks,,Provider access or an executable route is required
+aethonswap,AethonSwap,DeFi::DEX,https://app.aethonswap.com/,https://docs.aethonswap.com/,Provider access or an executable route is required
+agora,Agora,DeFi::Stablecoin;DeFi::Asset Issuers,https://www.agora.finance,https://docs.agora.finance,Provider access or an executable route is required
+apriori,aPriori,DeFi::Liquid Staking;DeFi::MEV;DeFi::DEX Aggregator,https://www.apr.io/,https://apriori-docs.gitbook.io/apriori-docs/,Provider access or an executable route is required
+atlantis,Atlantis,DeFi::DEX,https://atlantisdex.xyz,https://atlantis-dex.gitbook.io/whitepaper,Provider access or an executable route is required
+avail_nexus,Avail Nexus,Infra::Interoperability;DeFi::Cross Chain;DeFi::Intents,https://availproject.org/,https://docs.availproject.org/,Provider access or an executable route is required
+balancer,Balancer,DeFi::DEX,https://balancer.fi,https://docs.balancer.fi/,Provider access or an executable route is required
+bean_exchange,Bean Exchange,DeFi::DEX;DeFi::Perpetuals / Derivatives,https://bean.exchange,https://docs.bean.exchange,Provider access or an executable route is required
+blinq,Blinq,Consumer::Prediction Market;DeFi::Perpetuals / Derivatives,https://blinq.fi/,,Provider access or an executable route is required
+brownfi,BrownFi,DeFi::DEX,https://brownfi.io,https://brownfi.gitbook.io/brownfi-docs,Provider access or an executable route is required
+bungee,Bungee.Exchange,DeFi::Cross Chain;Infra::Interoperability,https://www.bungee.exchange,https://docs.bungee.exchange/,Provider access or an executable route is required
+capricorn,Capricorn,DeFi::DEX,https://capricorn.exchange/,https://capricorn-protocol.notion.site/Capricorn-DEX-Aggregator-Integration-Guide-28c945bc2f3a80b496e6c755f9ca7452,Provider access or an executable route is required
+cashmere,Cashmere,DeFi::Cross Chain,https://cashmere.exchange,https://docs.cashmere.exchange/,Provider access or an executable route is required
+castora,Castora,Consumer::Prediction Market,https://castora.xyz,https://github.com/castora-xyz/castora?tab=readme-ov-file#castora,Provider access or an executable route is required
+cctp_exchange,CCTP Exchange,DeFi::Cross Chain;Infra::Interoperability,https://cctp.exchange,https://docs.rath.fi/,Provider access or an executable route is required
+centrifuge,Centrifuge,DeFi::RWA,https://centrifuge.io,https://docs.centrifuge.io,Provider access or an executable route is required
+clober,Clober,DeFi::DEX,https://clober.io,https://ethresear.ch/t/enabling-on-chain-order-matching-for-order-book-dexs-revisited-segmented-segment-trees-and-octopus-heaps-explained/15180,Provider access or an executable route is required
+covenant,Covenant,DeFi::CDP;DeFi::DEX;DeFi::Yield,https://covenant.finance,https://docs.covenant.finance,Provider access or an executable route is required
+crsh,CRSH Market,Consumer::Prediction Market,https://crshmarket.com,,Provider access or an executable route is required
+crystal,Crystal,DeFi::DEX;DeFi::Launchpads,https://crystal.exchange,https://docs.crystal.exchange,Provider access or an executable route is required
+curve,Curve Finance,DeFi::DEX;DeFi::Stableswap,https://curve.finance,https://docs.curve.finance/,Provider access or an executable route is required
+dexalot,Dexalot,DeFi::DEX;DeFi::Cross Chain;DeFi::Trading Interfaces,https://app.dexalot.com/,https://docs.dexalot.com/,Provider access or an executable route is required
+dirol,Dirol,DeFi::DEX;DeFi::DEX Aggregator;DeFi::Launchpads;DeFi::Memecoin;DeFi::Stableswap;DeFi::Trading Interfaces,https://dex.dirol.io/,,Provider access or an executable route is required
+doppler,Doppler,DeFi::Launchpads;DeFi::Asset Issuers,https://www.doppler.lol/,https://docs.doppler.lol/,Provider access or an executable route is required
+drake_exchange,Drake Exchange,DeFi::Perpetuals / Derivatives;DeFi::DEX,https://drake.exchange/,https://docs.drake.exchange/,Provider access or an executable route is required
+dyorswap,DYORSwap,DeFi::DEX,https://dyorswap.finance/,,Provider access or an executable route is required
+eisen_finance,Eisen,DeFi::DEX Aggregator,https://eisenfinance.com,https://books.eisenfinance.com/eisen-finance,Provider access or an executable route is required
+esp_fun,ESP.Fun,Gaming::Games;NFT::Collections;DeFi::DEX,https://esp.fun/,,Provider access or an executable route is required
+fibrous,Fibrous,DeFi::DEX;DeFi::DEX Aggregator;DeFi::Trading Interfaces,https://fibrous.finance,https://docs.fibrous.finance,Provider access or an executable route is required
+fly_trade,Fly Trade,DeFi::DEX Aggregator,https://www.fly.trade,https://docs.fly.trade,Provider access or an executable route is required
+folks_finance,Folks Finance,DeFi::Lending;DeFi::Cross Chain,https://xapp.folks.finance,https://docs.xapp.folks.finance,Provider access or an executable route is required
+garden,Garden,DeFi::Cross Chain,https://garden.finance/,https://docs.garden.finance/developers/overview,Provider access or an executable route is required
+gmgn,Gmgn,DeFi::DEX Aggregator,https://gmgn.ai/,https://docs.gmgn.ai/,Provider access or an executable route is required
+hanji,Hanji,DeFi::DEX,https://hanji.io,https://docs.hanji.io,Provider access or an executable route is required
+hellotrade,HelloTrade,DeFi::Perpetuals / Derivatives;DeFi::RWA,https://www.hello.trade/,https://docs.hello.trade,Provider access or an executable route is required
+izumi_finance,iZiSwap,DeFi::DEX,https://izumi.finance/trade/swap,https://docs.izumi.finance/,Provider access or an executable route is required
+kansei,Kansei,DeFi::DEX;DeFi::Liquid Staking;DeFi::Leveraged Farming;DeFi::Lending;DeFi::Stableswap;DeFi::Yield,https://kansei.finance/,https://docs.kansei.finance/,Provider access or an executable route is required
+kinetk,KINETK,AI::Consumer AI;AI::Data;DeFi::RWA;Infra::Other,https://www.kinetk.ai/,,Provider access or an executable route is required
+kuru,Kuru,DeFi::DEX;DeFi::DEX Aggregator,https://kuru.io,https://docs.kuru.io/,Provider access or an executable route is required
+kyberswap,KyberSwap,DeFi::Cross Chain;DeFi::DEX Aggregator,https://kyberswap.com/,https://docs.kyberswap.com/,Provider access or an executable route is required
+leverup,LeverUp,DeFi::Perpetuals / Derivatives,https://leverup.xyz,https://leverup.gitbook.io/docs/,Provider access or an executable route is required
+levr_bet,Levr Bet,Gaming::Games;DeFi::Perpetuals / Derivatives,https://www.levr.bet/,,Provider access or an executable route is required
+lfj,LFJ,DeFi::DEX;DeFi::Memecoin,https://lfj.gg/,https://docs.lfj.gg/,Provider access or an executable route is required
+lunarbase,LunarBase,DeFi::DEX,https://lunarbase.gg/,,Provider access or an executable route is required
+mace,Mace,DeFi::DEX Aggregator;DeFi::Trading Interfaces,https://www.mace.ag/,https://docs.mace.ag/,Provider access or an executable route is required
+matcha,Matcha,DeFi::Cross Chain;DeFi::DEX Aggregator,https://matcha.xyz/,https://help.matcha.xyz/,Provider access or an executable route is required
+mayan,Mayan,DeFi::Cross Chain;DeFi::DEX;DeFi::Intents;DeFi::Memecoin;DeFi::Stableswap;DeFi::Trading Interfaces,https://mayan.finance/,https://docs.mayan.finance/,Provider access or an executable route is required
+mento,Mento,DeFi::Stablecoin;DeFi::Stableswap;DeFi::DEX,https://www.mento.org/,https://docs.mento.org/mento,Provider access or an executable route is required
+metric,Metric,DeFi::DEX,https://www.metric.xyz/,,Provider access or an executable route is required
+midas,Midas,DeFi::Asset Issuers;DeFi::RWA,https://midas.app,https://docs.midas.app,Provider access or an executable route is required
+monday_trade,Monday Trade,DeFi::DEX;DeFi::Perpetuals / Derivatives,https://monday.trade/,https://docs.monday.trade/,Provider access or an executable route is required
+monorail,Monorail,DeFi::DEX Aggregator;DeFi::Trading Interfaces,https://monorail.xyz,https://docs.monorail.xyz,Provider access or an executable route is required
+moose,Moose,DeFi::DEX Aggregator,https://moose.trade/,,Provider access or an executable route is required
+mu_digital,Mu Protocol,DeFi::RWA;DeFi::Yield,https://mudigital.net/,https://mu-digital.gitbook.io/mu-digital-litepaper,Provider access or an executable route is required
+nabla_finance,Nabla Finance,DeFi::DEX;DeFi::Yield,https://monad.nabla.fi,https://docs.nabla.fi/,Provider access or an executable route is required
+narwhal_finance,Narwhal Finance,DeFi::Perpetuals / Derivatives,https://narwhal.finance/,https://docs.narwhal.finance/,Provider access or an executable route is required
+near_intents,Near Intents,DeFi::Intents,https://near-intents.org/,,Provider access or an executable route is required
+o1_exchange,o1.exchange,DeFi::Launchpads;DeFi::DEX Aggregator,https://o1.exchange/,https://docs.o1.exchange/,Provider access or an executable route is required
+obsdn,OBSDN,DeFi::Perpetuals / Derivatives,https://app.obsdn.trade,,Provider access or an executable route is required
+octoswap,OctoSwap,DeFi::DEX,https://octo.exchange/,https://docs.octo.exchange/,Provider access or an executable route is required
+okx_aggregator,OKX Wallet,DeFi::DEX Aggregator,https://web3.okx.com/,,Provider access or an executable route is required
+openocean,OpenOcean,DeFi::DEX;DeFi::DEX Aggregator;DeFi::Trading Interfaces;DeFi::Cross Chain,https://openocean.finance/,https://docs.openocean.finance/,Provider access or an executable route is required
+orbiter_finance,OrbiterFinance,DeFi::DEX;Infra::Interoperability,https://orbiter.finance,https://docs.orbiter.finance,Provider access or an executable route is required
+pancakeswap,PancakeSwap,DeFi::DEX,https://pancakeswap.finance/?chain=monad,https://developer.pancakeswap.finance/,Provider access or an executable route is required
+parletto,Parletto,Consumer::Prediction Market,https://parletto.bet/,https://parletto.bet/docs,Provider access or an executable route is required
+perpl,Perpl,DeFi::Perpetuals / Derivatives,https://perpl.xyz,https://docs.perpl.xyz,Provider access or an executable route is required
+pingu_exchange,Pingu Exchange,DeFi::Perpetuals / Derivatives,https://pingu.exchange/,https://docs.pingu.exchange/,Provider access or an executable route is required
+purps_exchange,Purps,DeFi::DEX;DeFi::Perpetuals / Derivatives;DeFi::Launchpads,http://app.purps.xyz/,https://purpsexchange.gitbook.io/docs,Provider access or an executable route is required
+rango,Rango,Infra::Interoperability;DeFi::DEX Aggregator;DeFi::Cross Chain,https://rango.exchange/,https://docs.rango.exchange/,Provider access or an executable route is required
+relay,Relay,DeFi::Cross Chain,https://relay.link/bridge,https://docs.relay.link/what-is-relay,Provider access or an executable route is required
+rocket_markets,Rocket Markets,Consumer::Prediction Market,https://app.rocketmarkets.fun/,https://rocket-markets.gitbook.io/rocket-markets-docs/,Provider access or an executable route is required
+rubic,Rubic,DeFi::DEX Aggregator,https://rubic.exchange/,https://docs.rubic.finance/,Provider access or an executable route is required
+skate_amm,Skate AMM,DeFi::DEX;Infra::Interoperability,https://skatechain.org,https://docs.skatechain.org,Provider access or an executable route is required
+someswap,SomeSwap,DeFi::DEX,https://someswap.org,https://github.com/Something-tools/SomethingSpecs,Provider access or an executable route is required
+stakestone,StakeStone,DeFi::Asset Issuers;DeFi::Liquid Staking;DeFi::Stablecoin;DeFi::Yield,https://stakestone.io,https://docs.stakestone.io/stakestone,Provider access or an executable route is required
+sumer_money,Sumer,DeFi::Lending;DeFi::CDP;DeFi::Cross Chain;DeFi::Synthetics,https://www.sumer.money/,https://docs.sumer.money/,Provider access or an executable route is required
+sushiswap,SushiSwap,DeFi::DEX Aggregator;DeFi::DEX,https://www.sushi.com/monad/swap,https://docs.sushi.com/,Provider access or an executable route is required
+swaap,Swaap,DeFi::DEX,https://www.swaap.finance/,https://docs.swaap.finance/,Provider access or an executable route is required
+symbiosis_finance,Symbiosis,DeFi::Cross Chain;Infra::Interoperability;DeFi::DEX Aggregator,https://symbiosis.finance/,https://docs.symbiosis.finance/,Provider access or an executable route is required
+symphony,Symphony,AI::Agent Launchpad;AI::Abstraction Infrastructure;AI::Infrastructure;DeFi::Intents;DeFi::Cross Chain;Infra::AA;Infra::Interoperability;Infra::Developer Tooling;CeFi::Institutional Trading,https://www.symphony.io/,https://symphony-3.gitbook.io/symphony-docs,Provider access or an executable route is required
+tadle,Tadle,DeFi::Lending;DeFi::CDP;DeFi::Launchpads;DeFi::Liquid Staking;DeFi::DEX Aggregator;DeFi::Yield Aggregator;Infra::Interoperability;DeFi::Stablecoin;DeFi::Yield,https://tadle.com/,https://docs.tadle.com/,Provider access or an executable route is required
+townsquare,TownSquare,DeFi::Lending;DeFi::Cross Chain,https://www.townsq.xyz/,https://docs.townsq.xyz/,Provider access or an executable route is required
+trendle,Trendle,Consumer::Prediction Market,https://trendle.fi,https://docs.trendle.fi,Provider access or an executable route is required
+uniswap,Uniswap,DeFi::DEX,https://app.uniswap.org/,https://docs.uniswap.org/,Provider access or an executable route is required
+velvet_capital,Velvet Capital,DeFi::DEX Aggregator,https://velvet.capital,https://docs.velvet.capital/,Provider access or an executable route is required
+woofi,WooFi,DeFi::DEX,https://woofi.com/,https://learn.woo.org/,Provider access or an executable route is required
+zkswap,zkSwap,DeFi::DEX,https://www.zkswap.finance/,https://docs.zkswap.finance/,Provider access or an executable route is required

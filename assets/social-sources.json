@@ -1,0 +1,17 @@
+{
+  "house": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/house.svg",
+  "compass": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/compass.svg",
+  "image": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/image.svg",
+  "video": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/video.svg",
+  "send": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/send.svg",
+  "link": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/link.svg",
+  "ellipsis": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/ellipsis.svg",
+  "repeat-2": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/repeat-2.svg",
+  "plug": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/plug.svg",
+  "user": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/user.svg",
+  "code-xml": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/code-xml.svg",
+  "social-coast.jpg": "https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=1200&q=85&fit=crop",
+  "social-forest.jpg": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1000&q=85&fit=crop",
+  "social-ocean.jpg": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=1200&q=85&fit=crop",
+  "garden.mp4": "https://developer.mozilla.org/shared-assets/videos/flower.mp4"
+}

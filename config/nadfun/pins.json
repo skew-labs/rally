@@ -1,0 +1,88 @@
+{
+  "chainId": 143,
+  "observedBlock": 109583096,
+  "versions": {
+    "v1": {
+      "curve": {
+        "address": "0xa7283d07812a02afb7c09b60f8896bcea3f90ace",
+        "codeHash": "179871e3075dd4d79792fe4372908ae21d7d29375d4af9bd9e54fcdf6c0d4d41",
+        "implementation": "0x0000000000000000000000000000000000000000",
+        "implementationHash": null
+      },
+      "router": {
+        "address": "0x6f6b8f1a20703309951a5127c45b49b1cd981a22",
+        "codeHash": "536312aa35fd69bd03b98cf27045c8a33d50604a10ec2752829bf25e1321246b",
+        "implementation": "0x0000000000000000000000000000000000000000",
+        "implementationHash": null
+      },
+      "dex": {
+        "address": "0x0b79d71ae99528d1db24a4148b5f4f865cc2b137",
+        "codeHash": "3d5738f7a56cde77dc89815ca740610311b6e0ac9f20230b14fb4ec3a1d4f533",
+        "implementation": "0x0000000000000000000000000000000000000000",
+        "implementationHash": null
+      },
+      "lens": {
+        "address": "0x7e78a8de94f21804f7a17f4e8bf9ec2c872187ea",
+        "codeHash": "42a9420260b5dedd4223dd3bc41e137c705c1b74848cce0ec7cc901029787aac",
+        "implementation": "0x0000000000000000000000000000000000000000",
+        "implementationHash": null
+      }
+    },
+    "v2": {
+      "curve": {
+        "address": "0x9f3832732923252a21044f21ee6bd87f09514ae4",
+        "codeHash": "2447607bbb39aaa48b87ad6ae4d998c72637b40b38a6a57efc716eaf44b47880",
+        "implementation": "0x2034ea6f363228864af5858303bb35524fadcc77",
+        "implementationHash": "cb65c902085073e152aa75bac66e6cbfa60bfb9d5390d1aea4057f1e766cd4d5"
+      },
+      "router": {
+        "address": "0x8986c8fd44eb85294a725a7e61af35e76ba26f91",
+        "codeHash": "2447607bbb39aaa48b87ad6ae4d998c72637b40b38a6a57efc716eaf44b47880",
+        "implementation": "0xf0001763fe64837f603d0464b7ac8bb65c3807b9",
+        "implementationHash": "ee375ceccd71c3fdaa2dd002af22aa8b398cb03750d151e9b15d9f18d30b25a6"
+      },
+      "factory": {
+        "address": "0xa25b13127e63ddae6d0b35570ff3d39dbd621001",
+        "codeHash": "4c478af8272ac847e97758cfce4a36d26c4d0bd0a404283822a842259d795cdf",
+        "implementation": "0x0000000000000000000000000000000000000000",
+        "implementationHash": null
+      },
+      "fees": {
+        "address": "0xe1c8b73343f5a83ebe165be90470d84b00e33022",
+        "codeHash": "2447607bbb39aaa48b87ad6ae4d998c72637b40b38a6a57efc716eaf44b47880",
+        "implementation": "0xd52cc42cbd16f2da5fdf4d6d4b4fa3f709556dbe",
+        "implementationHash": "85351d36e1fc18d7fb64cd23d4ae14d7b419460525eb39d6d3d5670989ec3ec4"
+      },
+      "creatorVault": {
+        "address": "0x687f9172d5f4798694811333c5c5696afcf4f6f4",
+        "codeHash": "2447607bbb39aaa48b87ad6ae4d998c72637b40b38a6a57efc716eaf44b47880",
+        "implementation": "0xa0d351aa2ef0b5f1c53ec1d50b3e0bb777ef4a6e",
+        "implementationHash": "b433a1e4576da76fe25f07a36dd26f04908fd404cf00881b973528a1f5908479"
+      },
+      "manager": {
+        "address": "0x71f846a560a4d68f53e5bd34ed084e7992f171c7",
+        "codeHash": "2447607bbb39aaa48b87ad6ae4d998c72637b40b38a6a57efc716eaf44b47880",
+        "implementation": "0x2e14b3705e247ed3424cdbf11c6d46e69fd1de50",
+        "implementationHash": "121f80a6664b4e5e15b5fb564c695f1a671a53bba32a08ecfc2860c60972d5b5"
+      }
+    }
+  },
+  "abiHashes": {
+    "NadFunPair.json": "99dbff5d14abf466bc66e6a2be5a0c199587eab05163a261712ba3e9a0ee7aee",
+    "routerAbi.json": "79b6ed60e201e30727d69a40bcdcaef5d89bbd4a5916d48c7511c1b9b252727b",
+    "dexRouterAbi.json": "c275082ea3085d7b75ccd870cc436a0579a38569f263dca0c9f2928a9e40ed7b",
+    "NadFunRouter.json": "ef99015bd5322d2bc64d7158cfce16aa315be99e606b9ff0e3f3f85f71a3547b",
+    "curveAbi.json": "67eb27f7d3b0b2f04b2e930ab2502de257d2c6ca04ce892f68ed20ad885a9ebf",
+    "NadFunFactory.json": "34c147f60b4e351d3c1b8c58b0e51ff89409c6fb80bd55bd0d6cde55b6423351",
+    "v3factoryAbi.json": "c6cdb74a5daa12dcd4c78363f07379c6f544233c85870a913ae6beb1f152b420",
+    "BondingCurve.json": "dc9f0ae16b9b9949cde860662c4d46c39a206097ca7579451a14181d96fb3aca",
+    "v3PoolAbi.json": "15c66792acb759674021b0be82164fadc71272d4a914fd14e4e5c4d108ab7563",
+    "FeeCollector.json": "1d5e695e9658923f075c54b5d4c2a3c12ce2dbc13cd8bd500e099917fcbc0a91",
+    "bondingCurveRouterAbi.json": "5482e7d1f6eaaec479c3033f2d14efc9872571fa3908fd006eaaf0f6988a4819",
+    "lensAbi.json": "4ec328c0c1bcb9b3b70330039c21893177cfab61829666e7b784bb04312596f1"
+  },
+  "v2Creation": {
+    "deployFeeRaw": "0",
+    "creatorFee100Allowed": true
+  }
+}

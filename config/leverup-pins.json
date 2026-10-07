@@ -1,0 +1,45 @@
+{
+  "abiHash": "45b2726843128c7e6a8effea801df836dea859a6153d2a4e6589c7a2c006fa12",
+  "diamondHash": "e4582cfcbff83bed7136b9fa05479c167a3eeda25863afb2e28ad11fcfe9b125",
+  "facets": [
+    {
+      "signature": "closeTrade(bytes32)",
+      "selector": "0x5177fd3b",
+      "address": "0x75d30edb9d63dad17ff89c4e5ba43a03e5895fbb",
+      "codeHash": "6e1d2418ce9bf12ae01209bf0a370ccaae1c507a2d6ba50912dcdc6b7329377b"
+    },
+    {
+      "signature": "getPairByBaseV4(address)",
+      "selector": "0x9bd39764",
+      "address": "0x619d09d48471a81bc460eac82714c4ddd9fc5477",
+      "codeHash": "b5878f23eff938dff17291613c2d655bf419303f8bfeb1ab9ea078126699a60b"
+    },
+    {
+      "signature": "getPositionByHashV4(bytes32)",
+      "selector": "0x1a93c7f5",
+      "address": "0x0bad7278431c49ab2baf7286c000852d35527242",
+      "codeHash": "87f2d7d9a97cd53f0130fb729bed9697409f6f75a006a55dc4f3f3117c48d707"
+    },
+    {
+      "signature": "getPositionsV4(address,address)",
+      "selector": "0x456b99bf",
+      "address": "0x0bad7278431c49ab2baf7286c000852d35527242",
+      "codeHash": "87f2d7d9a97cd53f0130fb729bed9697409f6f75a006a55dc4f3f3117c48d707"
+    },
+    {
+      "signature": "getPositionTrader(bytes32)",
+      "selector": "0xcfb49a78",
+      "address": "0x0bad7278431c49ab2baf7286c000852d35527242",
+      "codeHash": "87f2d7d9a97cd53f0130fb729bed9697409f6f75a006a55dc4f3f3117c48d707"
+    },
+    {
+      "signature": "openMarketTradeV2((address,bool,address,address,uint96,uint128,uint128,uint128,uint128,uint24),(bytes[],bytes[]),uint96)",
+      "selector": "0xd10227eb",
+      "address": "0x75d30edb9d63dad17ff89c4e5ba43a03e5895fbb",
+      "codeHash": "6e1d2418ce9bf12ae01209bf0a370ccaae1c507a2d6ba50912dcdc6b7329377b"
+    }
+  ],
+  "chainId": 143,
+  "address": "0xea1b8e4ab7f14f7dca68c5b214303b13078fc5ec",
+  "sourceURL": "https://developer-docs.leverup.xyz/abi/leverup-trading-abi.json"
+}

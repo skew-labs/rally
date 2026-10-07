@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "scripts": {"build": "node build.mjs"},
+  "overrides": {"viem": {"ws": "8.21.3"}},
+  "dependencies": {
+    "@privy-io/node": "^0.35.0",
+    "@privy-io/react-auth": "^3.47.0",
+    "esbuild": "^0.25.11",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "viem": "^2.57.2"
+  }
+}

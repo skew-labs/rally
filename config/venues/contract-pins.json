@@ -1,0 +1,20 @@
+{
+  "perpl": {
+    "address": "0x34b6552d57a35a1d042ccae1951bd1c370112a6f",
+    "proxyHash": "2c8fa41c000b0b1ad61376436999748e836f19cf4daf272accaa4dad294ba40c",
+    "implementation": "0xa9ab97a404a0bca04d6a5b4a39995fea9e791b2a",
+    "implementationHash": "d31e025afe24667a611336fd95aa5cc62bfd26357055ffb9bec19d2160a1f564",
+    "observedAt": 1790823840,
+    "chainId": 143,
+    "abiHash": "1073edc45f76e8455ab143e9625df92bb93cf1bbaa1c183aa960be528778c15e"
+  },
+  "castora": {
+    "address": "0x9e1e6f277df3f2cd150ae1e08b05f45b3297be6d",
+    "proxyHash": "dbcd10438cc4e10f68f70d67bba5ccbdbb63f86da57b5fb7e432f8361c6f1c8f",
+    "implementation": "0x1cee4bfc463a7cc0016828bcc94e0592c850f97f",
+    "implementationHash": "7ff99cecd4d72e14d3f9b1db49ea6b5fa1d017d5f332fc8375a53fef389f054d",
+    "observedAt": 1790823840,
+    "chainId": 143,
+    "abiHash": "5d72a1e94727f6bf2a1e8356f7536da3442711443355115a1eae5322f298b85d"
+  }
+}

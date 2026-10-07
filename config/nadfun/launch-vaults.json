@@ -1,0 +1,26 @@
+{
+  "creatorFeeVault": {
+    "address": "0x687f9172d5f4798694811333c5c5696afcf4f6f4",
+    "codeHash": "2447607bbb39aaa48b87ad6ae4d998c72637b40b38a6a57efc716eaf44b47880",
+    "implementation": "0xa0d351aa2ef0b5f1c53ec1d50b3e0bb777ef4a6e",
+    "implementationHash": "b433a1e4576da76fe25f07a36dd26f04908fd404cf00881b973528a1f5908479"
+  },
+  "burnVault": {
+    "address": "0x94cfaa4d41ae2336e2a4d8b307c7faf906384c27",
+    "codeHash": "2447607bbb39aaa48b87ad6ae4d998c72637b40b38a6a57efc716eaf44b47880",
+    "implementation": "0x5213469f2c24ff73626eee7add00ce12f2bf2409",
+    "implementationHash": "ac54e8bff0a790a056ea3ed5d8c4001e5d14ba3aeef3add06f0061260dfcd381"
+  },
+  "lpVault": {
+    "address": "0xa1a5ea7c9490a25e715351ddc66a7771e1817e66",
+    "codeHash": "2447607bbb39aaa48b87ad6ae4d998c72637b40b38a6a57efc716eaf44b47880",
+    "implementation": "0xd8d3dd7f6a9c6c71382180fd9c57f01eb1095930",
+    "implementationHash": "5593d50eb890d864feddccf84f1f1b6a9bb30cc8d0f7407a0f3237dc3f4b4940"
+  },
+  "giftVault": {
+    "address": "0xa46a28558d77b1bf9dd98a451f78c43be2545605",
+    "codeHash": "2447607bbb39aaa48b87ad6ae4d998c72637b40b38a6a57efc716eaf44b47880",
+    "implementation": "0x640e822fe712de6ca522b30cb7a20ba5d5b7648e",
+    "implementationHash": "6fdc71e8d7164977a21b7579dbd1381f6c01aba182424e3c9e7c4f1c5101c8b9"
+  }
+}

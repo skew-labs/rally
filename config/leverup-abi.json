@@ -1,0 +1,3655 @@
+[
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "minRequiredLeverage",
+        "type": "uint256"
+      },
+      {
+        "name": "newLeverage",
+        "type": "uint256"
+      }
+    ],
+    "name": "BelowDegenModeMinLeverage",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ExceedDecreaseOrderMaxTakeProfit",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "maxLeverage",
+        "type": "uint256"
+      },
+      {
+        "name": "newLeverage",
+        "type": "uint256"
+      }
+    ],
+    "name": "ExceedMaxLeverageAfterMarginRemoval",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "marketPrice",
+        "type": "uint256"
+      },
+      {
+        "name": "maxTakeProfit",
+        "type": "uint256"
+      }
+    ],
+    "name": "ExceedMaxTakeProfitAfterMarginRemoval",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "InsufficientMarginAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidDecreaseOrderCloseQty",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidDecreaseOrderStopLoss",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidDecreaseOrderTakeProfit",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "name": "price",
+        "type": "int64"
+      },
+      {
+        "name": "expo",
+        "type": "int32"
+      }
+    ],
+    "name": "InvalidExpo",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "name": "priceId",
+        "type": "bytes32"
+      },
+      {
+        "name": "price",
+        "type": "int64"
+      }
+    ],
+    "name": "InvalidPrice",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "entryPrice",
+        "type": "uint128"
+      },
+      {
+        "name": "newStopLoss",
+        "type": "uint128"
+      }
+    ],
+    "name": "InvalidStopLoss",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "LiquidatableAfterMarginRemoval",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MarketClosed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NonexistentTrade",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "name": "pairBase",
+        "type": "address"
+      }
+    ],
+    "name": "PairClosed",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "name": "positionHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "PositionNotCloseable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "TooManyActiveDecreaseOrders",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "name": "UnauthorizedOperation",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "orderHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "CancelLimitOrder",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "name": "closeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "closeQty",
+        "type": "uint128"
+      },
+      {
+        "components": [
+          {
+            "name": "closePrice",
+            "type": "uint128"
+          },
+          {
+            "name": "fundingFee",
+            "type": "int96"
+          },
+          {
+            "name": "closeFee",
+            "type": "uint96"
+          },
+          {
+            "name": "pnl",
+            "type": "int96"
+          },
+          {
+            "name": "holdingFee",
+            "type": "uint96"
+          }
+        ],
+        "indexed": false,
+        "name": "closeInfo",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "name": "user",
+            "type": "address"
+          },
+          {
+            "name": "userOpenTradeIndex",
+            "type": "uint32"
+          },
+          {
+            "name": "holdingFeeRate",
+            "type": "uint40"
+          },
+          {
+            "name": "entryPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "tokenPay",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "lvMargin",
+            "type": "uint96"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32"
+          },
+          {
+            "name": "lvOpenFee",
+            "type": "uint96"
+          },
+          {
+            "name": "lvExecutionFee",
+            "type": "uint96"
+          },
+          {
+            "name": "longAccFundingFeePerShare",
+            "type": "int256"
+          },
+          {
+            "name": "openBlock",
+            "type": "uint256"
+          },
+          {
+            "name": "accruedFundingFee",
+            "type": "int128"
+          },
+          {
+            "name": "accruedHoldingFee",
+            "type": "uint128"
+          }
+        ],
+        "indexed": false,
+        "name": "ot",
+        "type": "tuple"
+      }
+    ],
+    "name": "ClosePosition",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "CloseTradeAddLiquidity",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "CloseTradeReceived",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "name": "closeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "requestId",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "closeQty",
+        "type": "uint128"
+      }
+    ],
+    "name": "CloseTradeRequested",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "components": [
+          {
+            "name": "closePrice",
+            "type": "uint128"
+          },
+          {
+            "name": "fundingFee",
+            "type": "int96"
+          },
+          {
+            "name": "closeFee",
+            "type": "uint96"
+          },
+          {
+            "name": "pnl",
+            "type": "int96"
+          },
+          {
+            "name": "holdingFee",
+            "type": "uint96"
+          }
+        ],
+        "indexed": false,
+        "name": "closeInfo",
+        "type": "tuple"
+      }
+    ],
+    "name": "CloseTradeSuccessful",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "components": [
+          {
+            "name": "closePrice",
+            "type": "uint128"
+          },
+          {
+            "name": "fundingFee",
+            "type": "int96"
+          },
+          {
+            "name": "closeFee",
+            "type": "uint96"
+          },
+          {
+            "name": "pnl",
+            "type": "int96"
+          },
+          {
+            "name": "holdingFee",
+            "type": "uint96"
+          }
+        ],
+        "indexed": false,
+        "name": "closeInfo",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "name": "user",
+            "type": "address"
+          },
+          {
+            "name": "userOpenTradeIndex",
+            "type": "uint32"
+          },
+          {
+            "name": "holdingFeeRate",
+            "type": "uint40"
+          },
+          {
+            "name": "entryPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "tokenPay",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "lvMargin",
+            "type": "uint96"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32"
+          },
+          {
+            "name": "lvOpenFee",
+            "type": "uint96"
+          },
+          {
+            "name": "lvExecutionFee",
+            "type": "uint96"
+          },
+          {
+            "name": "longAccFundingFeePerShare",
+            "type": "int256"
+          },
+          {
+            "name": "openBlock",
+            "type": "uint256"
+          }
+        ],
+        "indexed": false,
+        "name": "ot",
+        "type": "tuple"
+      }
+    ],
+    "name": "CloseTradeSuccessfulV2",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "name": "orderHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "DecreaseOrderCancelled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "name": "orderHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "kind",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "name": "triggerPrice",
+        "type": "uint128"
+      },
+      {
+        "indexed": false,
+        "name": "closeQty",
+        "type": "uint128"
+      },
+      {
+        "indexed": false,
+        "name": "broker",
+        "type": "uint24"
+      }
+    ],
+    "name": "DecreaseOrderCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "orderHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "triggerPrice",
+        "type": "uint128"
+      },
+      {
+        "indexed": false,
+        "name": "closeQty",
+        "type": "uint128"
+      },
+      {
+        "indexed": false,
+        "name": "broker",
+        "type": "uint24"
+      }
+    ],
+    "name": "DecreaseOrderUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "executionType",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "name": "execPrice",
+        "type": "uint128"
+      },
+      {
+        "indexed": false,
+        "name": "marketPrice",
+        "type": "uint128"
+      }
+    ],
+    "name": "ExecuteCloseRejected",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "executionType",
+        "type": "uint8"
+      },
+      {
+        "components": [
+          {
+            "name": "closePrice",
+            "type": "uint128"
+          },
+          {
+            "name": "fundingFee",
+            "type": "int96"
+          },
+          {
+            "name": "closeFee",
+            "type": "uint96"
+          },
+          {
+            "name": "pnl",
+            "type": "int96"
+          },
+          {
+            "name": "holdingFee",
+            "type": "uint96"
+          }
+        ],
+        "indexed": false,
+        "name": "closeInfo",
+        "type": "tuple"
+      }
+    ],
+    "name": "ExecuteCloseSuccessful",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "executionType",
+        "type": "uint8"
+      },
+      {
+        "components": [
+          {
+            "name": "closePrice",
+            "type": "uint128"
+          },
+          {
+            "name": "fundingFee",
+            "type": "int96"
+          },
+          {
+            "name": "closeFee",
+            "type": "uint96"
+          },
+          {
+            "name": "pnl",
+            "type": "int96"
+          },
+          {
+            "name": "holdingFee",
+            "type": "uint96"
+          }
+        ],
+        "indexed": false,
+        "name": "closeInfo",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "name": "user",
+            "type": "address"
+          },
+          {
+            "name": "userOpenTradeIndex",
+            "type": "uint32"
+          },
+          {
+            "name": "holdingFeeRate",
+            "type": "uint40"
+          },
+          {
+            "name": "entryPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "tokenPay",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "lvMargin",
+            "type": "uint96"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32"
+          },
+          {
+            "name": "lvOpenFee",
+            "type": "uint96"
+          },
+          {
+            "name": "lvExecutionFee",
+            "type": "uint96"
+          },
+          {
+            "name": "longAccFundingFeePerShare",
+            "type": "int256"
+          },
+          {
+            "name": "openBlock",
+            "type": "uint256"
+          }
+        ],
+        "indexed": false,
+        "name": "ot",
+        "type": "tuple"
+      }
+    ],
+    "name": "ExecuteCloseSuccessfulV2",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "orderHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "kind",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "name": "closeQty",
+        "type": "uint128"
+      },
+      {
+        "components": [
+          {
+            "name": "closePrice",
+            "type": "uint128"
+          },
+          {
+            "name": "fundingFee",
+            "type": "int96"
+          },
+          {
+            "name": "closeFee",
+            "type": "uint96"
+          },
+          {
+            "name": "pnl",
+            "type": "int96"
+          },
+          {
+            "name": "holdingFee",
+            "type": "uint96"
+          }
+        ],
+        "indexed": false,
+        "name": "closeInfo",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "name": "user",
+            "type": "address"
+          },
+          {
+            "name": "userOpenTradeIndex",
+            "type": "uint32"
+          },
+          {
+            "name": "holdingFeeRate",
+            "type": "uint40"
+          },
+          {
+            "name": "entryPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "tokenPay",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "lvMargin",
+            "type": "uint96"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32"
+          },
+          {
+            "name": "lvOpenFee",
+            "type": "uint96"
+          },
+          {
+            "name": "lvExecutionFee",
+            "type": "uint96"
+          },
+          {
+            "name": "longAccFundingFeePerShare",
+            "type": "int256"
+          },
+          {
+            "name": "openBlock",
+            "type": "uint256"
+          },
+          {
+            "name": "accruedFundingFee",
+            "type": "int128"
+          },
+          {
+            "name": "accruedHoldingFee",
+            "type": "uint128"
+          }
+        ],
+        "indexed": false,
+        "name": "ot",
+        "type": "tuple"
+      }
+    ],
+    "name": "ExecuteDecreaseOrderSuccessful",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "orderHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "refund",
+        "type": "uint8"
+      }
+    ],
+    "name": "ExecuteLimitOrderRejected",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "orderHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ExecuteLimitOrderSuccessful",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "brokerId",
+        "type": "uint24"
+      },
+      {
+        "indexed": false,
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "amount",
+        "type": "uint96"
+      },
+      {
+        "indexed": false,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "tradeHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ExtraFeeCharged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "FundingFeeAddLiquidity",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "orderHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "refund",
+        "type": "uint8"
+      }
+    ],
+    "name": "LimitOrderRefund",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "lvToken",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "slippageAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "liquidationAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "LpRevenue",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "components": [
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "tokenIn",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "amountIn",
+            "type": "uint96"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "price",
+            "type": "uint128"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          }
+        ],
+        "indexed": false,
+        "name": "trade",
+        "type": "tuple"
+      }
+    ],
+    "name": "MarketPendingTrade",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "orderHash",
+        "type": "bytes32"
+      },
+      {
+        "components": [
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "tokenIn",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "amountIn",
+            "type": "uint96"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "price",
+            "type": "uint128"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          }
+        ],
+        "indexed": false,
+        "name": "data",
+        "type": "tuple"
+      }
+    ],
+    "name": "OpenLimitOrder",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "name": "sourceHash",
+        "type": "bytes32"
+      },
+      {
+        "components": [
+          {
+            "name": "source",
+            "type": "uint8"
+          },
+          {
+            "name": "sourceHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "addedQty",
+            "type": "uint128"
+          },
+          {
+            "name": "addedEntryPrice",
+            "type": "uint128"
+          },
+          {
+            "components": [
+              {
+                "name": "user",
+                "type": "address"
+              },
+              {
+                "name": "userOpenTradeIndex",
+                "type": "uint32"
+              },
+              {
+                "name": "holdingFeeRate",
+                "type": "uint40"
+              },
+              {
+                "name": "entryPrice",
+                "type": "uint128"
+              },
+              {
+                "name": "qty",
+                "type": "uint128"
+              },
+              {
+                "name": "pairBase",
+                "type": "address"
+              },
+              {
+                "name": "tokenPay",
+                "type": "address"
+              },
+              {
+                "name": "lvToken",
+                "type": "address"
+              },
+              {
+                "name": "lvMargin",
+                "type": "uint96"
+              },
+              {
+                "name": "stopLoss",
+                "type": "uint128"
+              },
+              {
+                "name": "takeProfit",
+                "type": "uint128"
+              },
+              {
+                "name": "broker",
+                "type": "uint24"
+              },
+              {
+                "name": "isLong",
+                "type": "bool"
+              },
+              {
+                "name": "timestamp",
+                "type": "uint32"
+              },
+              {
+                "name": "lvOpenFee",
+                "type": "uint96"
+              },
+              {
+                "name": "lvExecutionFee",
+                "type": "uint96"
+              },
+              {
+                "name": "longAccFundingFeePerShare",
+                "type": "int256"
+              },
+              {
+                "name": "openBlock",
+                "type": "uint256"
+              },
+              {
+                "name": "accruedFundingFee",
+                "type": "int128"
+              },
+              {
+                "name": "accruedHoldingFee",
+                "type": "uint128"
+              }
+            ],
+            "name": "position",
+            "type": "tuple"
+          }
+        ],
+        "indexed": false,
+        "name": "update",
+        "type": "tuple"
+      }
+    ],
+    "name": "OpenPosition",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "refund",
+        "type": "uint8"
+      }
+    ],
+    "name": "PendingTradeRefund",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "name": "closeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "closeQty",
+        "type": "uint128"
+      },
+      {
+        "components": [
+          {
+            "name": "closePrice",
+            "type": "uint128"
+          },
+          {
+            "name": "fundingFee",
+            "type": "int96"
+          },
+          {
+            "name": "closeFee",
+            "type": "uint96"
+          },
+          {
+            "name": "pnl",
+            "type": "int96"
+          },
+          {
+            "name": "holdingFee",
+            "type": "uint96"
+          }
+        ],
+        "indexed": false,
+        "name": "closeInfo",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "name": "user",
+            "type": "address"
+          },
+          {
+            "name": "userOpenTradeIndex",
+            "type": "uint32"
+          },
+          {
+            "name": "holdingFeeRate",
+            "type": "uint40"
+          },
+          {
+            "name": "entryPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "tokenPay",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "lvMargin",
+            "type": "uint96"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32"
+          },
+          {
+            "name": "lvOpenFee",
+            "type": "uint96"
+          },
+          {
+            "name": "lvExecutionFee",
+            "type": "uint96"
+          },
+          {
+            "name": "longAccFundingFeePerShare",
+            "type": "int256"
+          },
+          {
+            "name": "openBlock",
+            "type": "uint256"
+          },
+          {
+            "name": "accruedFundingFee",
+            "type": "int128"
+          },
+          {
+            "name": "accruedHoldingFee",
+            "type": "uint128"
+          }
+        ],
+        "indexed": false,
+        "name": "ot",
+        "type": "tuple"
+      }
+    ],
+    "name": "PositionDecreased",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "name": "sourceHash",
+        "type": "bytes32"
+      },
+      {
+        "components": [
+          {
+            "name": "source",
+            "type": "uint8"
+          },
+          {
+            "name": "sourceHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "addedQty",
+            "type": "uint128"
+          },
+          {
+            "name": "addedEntryPrice",
+            "type": "uint128"
+          },
+          {
+            "components": [
+              {
+                "name": "user",
+                "type": "address"
+              },
+              {
+                "name": "userOpenTradeIndex",
+                "type": "uint32"
+              },
+              {
+                "name": "holdingFeeRate",
+                "type": "uint40"
+              },
+              {
+                "name": "entryPrice",
+                "type": "uint128"
+              },
+              {
+                "name": "qty",
+                "type": "uint128"
+              },
+              {
+                "name": "pairBase",
+                "type": "address"
+              },
+              {
+                "name": "tokenPay",
+                "type": "address"
+              },
+              {
+                "name": "lvToken",
+                "type": "address"
+              },
+              {
+                "name": "lvMargin",
+                "type": "uint96"
+              },
+              {
+                "name": "stopLoss",
+                "type": "uint128"
+              },
+              {
+                "name": "takeProfit",
+                "type": "uint128"
+              },
+              {
+                "name": "broker",
+                "type": "uint24"
+              },
+              {
+                "name": "isLong",
+                "type": "bool"
+              },
+              {
+                "name": "timestamp",
+                "type": "uint32"
+              },
+              {
+                "name": "lvOpenFee",
+                "type": "uint96"
+              },
+              {
+                "name": "lvExecutionFee",
+                "type": "uint96"
+              },
+              {
+                "name": "longAccFundingFeePerShare",
+                "type": "int256"
+              },
+              {
+                "name": "openBlock",
+                "type": "uint256"
+              },
+              {
+                "name": "accruedFundingFee",
+                "type": "int128"
+              },
+              {
+                "name": "accruedHoldingFee",
+                "type": "uint128"
+              }
+            ],
+            "name": "position",
+            "type": "tuple"
+          }
+        ],
+        "indexed": false,
+        "name": "update",
+        "type": "tuple"
+      }
+    ],
+    "name": "PositionIncreased",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "earliestCloseTime",
+        "type": "uint256"
+      }
+    ],
+    "name": "SetOpenTradeEarliestCloseTime",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "beforeMargin",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "margin",
+        "type": "uint256"
+      }
+    ],
+    "name": "UpdateMargin",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "orderHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "oldSl",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "sl",
+        "type": "uint256"
+      }
+    ],
+    "name": "UpdateOrderSl",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "orderHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "oldTp",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "tp",
+        "type": "uint256"
+      }
+    ],
+    "name": "UpdateOrderTp",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "oldSl",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "sl",
+        "type": "uint256"
+      }
+    ],
+    "name": "UpdateTradeSl",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "oldTp",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "tp",
+        "type": "uint256"
+      }
+    ],
+    "name": "UpdateTradeTp",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "tokenIn",
+        "type": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint96"
+      }
+    ],
+    "name": "addMargin",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "orderHashes",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "batchCancelLimitOrders",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "positionHashes",
+        "type": "bytes32[]"
+      },
+      {
+        "name": "broker",
+        "type": "uint24"
+      }
+    ],
+    "name": "batchCloseTrade",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "positionHashes",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "batchCloseTrade",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "components": [
+          {
+            "name": "kind",
+            "type": "uint8"
+          },
+          {
+            "name": "triggerPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "closeQty",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          }
+        ],
+        "name": "orders",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "batchCreateDecreaseOrders",
+    "outputs": [
+      {
+        "name": "orderHashes",
+        "type": "bytes32[]"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "name": "orderHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "triggerPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "closeQty",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          }
+        ],
+        "name": "updates",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "batchUpdateDecreaseOrders",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "positionHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "cancelAllDecreaseOrders",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "orderHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "cancelDecreaseOrder",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "orderHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "cancelLimitOrder",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "closeQty",
+        "type": "uint128"
+      },
+      {
+        "name": "broker",
+        "type": "uint24"
+      }
+    ],
+    "name": "closeTrade",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "broker",
+        "type": "uint24"
+      }
+    ],
+    "name": "closeTrade",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "positionHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "closeTrade",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "positionHash",
+        "type": "bytes32"
+      },
+      {
+        "components": [
+          {
+            "name": "kind",
+            "type": "uint8"
+          },
+          {
+            "name": "triggerPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "closeQty",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          }
+        ],
+        "name": "order",
+        "type": "tuple"
+      }
+    ],
+    "name": "createDecreaseOrder",
+    "outputs": [
+      {
+        "name": "orderHash",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "orderHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getDecreaseOrder",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "orderHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "positionHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "user",
+            "type": "address"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "kind",
+            "type": "uint8"
+          },
+          {
+            "name": "triggerPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "closeQty",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          },
+          {
+            "name": "createdAt",
+            "type": "uint32"
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          }
+        ],
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "positionHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getDecreaseOrders",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "orderHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "positionHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "user",
+            "type": "address"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "kind",
+            "type": "uint8"
+          },
+          {
+            "name": "triggerPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "closeQty",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          },
+          {
+            "name": "createdAt",
+            "type": "uint32"
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          }
+        ],
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "orderHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getLimitOrderByHash",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "orderHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "pair",
+            "type": "string"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "tokenIn",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "amountIn",
+            "type": "uint96"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "limitPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32"
+          }
+        ],
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "name": "pairBase",
+        "type": "address"
+      }
+    ],
+    "name": "getLimitOrders",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "orderHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "pair",
+            "type": "string"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "tokenIn",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "amountIn",
+            "type": "uint96"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "limitPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32"
+          }
+        ],
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "pairBases",
+        "type": "address[]"
+      }
+    ],
+    "name": "getMarketInfosV2",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "longQty",
+            "type": "uint256"
+          },
+          {
+            "name": "shortQty",
+            "type": "uint256"
+          },
+          {
+            "name": "lpLongAvgPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "lpShortAvgPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "fundingFeeRate",
+            "type": "int256"
+          },
+          {
+            "name": "lastLongAccFundingFeePerShare",
+            "type": "int256"
+          }
+        ],
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "pairBase",
+        "type": "address"
+      }
+    ],
+    "name": "getMarketInfoV2",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "longQty",
+            "type": "uint256"
+          },
+          {
+            "name": "shortQty",
+            "type": "uint256"
+          },
+          {
+            "name": "lpLongAvgPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "lpShortAvgPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "fundingFeeRate",
+            "type": "int256"
+          },
+          {
+            "name": "lastLongAccFundingFeePerShare",
+            "type": "int256"
+          }
+        ],
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "base",
+        "type": "address"
+      }
+    ],
+    "name": "getPairByBaseV4",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "base",
+            "type": "address"
+          },
+          {
+            "name": "basePosition",
+            "type": "uint16"
+          },
+          {
+            "name": "pairType",
+            "type": "uint8"
+          },
+          {
+            "name": "status",
+            "type": "uint8"
+          },
+          {
+            "name": "maxLongOiUsd",
+            "type": "uint256"
+          },
+          {
+            "name": "maxShortOiUsd",
+            "type": "uint256"
+          },
+          {
+            "name": "fundingFeePerSecondP",
+            "type": "uint256"
+          },
+          {
+            "name": "minFundingFeeR",
+            "type": "uint256"
+          },
+          {
+            "name": "maxFundingFeeR",
+            "type": "uint256"
+          },
+          {
+            "components": [
+              {
+                "name": "notionalUsd",
+                "type": "uint256"
+              },
+              {
+                "name": "tier",
+                "type": "uint16"
+              },
+              {
+                "name": "maxLeverage",
+                "type": "uint16"
+              },
+              {
+                "name": "initialLostP",
+                "type": "uint16"
+              },
+              {
+                "name": "liqLostP",
+                "type": "uint16"
+              }
+            ],
+            "name": "leverageMargins",
+            "type": "tuple[]"
+          },
+          {
+            "name": "slippageConfigIndex",
+            "type": "uint16"
+          },
+          {
+            "name": "slippagePosition",
+            "type": "uint16"
+          },
+          {
+            "components": [
+              {
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "name": "onePercentDepthAboveUsd",
+                "type": "uint256"
+              },
+              {
+                "name": "onePercentDepthBelowUsd",
+                "type": "uint256"
+              },
+              {
+                "name": "slippageLongP",
+                "type": "uint16"
+              },
+              {
+                "name": "slippageShortP",
+                "type": "uint16"
+              },
+              {
+                "name": "index",
+                "type": "uint16"
+              },
+              {
+                "name": "slippageType",
+                "type": "uint8"
+              },
+              {
+                "name": "enable",
+                "type": "bool"
+              },
+              {
+                "name": "longThresholdUsd",
+                "type": "uint256"
+              },
+              {
+                "name": "shortThresholdUsd",
+                "type": "uint256"
+              }
+            ],
+            "name": "slippageConfig",
+            "type": "tuple"
+          },
+          {
+            "name": "feeConfigIndex",
+            "type": "uint16"
+          },
+          {
+            "name": "feePosition",
+            "type": "uint16"
+          },
+          {
+            "components": [
+              {
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "name": "index",
+                "type": "uint16"
+              },
+              {
+                "name": "openFeeP",
+                "type": "uint16"
+              },
+              {
+                "name": "closeFeeP",
+                "type": "uint16"
+              },
+              {
+                "name": "enable",
+                "type": "bool"
+              },
+              {
+                "name": "shareP",
+                "type": "uint24"
+              },
+              {
+                "name": "minCloseFeeP",
+                "type": "uint24"
+              },
+              {
+                "name": "lvTokenDiscountP",
+                "type": "uint24"
+              }
+            ],
+            "name": "feeConfig",
+            "type": "tuple"
+          },
+          {
+            "name": "longHoldingFeeRate",
+            "type": "uint40"
+          },
+          {
+            "name": "shortHoldingFeeRate",
+            "type": "uint40"
+          },
+          {
+            "name": "holdingTimeThresholdSizeUSD",
+            "type": "uint256"
+          },
+          {
+            "name": "minHoldingSeconds",
+            "type": "uint256"
+          }
+        ],
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "base",
+        "type": "address"
+      }
+    ],
+    "name": "getPairConfig",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "maxLongOiUsd",
+            "type": "uint256"
+          },
+          {
+            "name": "maxShortOiUsd",
+            "type": "uint256"
+          },
+          {
+            "name": "fundingFeePerSecondP",
+            "type": "uint256"
+          },
+          {
+            "name": "minFundingFeeR",
+            "type": "uint256"
+          },
+          {
+            "name": "maxFundingFeeR",
+            "type": "uint256"
+          }
+        ],
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "base",
+        "type": "address"
+      }
+    ],
+    "name": "getPairFeeConfig",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "openFeeP",
+            "type": "uint16"
+          },
+          {
+            "name": "closeFeeP",
+            "type": "uint16"
+          },
+          {
+            "name": "shareP",
+            "type": "uint24"
+          },
+          {
+            "name": "minCloseFeeP",
+            "type": "uint24"
+          },
+          {
+            "name": "lvTokenDiscountP",
+            "type": "uint24"
+          }
+        ],
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "base",
+        "type": "address"
+      },
+      {
+        "name": "isLong",
+        "type": "bool"
+      }
+    ],
+    "name": "getPairHoldingFeeRate",
+    "outputs": [
+      {
+        "name": "holdingFeeRate",
+        "type": "uint40"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "base",
+        "type": "address"
+      }
+    ],
+    "name": "getPairSlippageConfig",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "onePercentDepthAboveUsd",
+            "type": "uint256"
+          },
+          {
+            "name": "onePercentDepthBelowUsd",
+            "type": "uint256"
+          },
+          {
+            "name": "slippageLongP",
+            "type": "uint16"
+          },
+          {
+            "name": "slippageShortP",
+            "type": "uint16"
+          },
+          {
+            "name": "longThresholdUsd",
+            "type": "uint256"
+          },
+          {
+            "name": "shortThresholdUsd",
+            "type": "uint256"
+          },
+          {
+            "name": "slippageType",
+            "type": "uint8"
+          }
+        ],
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getPendingTrade",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "user",
+            "type": "address"
+          },
+          {
+            "name": "tokenPay",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "amountIn",
+            "type": "uint96"
+          },
+          {
+            "name": "price",
+            "type": "uint128"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32"
+          },
+          {
+            "name": "blockNumber",
+            "type": "uint128"
+          }
+        ],
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getPositionByHashV4",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "positionHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "pair",
+            "type": "string"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "tokenIn",
+            "type": "address"
+          },
+          {
+            "name": "marginToken",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "margin",
+            "type": "uint96"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "entryPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "openFee",
+            "type": "uint96"
+          },
+          {
+            "name": "executionFee",
+            "type": "uint96"
+          },
+          {
+            "name": "fundingFee",
+            "type": "int256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32"
+          },
+          {
+            "name": "holdingFee",
+            "type": "uint96"
+          },
+          {
+            "name": "earliestCloseTime",
+            "type": "uint256"
+          },
+          {
+            "name": "accruedFundingFee",
+            "type": "int256"
+          },
+          {
+            "name": "accruedHoldingFee",
+            "type": "uint256"
+          }
+        ],
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "name": "pairBase",
+        "type": "address"
+      },
+      {
+        "name": "isLong",
+        "type": "bool"
+      },
+      {
+        "name": "lvToken",
+        "type": "address"
+      }
+    ],
+    "name": "getPositionByKeyV4",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "positionHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "pair",
+            "type": "string"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "tokenIn",
+            "type": "address"
+          },
+          {
+            "name": "marginToken",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "margin",
+            "type": "uint96"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "entryPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "openFee",
+            "type": "uint96"
+          },
+          {
+            "name": "executionFee",
+            "type": "uint96"
+          },
+          {
+            "name": "fundingFee",
+            "type": "int256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32"
+          },
+          {
+            "name": "holdingFee",
+            "type": "uint96"
+          },
+          {
+            "name": "earliestCloseTime",
+            "type": "uint256"
+          },
+          {
+            "name": "accruedFundingFee",
+            "type": "int256"
+          },
+          {
+            "name": "accruedHoldingFee",
+            "type": "uint256"
+          }
+        ],
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "name": "pairBase",
+        "type": "address"
+      },
+      {
+        "name": "isLong",
+        "type": "bool"
+      },
+      {
+        "name": "lvToken",
+        "type": "address"
+      }
+    ],
+    "name": "getPositionHash",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "name": "pairBase",
+        "type": "address"
+      }
+    ],
+    "name": "getPositionsV4",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "positionHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "pair",
+            "type": "string"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "tokenIn",
+            "type": "address"
+          },
+          {
+            "name": "marginToken",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "margin",
+            "type": "uint96"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "entryPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "openFee",
+            "type": "uint96"
+          },
+          {
+            "name": "executionFee",
+            "type": "uint96"
+          },
+          {
+            "name": "fundingFee",
+            "type": "int256"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32"
+          },
+          {
+            "name": "holdingFee",
+            "type": "uint96"
+          },
+          {
+            "name": "earliestCloseTime",
+            "type": "uint256"
+          },
+          {
+            "name": "accruedFundingFee",
+            "type": "int256"
+          },
+          {
+            "name": "accruedHoldingFee",
+            "type": "uint256"
+          }
+        ],
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "positionHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getPositionTrader",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "getTraderDecreaseOrders",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "orderHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "positionHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "user",
+            "type": "address"
+          },
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "kind",
+            "type": "uint8"
+          },
+          {
+            "name": "triggerPrice",
+            "type": "uint128"
+          },
+          {
+            "name": "closeQty",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          },
+          {
+            "name": "createdAt",
+            "type": "uint32"
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          }
+        ],
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "tokenIn",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "amountIn",
+            "type": "uint96"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "price",
+            "type": "uint128"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          }
+        ],
+        "name": "data",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "name": "pythPriceUpdateData",
+            "type": "bytes[]"
+          },
+          {
+            "name": "pythProPriceUpdateData",
+            "type": "bytes[]"
+          }
+        ],
+        "name": "updateData",
+        "type": "tuple"
+      },
+      {
+        "name": "extraFee",
+        "type": "uint96"
+      }
+    ],
+    "name": "openLimitOrderV2",
+    "outputs": [
+      {
+        "name": "orderHash",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "name": "pairBase",
+            "type": "address"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "tokenIn",
+            "type": "address"
+          },
+          {
+            "name": "lvToken",
+            "type": "address"
+          },
+          {
+            "name": "amountIn",
+            "type": "uint96"
+          },
+          {
+            "name": "qty",
+            "type": "uint128"
+          },
+          {
+            "name": "price",
+            "type": "uint128"
+          },
+          {
+            "name": "stopLoss",
+            "type": "uint128"
+          },
+          {
+            "name": "takeProfit",
+            "type": "uint128"
+          },
+          {
+            "name": "broker",
+            "type": "uint24"
+          }
+        ],
+        "name": "data",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "name": "pythPriceUpdateData",
+            "type": "bytes[]"
+          },
+          {
+            "name": "pythProPriceUpdateData",
+            "type": "bytes[]"
+          }
+        ],
+        "name": "updateData",
+        "type": "tuple"
+      },
+      {
+        "name": "extraFee",
+        "type": "uint96"
+      }
+    ],
+    "name": "openMarketTradeV2",
+    "outputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "lvAmount",
+        "type": "uint96"
+      },
+      {
+        "components": [
+          {
+            "name": "pythPriceUpdateData",
+            "type": "bytes[]"
+          },
+          {
+            "name": "pythProPriceUpdateData",
+            "type": "bytes[]"
+          }
+        ],
+        "name": "updateData",
+        "type": "tuple"
+      }
+    ],
+    "name": "removeMargin",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tokens",
+        "type": "address[]"
+      }
+    ],
+    "name": "traderAssets",
+    "outputs": [
+      {
+        "components": [
+          {
+            "name": "purpose",
+            "type": "uint8"
+          },
+          {
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "name": "value",
+            "type": "uint256"
+          }
+        ],
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "orderHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "stopLoss",
+        "type": "uint128"
+      }
+    ],
+    "name": "updateOrderSl",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "orderHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "takeProfit",
+        "type": "uint128"
+      }
+    ],
+    "name": "updateOrderTp",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "orderHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "takeProfit",
+        "type": "uint128"
+      },
+      {
+        "name": "stopLoss",
+        "type": "uint128"
+      }
+    ],
+    "name": "updateOrderTpAndSl",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "stopLoss",
+        "type": "uint128"
+      }
+    ],
+    "name": "updateTradeSl",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "takeProfit",
+        "type": "uint128"
+      }
+    ],
+    "name": "updateTradeTp",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "tradeHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "takeProfit",
+        "type": "uint128"
+      },
+      {
+        "name": "stopLoss",
+        "type": "uint128"
+      }
+    ],
+    "name": "updateTradeTpAndSl",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

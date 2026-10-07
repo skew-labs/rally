@@ -1,0 +1,25 @@
+# Runtime state and credentials
+private/
+.env
+.env.*
+!.env.example
+*.sqlite*
+*.db
+*.pem
+*.key
+*.log
+# Reproducible outputs
+.venv/
+node_modules/
+__pycache__/
+*.py[cod]
+build/
+app-bundle.json
+community-contracts.json
+community-deployment.json
+nad-revenue-contract.json
+assets/auth/
+assets/rally-app-*
+assets/token-art-*
+auth-client/privy-build.json
+.DS_Store

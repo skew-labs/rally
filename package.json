@@ -1,0 +1,22 @@
+{
+  "name": "rally-monad",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=22"},
+  "scripts": {
+    "build": "node scripts/build-contracts.mjs && node scripts/build-app.mjs",
+    "build:auth": "npm --prefix auth-client ci && npm --prefix auth-client run build",
+    "test": "python3 scripts/test.py",
+    "test:contracts": "node tests/community.mjs && node tests/nad-revenue.mjs",
+    "test:ui": "node tests/browser.mjs"
+  },
+  "devDependencies": {
+    "@openzeppelin/contracts": "5.4.0",
+    "esbuild": "0.28.2",
+    "ethers": "6.15.0",
+    "ganache": "7.9.2",
+    "playwright": "1.56.1",
+    "solc": "0.8.28"
+  }
+}

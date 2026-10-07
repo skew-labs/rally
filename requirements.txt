@@ -1,0 +1,5 @@
+eth-account==0.13.7
+Pillow==11.3.0
+eth-abi==6.0.0
+PyJWT[crypto]==2.10.1
+cryptography==46.0.3

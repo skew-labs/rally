@@ -1,0 +1,153 @@
+/* Order entry leads; market research remains in the same panel. */
+html .r-checkout-spot .r-trade-scroll{padding-top:8px;flex:1;min-height:0}
+html .r-checkout-spot .r-route-tabs{margin-block:0 12px}
+html .r-checkout-spot .r-trade-price{margin-bottom:20px}
+html .r-checkout-spot .r-trade-price h2{font-size:24px}
+html .r-checkout-spot .r-swap-box{padding:0;margin:0;background:transparent;border:0;border-radius:0}
+html .r-checkout-spot .r-swap-title{margin-bottom:16px;gap:16px}
+html .r-checkout-spot .r-swap-title>span{font-size:12px}
+html .r-checkout-sides{display:flex;gap:4px;padding:4px;border-radius:14px;background:var(--soft);flex:1}
+html .r-checkout-sides button{flex:1;min-height:44px;border-radius:10px;font-size:14px;font-weight:650;color:var(--muted)}
+html .r-checkout-sides button[aria-pressed=true]{background:transparent;box-shadow:none}
+html .r-checkout-spot .r-swap-input,html .r-checkout-spot .r-swap-output,html .r-checkout-nad .nad-amount{padding:16px;border-radius:16px;background:var(--canvas);border-color:var(--line)}
+html .r-checkout-spot .r-swap-input input,html .r-checkout-nad .nad-amount input{font-size:32px;font-weight:550;letter-spacing:-.8px;font-variant-numeric:tabular-nums}
+html .r-checkout-spot .r-swap-output b{font-size:26px;font-variant-numeric:tabular-nums}
+html .r-checkout-spot .r-swap-input>span,html .r-checkout-spot .r-swap-output>span,html .r-checkout-nad .nad-amount>span{font-size:13px}
+html .r-checkout-spot .r-pay-select{min-height:44px;padding:8px 12px;border-radius:100px;font-size:14px;background:var(--paper)}
+html .r-checkout-presets{display:flex;gap:8px;margin:10px 0 16px}
+html .r-checkout-presets button{min-height:44px;flex:1;padding:8px;border:1px solid var(--line);border-radius:12px;font-size:13px}
+html .r-checkout-presets .selected{border-color:var(--muted);background:var(--soft)}
+html .r-checkout-fold{border-block:1px solid var(--line);margin-top:16px}
+html .r-checkout-fold+.r-checkout-fold{border-top:0;margin-top:0}
+html .r-checkout-fold>summary{min-height:52px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;font-size:13px;font-weight:600}
+html .r-checkout-fold>summary::-webkit-details-marker{display:none}
+html .r-checkout-fold>summary:after{content:'+';font-size:20px;font-weight:400;color:var(--muted)}
+html .r-checkout-fold[open]>summary:after{content:'−'}
+html .r-checkout-fold:focus-within{outline-offset:3px}
+html .r-checkout-fees .r-quote-details{padding:0 0 16px;font-size:12px}
+html .r-checkout-spot .r-route-panel{margin-top:14px}
+html .r-checkout-spot .r-route-panel>.r-btn{background:transparent;min-height:44px;font-size:13px;border:0;color:var(--muted)}
+html .r-checkout-contract{font-size:12px;min-height:52px}
+html .r-checkout-contract button{min-height:44px;font-size:12px}
+html .r-checkout-footer{padding:16px 20px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--paper);flex-shrink:0}
+html .r-checkout-footer>.r-btn{min-height:52px;font-size:15px;border-radius:14px}
+html .r-checkout-footer>.r-form-error:not(:empty){margin:0 0 12px;font-size:13px}
+html .r-checkout-clock{font-size:12px;color:var(--muted);margin-top:10px;text-align:center;font-variant-numeric:tabular-nums}
+html .r-checkout-footer .r-trade-disclosure{font-size:11px;margin-top:10px}
+html .r-checkout-dialog{display:flex;flex-direction:column;width:480px;padding:0;overflow:hidden;max-height:min(92dvh,800px)}
+html .r-checkout-dialog .r-modal-head{padding:16px 20px;margin:0;border-bottom:1px solid var(--line);flex-shrink:0}
+html .r-checkout-dialog .r-checkout-scroll{padding:20px;overflow:auto;overscroll-behavior:contain;min-height:0;flex:1}
+html .r-checkout-form{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+html .r-checkout-dialog .r-review-fields{font-size:13px;margin:0}
+html .r-checkout-dialog .r-review-fields>div{padding-block:12px}
+html .r-checkout-review-value dd{font-size:23px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.35}
+html .r-checkout-dialog .r-note{padding:16px 0;font-size:12px}
+html .r-checkout-dialog .r-review-pair>div{font-size:23px;gap:12px}
+html .r-checkout-dialog .r-review-pair .r-token{width:36px;height:36px}
+html .r-checkout-dialog .r-order-directions label{min-height:48px;padding:12px;font-size:14px}
+html .r-checkout-dialog .r-collateral-inline{font-size:12px}
+html .r-checkout-dialog .r-field{margin-top:16px}
+html .r-checkout-dialog .r-field input{font-size:20px}
+html .r-checkout-dialog .r-field select{font-size:16px}
+html .nad-token-bottom:has(.r-checkout-nad){display:block;padding:20px var(--space) 28px}
+html .r-checkout-nad .r-order-directions{margin-bottom:16px}
+html .nad-order:has(.r-checkout-nad) .r-order-directions button{min-height:48px;font-size:14px}
+html .r-checkout-nad .nad-slippage{margin-top:16px}
+html .r-checkout-nad .nad-slippage select{min-height:44px;font-size:14px}
+html .r-checkout-nad .nad-receive b{font-size:24px;font-variant-numeric:tabular-nums}
+html .r-checkout-nad .r-summary{font-size:12px}
+html .r-checkout-token-footer{position:fixed;bottom:0;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+html .r-checkout-token-footer>.r-btn{flex:1;min-width:160px}
+html .r-checkout-token-footer>.r-form-error{width:100%}
+html .r-checkout-footer-label{font-size:12px;color:var(--muted)}
+html .r-checkout-token-facts{padding-inline:var(--space)}
+html .r-checkout-token-facts .nad-facts{padding-top:0;border:0}
+html .r-checkout-token-facts .nad-facts>h2{display:none}
+html .r-checkout-token-facts .r-summary{font-size:13px}
+html .nad-chart-section{margin-bottom:20px}
+html body[data-view=token] #main{padding-bottom:180px}
+@media(max-width:760px){html .r-checkout-dialog{width:100%;max-height:92dvh;padding:0}html .r-checkout-spot .r-trade-scroll{padding:12px 16px 20px}html .r-checkout-footer{padding-inline:16px}html .r-checkout-token-footer{bottom:calc(68px + env(safe-area-inset-bottom));padding-bottom:16px}html .r-checkout-dialog .r-checkout-scroll{padding-inline:16px}}
+@media(max-width:380px){html .r-checkout-footer-label{display:none}html .r-checkout-spot .r-pay-select{padding:8px}html .r-checkout-presets{gap:6px}}
+
+html .r-checkout-fixed-asset:disabled{opacity:1;cursor:default}
+
+html .r-checkout-asset-title{display:flex;align-items:center;gap:10px}html .r-checkout-asset-title .r-token,html .r-checkout-asset-title .r-token-fallback{width:30px;height:30px;font-size:10px}
+
+html .r-checkout-edit{width:100%;min-height:44px;font-size:13px;color:var(--muted);margin-bottom:8px}
+
+/* Direction is a shared visual language across every Rally order surface. */
+:root{--trade-buy:#0866ff;--trade-buy-ink:#075cdb;--trade-buy-soft:#edf4ff;--trade-sell:#cf2440;--trade-sell-ink:#bd1834;--trade-sell-soft:#fff0f2}
+html[data-theme=dark]{--trade-buy-ink:#89b7ff;--trade-buy-soft:#142b47;--trade-sell-ink:#ff9bad;--trade-sell-soft:#3d202a}
+html [data-order-side=buy]{--order-color:var(--trade-buy);--order-ink:var(--trade-buy-ink);--order-soft:var(--trade-buy-soft)}
+html [data-order-side=sell]{--order-color:var(--trade-sell);--order-ink:var(--trade-sell-ink);--order-soft:var(--trade-sell-soft)}
+html .r-ticket-sides{position:relative;isolation:isolate;display:flex;gap:0;padding:4px;border:0;border-radius:16px;background:var(--soft);overflow:hidden}
+html .r-ticket-side-pill{position:absolute;z-index:-1;left:4px;top:4px;bottom:4px;width:calc(50% - 4px);border-radius:12px;background:var(--trade-buy);transform:translateX(0);transition:transform 220ms cubic-bezier(.22,1,.36,1),background-color 160ms ease}
+html .r-ticket-sides[data-order-side=sell] .r-ticket-side-pill{background:var(--trade-sell);transform:translateX(100%)}
+html .r-ticket-sides button,html .r-checkout-dialog .r-ticket-sides label{position:relative;flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;margin:0;padding:10px 8px;border:0;border-radius:12px;background:transparent;font-size:14px;font-weight:600;cursor:pointer;transition:color 120ms ease}
+html .nad-order .r-order-directions.r-ticket-sides button.selected,html .r-checkout-dialog .r-ticket-sides label:has(input:checked){background:transparent;border:0}
+html .r-ticket-sides [data-trade-side=buy]{color:var(--trade-buy-ink)}
+html .r-ticket-sides [data-trade-side=sell]{color:var(--trade-sell-ink)}
+html .r-ticket-sides[data-order-side=buy] [data-trade-side=buy],html .r-ticket-sides[data-order-side=sell] [data-trade-side=sell],html .nad-order .r-ticket-sides button.selected{color:#fff;box-shadow:none}
+html .r-ticket-sides input[type=radio]{position:absolute;width:1px;height:1px;margin:0;opacity:0;clip-path:inset(50%)}
+html .r-ticket-sides label:focus-within,html .r-ticket-sides button:focus-visible{outline:2px solid var(--text);outline-offset:-3px}
+html .r-ticket-stages{display:flex;gap:16px;align-items:center;padding:14px 20px 0;flex-shrink:0;font-size:11px;color:var(--muted)}
+html .r-ticket-stages span{display:flex;gap:7px;align-items:center}
+html .r-ticket-stages span:before{content:'';width:5px;height:5px;flex-shrink:0;border-radius:50%;background:var(--line)}
+html .r-ticket-stages [aria-current=step]{color:var(--order-ink);font-weight:600}
+html .r-ticket-stages [aria-current=step]:before{background:var(--order-color)}
+html [data-order-side] .r-checkout-footer>.r-btn.primary{background:var(--order-color);border-color:transparent;color:#fff;box-shadow:none;transition:opacity 120ms ease,transform 120ms ease}
+html [data-order-side] .r-checkout-footer>.r-btn.primary:hover:not(:disabled){opacity:.9}
+html [data-order-side] .r-checkout-footer>.r-btn.primary:active:not(:disabled){transform:scale(.985)}
+html [data-order-side] .r-checkout-presets button.selected{background:var(--order-soft);border-color:var(--order-color);color:var(--order-ink)}
+html .r-ticket-market-reference{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:0 2px 16px;font-size:12px;color:var(--muted)}
+html .r-ticket-market-reference b{color:var(--text);font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
+html .r-checkout-dialog .r-ticket-amount-field{padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--canvas);font-size:12px;color:var(--muted);margin-top:0}
+html .r-checkout-dialog .r-ticket-amount-field input{border:0;padding:8px 0 0;border-radius:0;background:transparent;font-size:34px;font-weight:600;letter-spacing:-.8px;box-shadow:none;font-variant-numeric:tabular-nums}
+html .r-checkout-dialog .r-ticket-amount-field:focus-within{border-color:var(--order-color);box-shadow:0 0 0 1px var(--order-color)}
+html .r-checkout-dialog .r-ticket-amount-field small{font-size:11px;font-weight:400;margin-top:3px}
+html .r-checkout-dialog .r-collateral-inline{margin:0 0 16px;gap:8px}
+html .r-checkout-dialog .r-field[hidden]{display:none}
+html .r-ticket-leverage{padding:16px 2px 8px}
+html .r-ticket-leverage>div:first-child{display:flex;align-items:center;justify-content:space-between;font-size:13px}
+html .r-ticket-leverage b{color:var(--order-ink);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+html .r-ticket-leverage input[type=range]{appearance:none;display:block;width:100%;height:44px;padding:0;margin:4px 0;background:transparent;border:0;cursor:pointer;box-shadow:none;accent-color:var(--order-color)}
+html .r-ticket-leverage input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:linear-gradient(to right,var(--order-color) var(--range-fill),var(--line) var(--range-fill))}
+html .r-ticket-leverage input[type=range]::-webkit-slider-thumb{appearance:none;width:24px;height:24px;margin-top:-10px;border:3px solid var(--paper);border-radius:50%;background:var(--order-color);box-shadow:0 1px 6px #0003}
+html .r-ticket-leverage input[type=range]::-moz-range-track{height:4px;border-radius:4px;background:var(--line)}
+html .r-ticket-leverage input[type=range]::-moz-range-progress{height:4px;border-radius:4px;background:var(--order-color)}
+html .r-ticket-leverage input[type=range]::-moz-range-thumb{width:18px;height:18px;border:3px solid var(--paper);border-radius:50%;background:var(--order-color)}
+html .r-ticket-leverage-ends{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+html .r-ticket-options{margin-top:12px;border-top:1px solid var(--line)}
+html .r-ticket-options>summary{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:48px;cursor:pointer;list-style:none;font-size:12px;color:var(--muted)}
+html .r-ticket-options>summary::-webkit-details-marker{display:none}
+html .r-ticket-options>summary b{color:var(--text);font-size:12px;font-weight:500;font-variant-numeric:tabular-nums}
+html .r-ticket-options>summary:after{content:'+';font-size:20px;font-weight:400}
+html .r-ticket-options[open]>summary:after{content:'−'}
+html .r-ticket-options .r-checkbox{margin-top:16px;min-height:44px}
+html .r-checkout-spot .r-swap-input:focus-within,html .r-checkout-nad .nad-amount:focus-within{border-color:var(--order-color);box-shadow:0 0 0 1px var(--order-color)}
+html .r-checkout-spot .r-swap-input input:focus{box-shadow:none;outline:none}
+html .r-checkout-spot .r-swap-output{background:var(--order-soft);border-color:transparent}
+html .r-checkout-spot .r-swap-output>span{color:var(--order-ink)}
+html .r-checkout-spot .r-swap-direction{position:relative;z-index:1;width:36px;height:36px;min-height:36px;padding:7px;margin:-8px auto;border:3px solid var(--paper);border-radius:50%;color:var(--order-ink);background:var(--order-soft)}
+html .r-checkout-spot .r-swap-direction .icon{width:16px;height:16px}
+html .r-checkout-spot .r-trade-price{margin-bottom:16px}
+html .r-checkout-spot .r-checkout-sides{flex:1}
+html .r-checkout-spot .r-swap-output b{font-size:28px;line-height:1.3}
+html .r-asset-actions .r-btn[data-mini-trade=buy],html .r-btn[data-action=perpl-order],html .r-btn[data-action=trade]{background:var(--trade-buy);color:#fff;border-color:transparent}
+html .r-asset-actions .r-btn[data-mini-trade=sell],html .r-btn[data-action=perpl-short]{background:var(--trade-sell-soft);color:var(--trade-sell-ink);border-color:transparent}
+html .r-swipe-direction.buy{color:#fff;background:var(--trade-buy)}
+html .r-swipe-direction.buy:hover{background:var(--trade-buy);opacity:.9}
+html .r-swipe-direction.sell,html[data-theme=dark] .r-swipe-direction.sell{color:var(--trade-sell-ink);background:var(--trade-sell-soft);border-color:transparent}
+html .r-swipe-direction.sell:hover{background:var(--trade-sell-soft);opacity:.9}
+html .r-swipe-direction.sell.quick-selected,html .r-swipe-direction.sell.quick-selected:hover{color:#fff;background:var(--trade-sell);border-color:transparent}
+html .r-swipe-card.drag-right .r-swipe-intent{background:var(--trade-buy)}
+html .r-swipe-card.drag-left:not([data-kind=prediction]) .r-swipe-intent{background:var(--trade-sell)}
+@media(max-width:760px){html .r-ticket-stages{padding-inline:16px}html .r-checkout-dialog .r-checkout-scroll{padding-top:16px}}
+@media(prefers-reduced-motion:reduce){html .r-ticket-side-pill,html .r-ticket-sides button,html .r-ticket-sides label,html [data-order-side] .r-checkout-footer>.r-btn.primary{transition:none}html [data-order-side] .r-checkout-footer>.r-btn.primary:active:not(:disabled){transform:none}}
+
+/* A single action leads directly to the wallet. Status stays in the ticket. */
+.r-direct-status{min-width:0;font-size:13px;line-height:1.45;color:var(--muted);overflow-wrap:anywhere}
+.r-direct-status:empty{display:none}
+.r-direct-status:not(:empty){padding:8px 0}
+.r-direct-status a{color:var(--text);white-space:nowrap}
+.r-direct-recovery{min-width:0;display:grid;gap:10px;padding:12px 0}

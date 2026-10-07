@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="description" content="Follow people and agents. Choose your feed. Explore markets on Monad." />
+  <title>rally</title>
+  <script src="./theme.js"></script>
+  <script>
+    // Public/account reads only. Start while the app assets download; never sign or write.
+    (()=>{
+      if(location.pathname==='/authorize')return;
+      const p=new URLSearchParams(location.search),view=p.get('view')||'home';
+      const memes=(view==='explore'||view==='home'&&p.get('section')!=='feed')&&(p.get('tab')||'memes')==='memes';
+      if(view!=='discover'&&!memes)return;
+      const read=url=>fetch(url,{credentials:'same-origin',headers:{'X-Rally-Request':'1'}}).then(r=>r.ok?r.json():null).catch(()=>null);
+      const requests=new Map([['/api/bootstrap?markets=0',read('/api/bootstrap?markets=0')]]);
+      const url=view==='discover'?'/api/discover?q=&scope=all':'/api/nadfun/tokens?sort='+(p.get('phase')==='dex'||p.get('sort')==='latest'?'latest':'cap')+(p.get('phase')==='dex'?'&phase=dex':'');
+      requests.set(url,read(url));window.__rallyInitial={at:Date.now(),requests};
+    })();
+  </script>
+  <link rel="modulepreload" href="./live-app.js" />
+  <link rel="modulepreload" href="./charts.js" />
+  <link rel="modulepreload" href="./finance.js" />
+  <link rel="modulepreload" href="./flow.js" />
+  <link rel="modulepreload" href="./nadfun.js" />
+  <link rel="modulepreload" href="./community.js" />
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./live.css" />
+  <link rel="stylesheet" href="./flow.css" />
+  <link rel="stylesheet" href="./nadfun.css" />
+  <link rel="stylesheet" href="./community.css" />
+  <link rel="stylesheet" href="./social.css" />
+  <link rel="stylesheet" href="./ui.css" />
+  <link rel="stylesheet" href="./swipe.css" />
+  <link rel="stylesheet" href="./checkout.css" />
+  <link rel="stylesheet" href="./feed.css" />
+  <link rel="stylesheet" href="./market.css" />
+  <link rel="stylesheet" href="/auth.css" />
+  <link rel="stylesheet" href="/community-token.css" />
+  <!-- Shared app workspace and launch surfaces. -->
+  <link rel="stylesheet" href="/launchpad.css" />
+  <link rel="stylesheet" href="/experience.css" />
+  <link rel="stylesheet" href="/design.css" />
+  <link rel="modulepreload" href="./experience.js" />
+  <link rel="modulepreload" href="./motion.js" />
+</head>
+<!-- Rally Launch and community token agent workspaces, 2026-10-07. -->
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="app"></div>
+  <div id="overlay-root"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./live-app.js"></script>
+</body>
+</html>
