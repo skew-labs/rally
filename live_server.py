@@ -196,7 +196,7 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith('/api/launchpad/'):
             if who and who['grant']:s.require(who,'markets:read')
             if path=='/api/launchpad/activity':return self.response(launch_activity.overview(who,params.get('period','30d'),params.get('token'),params.get('limit','50')))
-            if path=='/api/launchpad/tokens':return self.response(launchpad.catalog(who))
+            if path=='/api/launchpad/tokens':return self.response(launchpad.catalog(who,params))
             if path=='/api/launchpad/token':return self.response(launchpad.detail(params.get('token'),who))
             if path=='/api/launchpad/config':return self.response(launchpad.config())
             if path=='/api/launchpad/me':return self.response(launchpad.me(who))
@@ -205,9 +205,11 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith('/api/nadfun/'):
             if who and who['grant']:s.require(who,'markets:read')
             if path=='/api/nadfun/tokens':
-                data=nadfun.catalog(params.get('phase'),params.get('sort','latest'));token_images.decorate(data['tokens']);return self.response(data)
+                data=nadfun.catalog(params.get('phase'),params.get('sort','latest'),params.get('query',''),params.get('cursor',''),params.get('limit',100));token_images.decorate(data['tokens']);return self.response(data)
             if path=='/api/nadfun/token':
                 data=nadfun.token_info(params.get('token'));token_images.decorate([data]);return self.response(data)
+            if path=='/api/nadfun/references':
+                data=nadfun.references(params.get('assets',''));token_images.decorate(data['tokens']);return self.response(data)
             if path=='/api/nadfun/chart':return self.response(nadfun.chart(params.get('token'),params.get('interval','60')))
             if path=='/api/nadfun/config':return self.response({'chainId':143,'version':'v2','creationFeeMON':s.units(nadfun.creation_fee(),18),'creatorFeeBps':100,'initialBuy':'0','quoteAsset':'MON','fetchedAt':s.now()})
             if path=='/api/nadfun/drafts':return self.response(nadfun.drafts(who))
@@ -282,6 +284,10 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/app/':return self.response(b'',302,{'Location':'/app'+('?' + u.query if u.query else '')},'text/plain')
         if path in {'/app','/authorize'} or path=='/' and any(k in params for k in ('view','tab','id','market','phase')):return self.file(s.ROOT/'index.html','text/html; charset=utf-8')
         if path=='/':return self.file(s.ROOT/'landing.html','text/html; charset=utf-8')
+        if re.fullmatch(r'/assets/token-art-[a-f0-9]{20}\.webp',path):
+            target=token_images.file(path.rsplit('/',1)[-1])
+            if not target:raise s.Problem('Artwork not found',404)
+            return self.file(target,'image/webp')
         # Do not expose database, secrets, source Python, logs or research directories.
         if not path.startswith('/assets/') and path not in {'/landing.js','/landing.css','/live-app.js','/finance.js','/flow.js','/charts.js','/nadfun.js','/community.js','/community.css','/social.css','/ui.css','/checkout.js','/checkout.css','/feed-ui.js','/feed.css','/market-ui.js','/market-logos.js','/market.css','/theme.js','/live.css','/flow.css','/nadfun.css','/favicon.ico','/swipe.js','/swipe-trade.js','/swipe.css','/swipe-motion.js','/auth-ui.js','/auth.css','/community-token.js','/community-token.css','/creator-ui.js','/launchpad.js','/launch-activity.js','/launch-income.js','/launchpad.css','/experience.js','/experience.css','/motion.js','/design.css'}:raise s.Problem('File not found',404)
         if not re.fullmatch(r'/(?:assets/(?:(?:tokens|venues|auth)/)?[A-Za-z0-9_.-]+|[A-Za-z0-9_-]+\.(?:js|css)|favicon\.ico)',path):raise s.Problem('Page not found',404)
@@ -291,7 +297,8 @@ class Handler(BaseHTTPRequestHandler):
         return self.file(target,mimetypes.guess_type(target.name)[0] or 'application/octet-stream')
     def file(self,path,mime):
         # Private media stays uncached and retains permission checks on every read.
-        public=path.is_relative_to(s.ROOT) and not path.is_relative_to(s.STATE)
+        artwork=token_images.public(path)
+        public=artwork or path.is_relative_to(s.ROOT) and not path.is_relative_to(s.STATE)
         text=public and (path.suffix in {'.html','.css','.js','.svg'})
         if text and not self.headers.get('Range'):
             stat=path.stat();compressed=bool(re.search(r'(?:^|,)\s*gzip\s*(?:,|$)',self.headers.get('Accept-Encoding','')))
@@ -344,7 +351,7 @@ class Handler(BaseHTTPRequestHandler):
             start=int(match[1]);end=min(int(match[2]) if match[2] else end,end)
             if start>end:raise s.Problem('Range not available',416)
             status=206
-        headers={'Content-Length':str(end-start+1),'Content-Type':mime,'Accept-Ranges':'bytes','X-Content-Type-Options':'nosniff','Cache-Control':'public,max-age=3600' if path.parent.name=='assets' else 'no-store'}
+        headers={'Content-Length':str(end-start+1),'Content-Type':mime,'Accept-Ranges':'bytes','X-Content-Type-Options':'nosniff','Cache-Control':'public,max-age=31536000,immutable' if artwork else 'public,max-age=3600' if path.parent.name=='assets' else 'no-store'}
         if status==206:headers['Content-Range']=f'bytes {start}-{end}/{total}'
         self.send_response(status)
         for k,v in headers.items():self.send_header(k,v)

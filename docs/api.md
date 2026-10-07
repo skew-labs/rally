@@ -55,3 +55,14 @@ curl 'http://127.0.0.1:4186/api/discover?limit=12'
 ```
 
 Use the [OAuth/MCP flow](agents.md) for agent publication. Never copy a production session or create an API credential just to run repository tests.
+
+#### Launch catalog pagination
+
+`GET /api/nadfun/tokens` and `GET /api/launchpad/tokens` accept `sort=latest|cap`,
+`query`, `limit` (1–100) and an opaque `cursor`. The response includes `total`,
+`nextCursor` and `ingestion` health. Latest-order cursors retain a creation-time
+snapshot and address tie-breaker. Cursors expire after one hour. Cap-order pages
+can move when reference prices change; clients deduplicate by exact address.
+`GET /api/nadfun/references?assets=<comma-separated-addresses>` returns at most
+60 cached exact identities and schedules visible-token refresh, without provider
+reads in the HTTP worker. These public read endpoints do not authorize trades.

@@ -19,7 +19,7 @@ LVMON='0x91b81bfbe3a747230f0529aa28d8b2bc898e6d56'
 FILES={'v1':{'curve':'curveAbi.json','lens':'lensAbi.json','router':'routerAbi.json','dex':'dexRouterAbi.json'},
        'v2':{'curve':'BondingCurve.json','router':'NadFunRouter.json','factory':'NadFunFactory.json','fees':'FeeCollector.json'}}
 MANIFEST=json.loads((ROOT/'pins.json').read_text())
-API_LOCK=threading.Lock();API_AT=0;SYNC_LOCK=threading.Lock();DRAFT_LOCK=threading.Lock();SYNC_ERROR=None
+API_LOCK=threading.Lock();API_AT=0;API_RETRY_AT=0;SYNC_LOCK=threading.Lock();DRAFT_LOCK=threading.Lock();SYNC_ERROR=None
 ABIS={};TRANSFER='0x'+keccak(text='Transfer(address,address,uint256)').hex()
 CHARTS={};CHART_LOCK=threading.Lock()
 MARKET_REFERENCES={};MARKET_REFERENCE_LOCK=threading.Lock()
@@ -90,6 +90,8 @@ def initialize():
     CREATE TABLE IF NOT EXISTS nad_sync(version TEXT PRIMARY KEY,block INTEGER,block_hash TEXT,updated INTEGER);
     CREATE TABLE IF NOT EXISTS nad_drafts(id TEXT PRIMARY KEY,user_id TEXT,wallet TEXT,request_key TEXT UNIQUE,payload TEXT,created INTEGER);
     ''')
+    import launch_ingestion
+    launch_ingestion.initialize()
     if LVMON not in s.GATEWAY.token_map:
         quote={'id':LVMON,'address':LVMON,'symbol':'LVMon','name':'LVMon','decimals':18,'chainId':143,'logoURI':None}
         s.GATEWAY.tokens.append(quote);s.GATEWAY.token_map[LVMON]=quote
@@ -140,9 +142,10 @@ class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs):return None
 def api(path,data=None,mime=None):
     """Respect the unauthenticated external API limit; never spoof Origin."""
-    global API_AT
+    global API_AT,API_RETRY_AT
     with API_LOCK:
-        remaining=6.3-(time.monotonic()-API_AT)
+        if time.monotonic()<API_RETRY_AT:raise s.Problem('nad.fun is cooling down. Try again shortly.',503,'nad_api_backoff')
+        remaining=7.5-(time.monotonic()-API_AT)
         if remaining>0:time.sleep(remaining)
         API_AT=time.monotonic()
         body=data if isinstance(data,bytes) else s.dump(data).encode() if data is not None else None
@@ -153,7 +156,12 @@ def api(path,data=None,mime=None):
             result=json.loads(raw)
             if not isinstance(result,dict):raise ValueError()
             return result
-        except HTTPError as e:raise s.Problem('nad.fun is busy. Try again shortly.',503,'nad_api_'+str(e.code))
+        except HTTPError as e:
+            if e.code==429:
+                try:delay=float(e.headers.get('Retry-After','30'))
+                except (TypeError,ValueError,AttributeError):delay=30
+                API_RETRY_AT=time.monotonic()+max(5,min(120,delay)) if math.isfinite(delay) else time.monotonic()+30
+            raise s.Problem('nad.fun is busy. Try again shortly.',503,'nad_api_'+str(e.code))
         except Exception:raise s.Problem('nad.fun data is unavailable. Try again.',503,'nad_api_unavailable')
 
 def storage_url(url):
@@ -211,6 +219,8 @@ def token_info(token,refresh=True):
     if refresh:
         live=state(row['version'],token);info.update(live)
         s.write('UPDATE nad_tokens SET info=?,observed=? WHERE address=?',(s.dump(info),s.now(),token))
+    import launch_ingestion
+    launch_ingestion.viewed([info])
     return public_info(info)
 
 def public_info(info):
@@ -223,15 +233,53 @@ def public_info(info):
     info['lastKnown']=bool(info.get('price')) and info['stale']
     return info
 
-def catalog(phase=None,sort='latest'):
+def references(assets):
+    import launch_ingestion
+    ids=list(dict.fromkeys(str(assets).split(',')))
+    if not 1<=len(ids)<=60:raise s.Problem('Invalid launch references')
+    ids=[address(a) for a in ids]
+    entries=[public_info(json.loads(row['info'])) for row in s.rows('SELECT info FROM nad_tokens WHERE address IN ('+','.join('?' for _ in ids)+')',ids)]
+    launch_ingestion.viewed(entries)
+    return {'tokens':entries,'fetchedAt':s.now(),'financialTransactions':0}
+
+def catalog(phase=None,sort='latest',query='',cursor='',limit=100):
     if phase not in (None,'','dex'):raise s.Problem('Unknown launch filter',400)
     if sort not in ('latest','cap'):raise s.Problem('Unknown launch order',400)
-    where=' WHERE json_extract(info,"$.graduated")=1' if phase=='dex' else ''
-    entries=[public_info(json.loads(x['info'])) for x in s.rows('SELECT info FROM nad_tokens'+where+' ORDER BY json_extract(info,"$.created") DESC LIMIT '+('500' if sort=='cap' else '100'))]
-    if sort=='cap':entries.sort(key=lambda t:Decimal(t['marketCap']) if t.get('marketCap') is not None else Decimal(-1),reverse=True);entries=entries[:100]
-    cursor=s.rows('SELECT * FROM nad_sync')
+    import base64,launch_ingestion
+    query=str(query).strip().lower()[:120]
+    try:limit=int(limit)
+    except (TypeError,ValueError):raise s.Problem('Invalid launch page')
+    if not 1<=limit<=100:raise s.Problem('Invalid launch page')
+    filters=['1=1'];args=[];snapshot=s.now();after=None
+    if phase=='dex':filters.append('json_extract(info,"$.graduated")=1')
+    if query:
+        filters.append('(instr(lower(json_extract(info,"$.name")),?)>0 OR instr(lower(json_extract(info,"$.symbol")),?)>0 OR instr(address,?)>0)');args.extend([query]*3)
+    if cursor:
+        try:
+            if len(cursor)>1200:raise ValueError()
+            after=json.loads(base64.urlsafe_b64decode(cursor+'='*(-len(cursor)%4)))
+            if after['sort']!=sort or after['phase']!=(phase or '') or after['query']!=query or not isinstance(after['snapshot'],int) or not isinstance(after['created'],int):raise ValueError()
+            address(after['address']);snapshot=after['snapshot']
+            if not 0<=s.now()-snapshot<=3600:raise ValueError()
+        except Exception:raise s.Problem('Launch page expired. Refresh the list.',400,'launch_cursor_invalid')
+    filters.append('coalesce(json_extract(info,"$.created"),0)<=?');args.append(snapshot)
+    where=' WHERE '+' AND '.join(filters);total=s.one('SELECT count(*) AS n FROM nad_tokens'+where,args)['n']
+    created='coalesce(json_extract(info,"$.created"),0)'
+    cap='CASE WHEN json_extract(info,"$.referenceAt") BETWEEN '+str(s.now()-900)+' AND '+str(s.now())+' THEN coalesce(CAST(json_extract(info,"$.marketCap") AS REAL),-1) ELSE -1 END'
+    if after:
+        if sort=='cap':
+            where+=' AND ('+cap+'<? OR ('+cap+'=? AND ('+created+'<? OR ('+created+'=? AND address<?))))';args.extend([after['cap'],after['cap'],after['created'],after['created'],after['address']])
+        else:where+=' AND ('+created+'<? OR ('+created+'=? AND address<?))';args.extend([after['created'],after['created'],after['address']])
+    order=(cap+' DESC,' if sort=='cap' else '')+created+' DESC,address DESC'
+    rows=s.rows('SELECT info,'+cap+' AS sort_cap FROM nad_tokens'+where+' ORDER BY '+order+' LIMIT ?',(*args,limit+1))
+    entries=[public_info(json.loads(x['info'])) for x in rows[:limit]];next_cursor=None
+    if len(rows)>limit:
+        last=entries[-1];key={'sort':sort,'phase':phase or '','query':query,'snapshot':snapshot,'created':last.get('created',0),'address':last['id'],'cap':rows[limit-1]['sort_cap']}
+        next_cursor=base64.urlsafe_b64encode(s.dump(key).encode()).decode().rstrip('=')
+    launch_ingestion.viewed(entries[:24])
+    sync=s.rows('SELECT * FROM nad_sync')
     with MARKET_REFERENCE_LOCK:health=dict(REFERENCE_HEALTH)
-    return {'tokens':entries,'fetchedAt':max((x['referenceAt'] for x in entries),default=None),'sync':cursor,'error':SYNC_ERROR,'referenceHealth':health,'source':'nad.fun · contract verified','chainId':143,'refreshSeconds':60,'sort':sort,'marketCapBasis':'total_supply'}
+    return {'tokens':entries,'total':total,'nextCursor':next_cursor,'fetchedAt':max((x.get('referenceAt',0) for x in entries),default=None),'sync':sync,'error':SYNC_ERROR,'referenceHealth':health,'ingestion':launch_ingestion.health(),'source':'nad.fun · contract verified','chainId':143,'refreshSeconds':30,'sort':sort,'marketCapBasis':'total_supply'}
 
 def hydrate_events(limit=2):
     # Persisted events also feed discovery when launches fall outside an API page.
@@ -278,26 +326,19 @@ def sync_once():
                 s.write('INSERT OR IGNORE INTO nad_events VALUES(?,?,?,?,?,?,?)',(version,log['transactionHash'],int(log['logIndex'],16),int(log['blockNumber'],16),log['blockHash'],item['name'],s.dump(item['fields'])))
                 token=item['fields'].get('token')
                 if token and s.one('SELECT 1 FROM nad_tokens WHERE address=?',(token.lower(),)):
-                    token_info(token)
+                    # Discovery must not hold the event cursor behind slow reads.
+                    import launch_ingestion
+                    launch_ingestion.viewed([{'id':token.lower()}])
             block=s.rpc('eth_getBlockByNumber',[hex(stop),False])
             s.write('INSERT INTO nad_sync VALUES(?,?,?,?) ON CONFLICT(version) DO UPDATE SET block=excluded.block,block_hash=excluded.block_hash,updated=excluded.updated',(version,stop,block['hash'],s.now()))
-        candidates=api('/order/creation_time?'+urlencode({'page':1,'limit':24,'is_nsfw':'false','direction':'DESC'})).get('tokens',[])
-        for candidate in candidates[:24]:
-            try:remember(candidate)
-            except s.Problem:continue
-        for candidate in api('/order/market_cap?'+urlencode({'page':1,'limit':12,'is_nsfw':'false','is_graduated':'true','direction':'DESC'})).get('tokens',[])[:12]:
-            try:remember(candidate)
-            except s.Problem:continue
-        hydrate_events()
         SYNC_ERROR=None
     except s.Problem as e:SYNC_ERROR=e.code
     except Exception:SYNC_ERROR='nad_sync_unavailable'
     finally:SYNC_LOCK.release()
 
 def background():
-    threading.Thread(target=market_background,daemon=True,name='nad-market-reference').start()
-    while True:
-        sync_once();time.sleep(60)
+    import launch_ingestion
+    launch_ingestion.loops()
 
 def quote(token,kind,amount,slippage=100):
     info=token_info(token,False);block=s.rpc('eth_blockNumber',[]);live=state(info['version'],info['address'],block)

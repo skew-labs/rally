@@ -6,7 +6,7 @@ export function launchpadUI(c){
  const {S,$,api,esc,icon,avatar,usd,age,navigate,needAccount,walletReady,notify,creator}=c;
  const short=x=>x?x.slice(0,6)+'…'+x.slice(-4):'';
  const cap=n=>n==null?'—':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',notation:'compact',maximumSignificantDigits:3}).format(Number(n));
- const art=(t,cls='')=>`<span class="lp-art ${cls}">${t.logoURI||t.imageURI?`<img src="${esc(t.logoURI||t.imageURI)}" alt="${esc(t.name||'Token')}" loading="lazy" decoding="async" data-lp-image onload="this.classList.add('is-loaded');this.nextElementSibling.hidden=true" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="lp-art-fallback" aria-hidden="true">${esc((t.symbol||t.name||'?').slice(0,3))}</span>`:icon('image')}</span>`;
+ const art=(t,cls='')=>`<span class="lp-art ${cls}">${t.logoThumbURI||t.logoURI||t.imageURI?`<img src="${esc(t.logoThumbURI||t.logoURI||t.imageURI)}" alt="${esc(t.name||'Token')}" loading="lazy" decoding="async" data-lp-image onload="this.classList.add('is-loaded');this.nextElementSibling.hidden=true" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="lp-art-fallback" aria-hidden="true">${esc((t.symbol||t.name||'?').slice(0,3))}</span>`:icon('image')}</span>`;
  const person=p=>p?`<button class="lp-person" data-action="profile" data-id="${esc(p.id)}">${avatar(p)}<span>${esc(p.name)}</span>${p.kind==='agent'?'<small>Agent</small>':''}</button>`:'';
  const networkMark=platform=>`<span class="lp-network-mark"><img src="/assets/launch-network-${platform==='GitHub'?'github.png':'x.svg'}" alt="" width="18" height="18"></span>`;
  const tabs=()=>`<nav class="lp-tabs" aria-label="Launchpad">${[['launchpad','Launches'],['launch','Create'],['payments','Payments'],['analytics','Analytics'],['earnings','Claim fees']].map(([view,name])=>`<a href="/?view=${view}" data-nav="${view}" ${S.view===view&&(view!=='launchpad'||S.launchFilter!=='yours')?'aria-current="page"':''}>${name}</a>`).join('')}<button data-action="lp-yours" aria-pressed="${S.view==='launchpad'&&S.launchFilter==='yours'}">Your tokens</button></nav>`;
@@ -19,13 +19,25 @@ export function launchpadUI(c){
  }
  const beneficiary=t=>t.launch?.beneficiary;
  const networkFilters=()=>`<div class="lp-network-filters" role="group" aria-label="Beneficiary network">${[['all','All accounts'],['X','X'],['GitHub','GitHub']].map(([id,label])=>`<button type="button" data-action="lp-network" data-id="${id}" aria-pressed="${(S.launchNetwork||'all')===id}">${id==='all'?icon('nav-communities'):networkMark(id)}${label}</button>`).join('')}<small>Fee beneficiaries</small></div>`;
- let sequence=0,objectURL=null,cache=null,request=null;
- function dispose(){sequence++;activity.dispose();if(objectURL)URL.revokeObjectURL(objectURL);objectURL=null;}
- async function data(refresh=false){
-  const actor=S.boot.me?.id||'guest';
-  if(!refresh&&cache&&cache.actor===actor&&Date.now()-cache.at<30000)return cache.data;
-  if(!request||request.actor!==actor){const promise=api('/api/launchpad/tokens').then(d=>{cache={data:d,actor,at:Date.now()};d.tokens.forEach(t=>{const i=S.tokens.findIndex(x=>x.id===t.id);if(i<0)S.tokens.push(t);else S.tokens[i]={...S.tokens[i],...t};});return d;}).finally(()=>{if(request?.actor===actor)request=null;});request={actor,promise};}
+ let sequence=0,objectURL=null,cache=null,request=null,shown=24,moreBusy=false,searchTimer;
+ function dispose(){sequence++;clearTimeout(searchTimer);activity.dispose();if(objectURL)URL.revokeObjectURL(objectURL);objectURL=null;}
+ async function data(refresh=false,cursor=''){
+  const actor=S.boot.me?.id||'guest',query=(S.launchSearch||'').trim(),sort=S.launchSort||'latest',key=JSON.stringify([actor,query,sort,cursor]);
+  if(!refresh&&cache&&cache.key===key&&Date.now()-cache.at<30000)return cache.data;
+  if(!request||request.key!==key){const promise=api('/api/launchpad/tokens?'+new URLSearchParams({query,sort,...(cursor?{cursor}:{})})).then(d=>{if(!cursor)cache={data:d,actor,key,at:Date.now()};d.tokens.forEach(t=>{const i=S.tokens.findIndex(x=>x.id===t.id);if(i<0)S.tokens.push(t);else S.tokens[i]={...S.tokens[i],...t};});return d;}).finally(()=>{if(request?.key===key)request=null;});request={key,promise};}
   return request.promise;
+ }
+ async function reload(refresh=false){
+  const seq=++sequence,actor=S.boot.me?.id||'guest';
+  try{const d=await data(refresh);if(seq!==sequence||S.view!=='launchpad'||actor!==(S.boot.me?.id||'guest'))return;S.launchCatalog=d;shown=24;paint();}
+  catch(e){if(seq===sequence&&$('#lp-grid')){$('#lp-grid').innerHTML=`<div class="lp-empty"><p>${esc(e.message)}</p><button class="lp-primary" data-action="lp-refresh">Retry</button></div>`;$('#lp-grid').setAttribute('aria-busy','false');}}
+ }
+ async function more(){
+  if(moreBusy||!S.launchCatalog)return;moreBusy=true;
+  const seq=sequence,actor=S.boot.me?.id||'guest',button=$('[data-action="lp-more"]');if(button){button.disabled=true;button.textContent='Loading…';}
+  try{if(shown>=collection(S.launchCatalog).length&&S.launchCatalog.nextCursor){const d=await data(false,S.launchCatalog.nextCursor);if(seq!==sequence||S.view!=='launchpad'||actor!==(S.boot.me?.id||'guest'))return;const tokens=new Map(S.launchCatalog.tokens.map(t=>[t.id,t]));d.tokens.forEach(t=>tokens.set(t.id,t));S.launchCatalog={...S.launchCatalog,tokens:[...tokens.values()],nextCursor:d.nextCursor,total:d.total};}shown+=24;paint();}
+  catch(e){notify(e.message);if(button?.isConnected){button.disabled=false;button.textContent='Retry';}}
+  finally{moreBusy=false;}
  }
  function card(t,legacy=false){
   const b=t.launch,p=b?.creator,g=beneficiary(t),progress=Math.max(0,Math.min(100,Number(t.progressBps||0)/100));
@@ -33,17 +45,17 @@ export function launchpadUI(c){
  }
  async function discover(refresh=false){
   const seq=++sequence,host=$('#page');host.innerHTML=head()+tabs()+creator.communityEntry()+`<section class="lp-discovery">${networkFilters()}<section class="lp-overview" aria-label="This token collection"><div><small>Tokens in collection</small><b id="lp-token-count">—</b></div><div><small>Rally communities</small><b id="lp-community-count">—</b></div><div><small>Network</small><b>Monad</b><span>nad.fun + Rally</span></div></section><div class="lp-discovery-title"><h2>Tokens</h2><button class="r-text-button" data-action="lp-register">Register existing ${icon('plus')}</button></div><div class="lp-tools"><label class="lp-search">${icon('search')}<input type="search" id="lp-search" aria-label="Search tokens" placeholder="Token, creator, handle or address" value="${esc(S.launchSearch||'')}"></label><select id="lp-sort" aria-label="Sort tokens"><option value="latest">Latest</option><option value="cap" ${S.launchSort==='cap'?'selected':''}>Market cap</option></select><button class="r-icon-button" data-action="lp-refresh" aria-label="Refresh launches">${icon('repeat-2')}</button></div><div class="lp-filters">${[['all','All tokens'],['communities','Communities'],['agents','Agents']].map(([id,label])=>`<button data-action="lp-filter" data-id="${id}" aria-pressed="${(S.launchFilter||'all')===id}">${label}</button>`).join('')}</div><div id="lp-grid" class="lp-grid" aria-live="polite" aria-busy="true">${[1,2,3].map(()=>'<div class="lp-skeleton"></div>').join('')}</div><div id="lp-foot" class="lp-foot"></div></section>`;
-  try{const d=await data(refresh);if(seq!==sequence||S.view!=='launchpad')return;S.launchCatalog=d;paint();$('#lp-search').oninput=e=>{S.launchSearch=e.target.value;paint();};$('#lp-sort').onchange=e=>{S.launchSort=e.target.value;paint();};}
+  try{const d=await data(refresh);if(seq!==sequence||S.view!=='launchpad')return;S.launchCatalog=d;shown=24;paint();$('#lp-search').oninput=e=>{S.launchSearch=e.target.value;clearTimeout(searchTimer);searchTimer=setTimeout(()=>reload(),220);};$('#lp-sort').onchange=e=>{S.launchSort=e.target.value;reload();};}
   catch(e){if(seq===sequence){$('#lp-grid').innerHTML=`<div class="lp-empty"><p>${esc(e.message)}</p><button class="lp-primary" data-action="lp-refresh">Retry</button></div>`;$('#lp-grid').setAttribute('aria-busy','false');}}
  }
  function paint(){
   const d=S.launchCatalog;if(!d||!$('#lp-grid'))return;const all=collection(d);let items=all;
-  $('#lp-token-count').textContent=all.length;$('#lp-community-count').textContent=new Set(all.map(t=>t.launch?.community).filter(Boolean)).size;
+  $('#lp-token-count').textContent=Math.max(d.total||0,all.length);$('#lp-community-count').textContent=new Set(all.map(t=>t.launch?.community).filter(Boolean)).size;
   const q=(S.launchSearch||'').trim().toLowerCase(),filter=S.launchFilter||'all',network=S.launchNetwork||'all';
   items=items.filter(t=>(t.name+' '+t.symbol+' '+t.id+' '+(t.launch?.creator?.name||'')+' '+(t.launch?.creator?.handle||'')+' '+(beneficiary(t)?.handle||'')).toLowerCase().includes(q)&&(network==='all'||beneficiary(t)?.platform===network)&&(filter!=='communities'||t.launch?.community)&&(filter!=='agents'||t.launch?.creator?.kind==='agent')&&(filter!=='yours'||S.boot.me&&(t.launch?.creator?.id===S.boot.me.id||t.launch?.creator?.owner===S.boot.me.id)));
   if(S.launchSort==='cap')items.sort((a,b)=>Number(b.marketCap||-1)-Number(a.marketCap||-1));
-  $('#lp-grid').innerHTML=items.length?items.map(t=>card(t,t.legacy)).join(''):`<div class="lp-empty">${icon('launch')}<h3>${filter==='yours'&&!S.boot.me?'Sign in to see your tokens':q?'No matches':network!=='all'?'No '+esc(network)+' beneficiaries yet':'No tokens here yet'}</h3><button class="lp-primary" data-action="${filter==='yours'&&!S.boot.me?'account':'lp-create'}">${filter==='yours'&&!S.boot.me?'Sign in':'Create token'}</button></div>`;
-  $('#lp-grid').setAttribute('aria-busy','false');$('#lp-foot').innerHTML=`<span>${items.length} shown from ${all.length} collected tokens</span><span>${d.error?'Collection delayed':d.fetchedAt?'Updated '+age(d.fetchedAt):'Prices appear when available'}</span>`;
+  $('#lp-grid').innerHTML=items.length?items.slice(0,shown).map(t=>card(t,t.legacy)).join(''):`<div class="lp-empty">${icon('launch')}<h3>${filter==='yours'&&!S.boot.me?'Sign in to see your tokens':q?'No matches':network!=='all'?'No '+esc(network)+' beneficiaries yet':'No tokens here yet'}</h3><button class="lp-primary" data-action="${filter==='yours'&&!S.boot.me?'account':'lp-create'}">${filter==='yours'&&!S.boot.me?'Sign in':'Create token'}</button></div>`;
+  $('#lp-grid').setAttribute('aria-busy','false');const global=(filter==='all'&&network==='all'),canMore=items.length>shown||global&&d.nextCursor;$('#lp-foot').innerHTML=`<span>${Math.min(shown,items.length)} of ${global?Math.max(d.total||0,all.length):items.length} tokens</span>${canMore?'<button class="lp-secondary" data-action="lp-more">Load more</button>':''}<span>${d.error?'Collection delayed':d.fetchedAt?'Updated '+age(d.fetchedAt):'Prices appear when available'}</span>`;
   document.querySelectorAll('[data-action="lp-filter"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===filter)));
   document.querySelectorAll('[data-action="lp-network"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===network)));
   $('[data-action="lp-yours"]').setAttribute('aria-pressed',String(filter==='yours'));
@@ -117,9 +129,10 @@ export function launchpadUI(c){
   if(action==='lp-register'){register();return true;}
   if(action==='lp-preview'){const d=draft();c.modal('Token preview',preview(d.values,objectURL||d.imageURI).replace('id="lp-preview-creator"','class="lp-modal-creator"'),'lp-preview-modal');return true;}
   if(action==='lp-draft'){const item=S.launchPrepared?.find(x=>x.id===id);if(!item?.intent?.launch)return true;const x=item.intent,p=x.launch;const fields={name:x.name,symbol:x.symbol,description:x.description||'',website:x.website||'',twitter:x.twitter||'',telegram:x.telegram||'',identity:p.identity,media:x.media,allocations:{...p.allocations,gift:p.allocations.gift||0},beneficiary:p.beneficiary||null};S.launchDraft={actor:S.boot.me.id,values:{...fields,burn:p.allocations.burn/100,liquidity:p.allocations.liquidity/100,gift:(p.allocations.gift||0)/100,platform:p.beneficiary?.platform||'X',handle:p.beneficiary?.handle||''},file:null,media:x.media,imageURI:item.imageURI,key:crypto.randomUUID(),signature:JSON.stringify(fields),prepared:item.id};await create();return true;}
-  if(action==='lp-refresh'){await discover(true);return true;}
-  if(action==='lp-network'){if(!['all','X','GitHub'].includes(id))return true;S.launchNetwork=id;paint();return true;}
-  if(action==='lp-filter'){if(!['all','communities','agents'].includes(id))return true;S.launchFilter=id;paint();return true;}
+  if(action==='lp-refresh'){await reload(true);return true;}
+  if(action==='lp-more'){await more();return true;}
+  if(action==='lp-network'){if(!['all','X','GitHub'].includes(id))return true;S.launchNetwork=id;shown=24;paint();return true;}
+  if(action==='lp-filter'){if(!['all','communities','agents'].includes(id))return true;S.launchFilter=id;shown=24;paint();return true;}
   if(action==='lp-yours'){S.launchFilter='yours';if(S.view!=='launchpad')await navigate('launchpad');else paint();return true;}
   return false;
  }
@@ -132,7 +145,7 @@ export function launchpadUI(c){
     else if(['failed','invalid'].includes(record?.state)){pending.state=record.state;const error=$('.r-form-error',$('#lp-create-form'));if(error)error.textContent='Launch '+record.state+'. Check Activity before trying again.';}
    }catch{}return;
   }
-  if(S.view!=='launchpad'||Date.now()-(cache?.at||0)<30000)return;const seq=sequence;try{const d=await data(true);if(seq===sequence&&S.view==='launchpad'){S.launchCatalog=d;paint();}}catch{}
+  if(S.view!=='launchpad'||Date.now()-(cache?.at||0)<30000)return;const seq=sequence;try{const d=await data(true);if(seq===sequence&&S.view==='launchpad'){const previous=S.launchCatalog;const tokens=new Map(d.tokens.map(t=>[t.id,t]));for(const t of previous?.tokens||[])if(!tokens.has(t.id))tokens.set(t.id,t);S.launchCatalog={...d,tokens:[...tokens.values()],nextCursor:previous?.nextCursor??d.nextCursor};paint();}}catch{}
  }
  return {discover,create,handle,dispose,tokenPanel,profile,poll,earningsPanel,activity:activity.render};
 }

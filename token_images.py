@@ -27,7 +27,19 @@ def restore():
 def ready(url):
     if not safe(url):return None
     with LOCK:name=CACHE.get(hashlib.sha256(url.encode()).hexdigest())
-    return '/assets/'+name if name and (s.ROOT/'assets'/name).is_file() else None
+    return '/assets/'+name if name and file(name) else None
+
+
+def file(name):
+    if not isinstance(name,str) or not re.fullmatch(r'token-art-[a-f0-9]{20}\.webp',name):return None
+    for directory in [s.STATE/'token-art',s.ROOT/'assets']:
+        path=directory/name
+        if path.is_file() and not path.is_symlink() and path.resolve().is_relative_to(directory.resolve()):return path
+    return None
+
+
+def public(path):
+    return bool(path and file(path.name)==path and path.parent==s.STATE/'token-art')
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -54,7 +66,7 @@ def collect(url):
         with urllib.request.build_opener(NoRedirect()).open(request,timeout=5) as response:
             if int(response.headers.get('Content-Length','0'))>LIMIT:raise ValueError('Artwork exceeds size limit')
             body=response.read(LIMIT+1)
-        webp=encode(body);name='token-art-'+hashlib.sha256(webp).hexdigest()[:20]+'.webp';target=s.ROOT/'assets'/name
+        webp=encode(body);name='token-art-'+hashlib.sha256(webp).hexdigest()[:20]+'.webp';target=s.STATE/'token-art'/name
         target.parent.mkdir(parents=True,exist_ok=True)
         # A unique temporary name also handles identical artwork across tokens.
         temporary=target.with_name(name+'.'+key[:12]+'.tmp');temporary.write_bytes(webp);os.replace(temporary,target)
@@ -63,19 +75,19 @@ def collect(url):
     except Exception:return False
 
 
-def once(maximum=12,workers=2):
-    import nadfun
+def once(maximum=32,workers=2):
     # Registry metadata only: no chain reads, authentication or financial execution.
-    tokens=nadfun.catalog(sort='cap')['tokens']+nadfun.catalog()['tokens']
+    # The complete registry is the queue, including launches beyond page one.
+    tokens=s.rows("SELECT json_extract(info,'$.logoURI') AS logoURI FROM nad_tokens ORDER BY json_extract(info,'$.created') DESC")
     urls=list(dict.fromkeys(t.get('logoURI') for t in tokens if safe(t.get('logoURI'))))
     pending=[url for url in urls if not ready(url) and RETRY.get(hashlib.sha256(url.encode()).hexdigest(),0)<=time.time()][:maximum]
     with ThreadPoolExecutor(max_workers=workers) as pool:results=list(pool.map(collect,pending))
     with LOCK:
-        while len(CACHE)>2048:CACHE.pop(next(iter(CACHE)))
+        while len(CACHE)>50000:CACHE.pop(next(iter(CACHE)))
         data=dict(CACHE)
-    if len(data)==2048:
+    if len(data)==50000:
         keep=set(data.values())
-        for path in (s.ROOT/'assets').glob('token-art-*.webp'):
+        for path in (s.STATE/'token-art').glob('token-art-*.webp'):
             if path.name not in keep and re.fullmatch(r'token-art-[a-f0-9]{20}\.webp',path.name):path.unlink(missing_ok=True)
     temporary=s.STATE/'token-art-map.json.tmp';temporary.write_text(json.dumps(data));os.replace(temporary,s.STATE/'token-art-map.json')
     return {'attempted':len(pending),'collected':sum(results),'ready':sum(bool(ready(url)) for url in urls),'sources':len(urls)}
@@ -93,4 +105,4 @@ def background():
     while True:
         try:once()
         except Exception:pass
-        time.sleep(45)
+        time.sleep(15)

@@ -108,19 +108,22 @@ def me(who):
     user=s.require(who,human=True)
     return {'identities':[creator(p['id']) for p in s.rows("SELECT id FROM accounts WHERE id=? OR kind='agent' AND owner=? ORDER BY kind DESC,created LIMIT 100",(user,user))],'tokens':[binding(x) for x in s.rows('SELECT * FROM launch_tokens WHERE owner=? ORDER BY created DESC LIMIT 50',(user,))]}
 
-def catalog(who=None):
+def catalog(who=None,params=None):
     import social,community_tokens
     viewer=who['user'] if who else None
-    data=n.catalog(sort='latest');tokens=data['tokens'];bound={x['token']:x for x in s.rows('SELECT * FROM launch_tokens ORDER BY created DESC LIMIT 500')}
+    params=params or {}
+    data=n.catalog(sort=params.get('sort','latest'),query=params.get('query',''),cursor=params.get('cursor',''),limit=params.get('limit',100));tokens=data['tokens'];bound={x['token']:x for x in s.rows('SELECT * FROM launch_tokens ORDER BY created DESC LIMIT 500')}
     present={t['id'] for t in tokens}
     # Include registered launches even when they fall outside nad.fun's latest page.
     for token in bound:
-        if token not in present:
+        if not params.get('cursor') and token not in present:
             cached=s.one('SELECT info FROM nad_tokens WHERE address=?',(token,))
             if cached:tokens.append(n.public_info(json.loads(cached['info'])))
     for t in tokens:t['launch']=binding(bound[t['id']]) if t['id'] in bound and social.visible(viewer,bound[t['id']]['identity']) else None
     existing=[community_tokens.public(x['owner']) for x in s.rows('SELECT owner FROM creator_tokens WHERE state=? LIMIT 50',('live',))] if s.one("SELECT name FROM sqlite_master WHERE type='table' AND name='creator_tokens'") else []
-    return {**data,'tokens':tokens[:150],'communityTokens':[{**t,'creatorProfile':creator(t['owner'])} for t in existing if t and social.visible(viewer,t['owner'])]}
+    import token_images
+    token_images.decorate(tokens)
+    return {**data,'tokens':tokens,'communityTokens':[{**t,'creatorProfile':creator(t['owner'])} for t in existing if t and social.visible(viewer,t['owner'])]}
 
 def detail(token,who=None):
     import social

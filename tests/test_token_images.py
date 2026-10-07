@@ -2,10 +2,10 @@
 import io,json,os,sys,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
-assert os.environ.get('RALLY_TESTING') == '1', 'Use scripts/test.py for isolated tests'
+assert os.environ.get('RALLY_TESTING')=='1'
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from PIL import Image
-import token_images as art,service as s
+import token_images as art,service as s,live_server
 
 
 class Artwork(unittest.TestCase):
@@ -46,5 +46,32 @@ class Artwork(unittest.TestCase):
     def test_invalid_url_does_not_open_network(self):
         with patch.object(art.urllib.request,'build_opener',side_effect=AssertionError('No provider call')):
             self.assertFalse(art.collect('https://localhost/'));self.assertFalse(art.collect('/media/private'))
+
+    def test_derivative_works_with_read_only_app_assets(self):
+        buf=io.BytesIO();Image.new('RGB',(200,100),(20,30,40)).save(buf,format='PNG');body=buf.getvalue()
+        class Response:
+            headers={'Content-Length':str(len(body))}
+            def __enter__(self):return self
+            def __exit__(self,*a):pass
+            def read(self,limit):return body[:limit]
+        class Opener:
+            def open(self,*a,**kw):return Response()
+        assets=self.root/'assets';assets.chmod(0o555)
+        try:
+            with patch.object(art.urllib.request,'build_opener',return_value=Opener()):self.assertTrue(art.collect(self.url))
+            name=art.ready(self.url).rsplit('/',1)[-1];target=art.file(name)
+            self.assertEqual(target.parent,self.root/'state/token-art');self.assertTrue(art.public(target));self.assertEqual(list(assets.iterdir()),[])
+        finally:assets.chmod(0o755)
+    def test_public_derivative_path_cannot_resolve_private_files_or_symlinks(self):
+        store=self.root/'state/token-art';store.mkdir();secret=self.root/'state/secret';secret.write_text('private')
+        name='token-art-'+'1'*20+'.webp';(store/name).symlink_to(secret)
+        for value in ['../secret','token-art-../secret.webp','rally.sqlite3',name]:self.assertIsNone(art.file(value))
+        self.assertFalse(art.public(secret))
+    def test_http_derivative_cached_but_private_media_stays_uncached(self):
+        store=self.root/'state/token-art';store.mkdir();name='token-art-'+'1'*20+'.webp';target=store/name;target.write_bytes(b'fixture')
+        handler=object.__new__(live_server.Handler);handler.headers={};handler.command='GET';handler.wfile=io.BytesIO();headers={}
+        handler.send_response=lambda status:headers.update(status=status);handler.send_header=lambda k,v:headers.update({k:v});handler.end_headers=lambda:None
+        handler.file(target,'image/webp');self.assertEqual(headers['Cache-Control'],'public,max-age=31536000,immutable')
+        private=self.root/'state/private.webp';private.write_bytes(b'private');handler.wfile=io.BytesIO();headers.clear();handler.file(private,'image/webp');self.assertEqual(headers['Cache-Control'],'no-store')
 
 if __name__=='__main__':unittest.main()

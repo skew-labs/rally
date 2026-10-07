@@ -134,7 +134,7 @@ def restore():
                 with s.LOCK:
                     if value.get('fetchedAt',0)>=s.GATEWAY.prices.get(item['id'],{}).get('fetchedAt',0):s.GATEWAY.prices[item['id']]=value
 
-def index_factories():
+def index_factories(max_pages=4):
     from eth_abi import decode
     block=s.rpc('eth_blockNumber',[])
     for venue,address in FACTORIES.items():
@@ -152,7 +152,8 @@ def index_factories():
             if not 0<=count<=500_000:raise ValueError('Factory count invalid')
             cursor=int(old.get('cursor',0));source(venue,total=count,cursor=cursor,block=int(block,16),factory=address,codeHash=codehash,state='indexing')
             # Each committed cursor is resumable. Partial work is never called complete.
-            while cursor<count:
+            pages=0
+            while cursor<count and pages<max_pages:
                 end=min(cursor+96,count)
                 pairs=batch([call(address,'allPairs(uint256)',[i],['uint256']) for i in range(cursor,end)],block)
                 if not all(ok and len(v)==32 for ok,v in pairs):raise ValueError('Incomplete pool page')
@@ -164,8 +165,8 @@ def index_factories():
                         t0,t1=[decode(['address'],v)[0].lower() for _,v in tokens[i*2:i*2+2]]
                         c.execute('INSERT OR REPLACE INTO pools VALUES(?,?,?,?)',(a,venue,t0,t1))
                         for t in [t0,t1]:c.execute('INSERT OR IGNORE INTO assets(address) VALUES(?)',(t,))
-                cursor=end;source(venue,cursor=cursor,state='complete' if cursor==count else 'indexing',observedAt=s.now())
-            source(venue,state='complete',observedAt=s.now())
+                cursor=end;pages+=1;source(venue,cursor=cursor,state='complete' if cursor==count else 'indexing',observedAt=s.now())
+            source(venue,state='complete' if cursor==count else 'indexing',observedAt=s.now())
         except Exception:source(venue,state='partial',error='Factory read unavailable; saved cursor retained',observedAt=s.now())
 
 def enrich(limit=256):
@@ -232,7 +233,27 @@ def dex_batch(part):
         if not isinstance(raw,list):raise ValueError('Invalid token price response')
         values=spot_prices.dex_prices(raw,part)
         publish_prices(values)
+        enrich_artwork(raw,part)
         return values
+
+def enrich_artwork(pairs,addresses):
+    from urllib.parse import urlsplit
+    allowed={'cdn.dexscreener.com','dd.dexscreener.com','coin-images.coingecko.com'}
+    updates={}
+    for pair in pairs:
+        if pair.get('chainId')!='monad':continue
+        token=pair.get('baseToken') or {};a=str(token.get('address','')).lower()
+        known=s.GATEWAY.token_map.get(a)
+        if a not in addresses or not known or known.get('logoURI') or token.get('symbol')!=known.get('symbol') or token.get('name')!=known.get('name'):continue
+        url=(pair.get('info') or {}).get('imageUrl')
+        try:
+            parsed=urlsplit(url)
+            if parsed.scheme!='https' or parsed.hostname not in allowed or parsed.username or parsed.password or parsed.port not in {None,443} or len(url)>1024:continue
+        except (ValueError,TypeError,AttributeError):continue
+        updates[a]={**known,'logoURI':url,'logoSource':'DexScreener exact Monad token identity'}
+    with db() as c:
+        for a,info in updates.items():c.execute('UPDATE assets SET info=? WHERE address=?',(s.dump(info),a))
+    with s.LOCK:s.GATEWAY.token_map.update(updates)
 
 def prices(addresses):
     addresses=list(dict.fromkeys(a.lower() for a in addresses if re.fullmatch('0x[0-9a-fA-F]{40}',a)))
@@ -365,10 +386,18 @@ def catalog(params):
 def background():
     try:restore()
     except Exception:delayed('Catalog')
-    try:token_lists()
-    except Exception:delayed('Monad token list')
-    try:index_factories()
-    except Exception:delayed('Factory scan')
+    def factories():
+        while True:
+            try:index_factories()
+            except Exception:delayed('Factory scan')
+            time.sleep(60)
+    def lists():
+        while True:
+            try:token_lists()
+            except Exception:delayed('Monad token list')
+            time.sleep(3600)
+    threading.Thread(target=factories,daemon=True,name='spot-new-pools').start()
+    threading.Thread(target=lists,daemon=True,name='spot-token-list').start()
     tick=0
     while True:
         try:enrich(256)
@@ -377,7 +406,4 @@ def background():
         except Exception:delayed('Discovery prices')
         try:pool_prices()
         except Exception:delayed('Reserve scan')
-        if tick%120==119:
-            try:token_lists();index_factories()
-            except Exception:delayed('Factory scan')
         tick+=1;time.sleep(15)

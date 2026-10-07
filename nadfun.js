@@ -12,40 +12,62 @@ export function nadfunUI(c){
   const phase=t=>t.locked?'Migrating':t.graduated?'DEX':'Bonding curve';
   let chartApi,chartSeries,chartSequence=0,pollAt=0,chartAt=0;
   const catalogRequests=new Map(),catalogCache=new Map();
-  let listSequence=0,listState,listObserver;
+  let listSequence=0,listState,listObserver,referenceTimer,referenceRequest;
+  async function refreshRows(){
+    if(referenceRequest)return referenceRequest;
+    const cells=[...document.querySelectorAll('[data-meme-token]')].filter(cell=>{const rect=cell.getBoundingClientRect();return rect.bottom>-100&&rect.top<innerHeight+400;}).slice(0,60);
+    if(!cells.length)return false;
+    referenceRequest=api('/api/nadfun/references?'+new URLSearchParams({assets:cells.map(cell=>cell.dataset.memeToken).join(',')})).then(data=>{
+      if(S.marketTab!=='memes'||S.nadOverlay)return false;
+      for(const token of data.tokens){remember(token);const cell=document.querySelector('[data-meme-token="'+token.id+'"]');if(cell){cell.innerHTML=metrics(token,true);const progress=cell.closest('tr')?.querySelector('.nad-progress-cell');if(progress)progress.innerHTML=`<span>${phase(token)}${token.graduated?icon('arrow'):`<b>${(token.progressBps/100).toFixed(1)}%</b>`}</span><span class="nad-progress-track"><i style="width:${Math.min(100,token.progressBps/100)}%"></i></span>`;}}
+      return data.tokens.some(token=>token.price==null||token.stale);
+    }).finally(()=>{referenceRequest=null;});
+    return referenceRequest;
+  }
+  function quickReferences(attempt=0){
+    clearTimeout(referenceTimer);referenceTimer=setTimeout(async()=>{if(S.marketTab!=='memes'||S.nadOverlay||document.hidden)return;try{if(await refreshRows()&&attempt<3)quickReferences(attempt+1);}catch{}},attempt?2000:300);
+  }
   function fresh(data){return {...data,tokens:data.tokens.map(t=>{const elapsed=Date.now()/1000-(t.referenceAt||0),expired=elapsed>900||elapsed<0;return {...t,stale:elapsed>180||elapsed<0,priceAgeSeconds:Math.max(0,elapsed),...(expired?{price:null,marketCap:null,lastKnown:false}:{} )};})};}
   const remember=t=>{const i=S.tokens.findIndex(x=>x.id===t.id);if(i<0)S.tokens.push(t);else S.tokens[i]={...S.tokens[i],...t};};
-  function dispose(){listSequence++;listObserver?.disconnect();c.checkout.disposeNad();chartSequence++;chartApi?.remove();chartApi=null;chartSeries=null;}
-  async function catalog(phase='',sort='latest',force=false){
-    const key=phase+':'+sort,query=new URLSearchParams({sort});if(phase)query.set('phase',phase);
+  function dispose(){listSequence++;clearTimeout(referenceTimer);listObserver?.disconnect();c.checkout.disposeNad();chartSequence++;chartApi?.remove();chartApi=null;chartSeries=null;}
+  async function catalog(phase='',sort='latest',force=false,search='',cursor=''){
+    const key=JSON.stringify([phase,sort,search,cursor]),query=new URLSearchParams({sort,query:search});if(phase)query.set('phase',phase);if(cursor)query.set('cursor',cursor);
     const cached=catalogCache.get(key);let data;
     if(!force&&cached&&Date.now()-cached.at<20000)data=fresh(cached.data);
     else{
-      if(!catalogRequests.has(key))catalogRequests.set(key,api('/api/nadfun/tokens?'+query).then(data=>{catalogCache.set(key,{data,at:Date.now()});return data;}).finally(()=>{catalogRequests.delete(key);}));
+      if(!catalogRequests.has(key))catalogRequests.set(key,api('/api/nadfun/tokens?'+query).then(data=>{if(catalogCache.size>30)catalogCache.delete(catalogCache.keys().next().value);catalogCache.set(key,{data,at:Date.now()});return data;}).finally(()=>{catalogRequests.delete(key);}));
       data=fresh(await catalogRequests.get(key));
     }
-    data.tokens.forEach(remember);S[phase==='dex'?'nadGraduatedCatalog':'nadCatalog']=data;return data;
+    data.tokens.forEach(remember);if(!cursor)S[phase==='dex'?'nadGraduatedCatalog':'nadCatalog']=data;return data;
   }
   function row(t,index){return `<tr><td><button class="r-coin-cell" data-action="nad-token" data-id="${esc(t.id)}">${img(t,index<10)}<span class="r-market-identity"><b title="${esc(t.symbol)}">${esc(t.symbol)}</b><small title="${esc(t.name)}">${esc(t.name)}</small></span></button></td><td class="r-number nad-list-metrics" data-meme-token="${esc(t.id)}">${metrics(t,true)}</td><td><button class="nad-progress-cell" data-action="nad-token" data-id="${esc(t.id)}"><span>${phase(t)}${t.graduated?icon('arrow'): `<b>${(t.progressBps/100).toFixed(1)}%</b>`}</span><span class="nad-progress-track"><i style="width:${Math.min(100,t.progressBps/100)}%"></i></span></button></td><td class="r-number"><small>${age(t.created)}</small></td></tr>`;}
-  function appendRows(){
+  async function appendRows(){
     const state=listState;if(!state||!state.host.isConnected||S.marketTab!=='memes'||state.mode!==(S.nadMode||'cap'))return;
+    if(state.loading)return;
+    if(state.shown>=state.tokens.length&&state.nextCursor){
+      state.loading=true;const button=state.host.querySelector('.nad-load-more button');if(button){button.disabled=true;button.textContent='Loading…';}
+      try{const data=await catalog(state.mode==='dex'?'dex':'',state.mode==='cap'?'cap':'latest',false,state.query,state.nextCursor);if(listState!==state||!state.host.isConnected)return;const ids=new Set(state.tokens.map(t=>t.id));state.tokens.push(...data.tokens.filter(t=>!ids.has(t.id)&&(!S.watchOnly||S.boot.watches.includes(t.id))));state.nextCursor=data.nextCursor;state.total=data.total;}
+      catch{if(button?.isConnected){button.disabled=false;button.textContent='Retry';}return;}
+      finally{state.loading=false;}
+    }
     const start=state.shown;state.shown=Math.min(state.tokens.length,start+24);
     state.host.querySelector('tbody').insertAdjacentHTML('beforeend',state.tokens.slice(start,state.shown).map((t,i)=>row(t,start+i)).join(''));
-    const more=state.host.querySelector('.nad-load-more');more.innerHTML=`<span>${state.shown} of ${state.tokens.length} tokens</span>${state.shown<state.tokens.length?'<button class="r-text-button" data-action="nad-more">Load more</button>':''}`;
-    if(state.shown>=state.tokens.length)listObserver?.disconnect();
+    quickReferences();
+    const more=state.host.querySelector('.nad-load-more');more.innerHTML=`<span>${state.shown} of ${state.total} tokens</span>${state.shown<state.tokens.length||state.nextCursor?'<button class="r-text-button" data-action="nad-more">Load more</button>':''}`;
+    if(state.shown>=state.tokens.length&&!state.nextCursor)listObserver?.disconnect();
   }
   function observeList(){
-    listObserver?.disconnect();if(!listState?.host.isConnected||listState.shown>=listState.tokens.length)return;
+    listObserver?.disconnect();if(!listState?.host.isConnected||listState.shown>=listState.tokens.length&&!listState.nextCursor)return;
     listObserver=new IntersectionObserver(entries=>{if(!S.nadOverlay&&!document.hidden&&entries.some(e=>e.isIntersecting))appendRows();},{rootMargin:'300px'});
     listObserver.observe(listState.host.querySelector('.nad-load-more'));
   }
   async function list(host,q='',force=false){
     const mode=S.nadMode||'cap',seq=++listSequence;listObserver?.disconnect();
-    const data=await catalog(mode==='dex'?'dex':'',mode==='cap'?'cap':'latest',force);if(seq!==listSequence||!host.isConnected||S.marketTab!=='memes'||mode!==(S.nadMode||'cap'))return;
+    const data=await catalog(mode==='dex'?'dex':'',mode==='cap'?'cap':'latest',force,q);if(seq!==listSequence||!host.isConnected||S.marketTab!=='memes'||mode!==(S.nadMode||'cap'))return;
     const tokens=data.tokens.filter(t=>(t.name+' '+t.symbol+' '+t.address).toLowerCase().includes(q)&&(!S.watchOnly||S.boot.watches.includes(t.id))&&(mode!=='dex'||t.graduated));
     if(mode==='cap')tokens.sort((a,b)=>(b.marketCap==null?-1:Number(b.marketCap))-(a.marketCap==null?-1:Number(a.marketCap)));
     host.innerHTML=`<div class="nad-list-head"><div class="nad-filters">${[['cap','Mcap'],['new','Latest'],['dex','Graduated']].map(([id,label])=>`<button class="${mode===id?'selected':''}" data-action="nad-filter" data-id="${id}">${label}</button>`).join('')}</div><button class="r-btn primary small" data-action="nad-launch" aria-label="Launch token" title="Launch token">${icon('plus')}Launch token</button></div>${tokens.length?`<div class="r-table-wrap"><table class="r-market-table nad-table"><thead><tr><th>Token</th><th>Mcap / price</th><th>Progress</th><th>Age</th></tr></thead><tbody></tbody></table></div><div class="nad-load-more" aria-live="polite"></div>`:empty(data.error?'Launches unavailable':mode==='dex'?'No graduated tokens in this list':'No tokens found',data.error?'The last successful collection is kept. Try again shortly.':'Try a contract address or switch to Latest.',`<button class="r-btn" data-action="${/^0x[0-9a-f]{40}$/.test(q)?'nad-token':'nad-refresh'}" data-id="${esc(q)}">${/^0x[0-9a-f]{40}$/.test(q)?'Open token':'Refresh'}</button>`)}<div class="r-data-foot"><span>nad.fun · Total-supply cap (FDV)</span><span>${data.fetchedAt?'Updated '+age(data.fetchedAt):'Collecting new launches'}</span></div>${data.error&&tokens.length?'<p class="r-note">Collection is delayed. Quotes use the current contract state.</p>':''}`;
-    listState=tokens.length?{host,tokens,mode,shown:0}:null;if(listState){appendRows();observeList();}
+    listState=tokens.length?{host,tokens,mode,query:q,shown:0,total:data.total||tokens.length,nextCursor:data.nextCursor}:null;if(listState){appendRows();observeList();}
   }
   async function open(id,context=null,side='buy'){
     if(S.view!=='token'){
@@ -133,7 +155,8 @@ export function nadfunUI(c){
     if(document.hidden||S.modal||S.financialBusy||Date.now()-pollAt<20000)return;pollAt=Date.now();
     if(!S.nadOverlay&&(S.view==='explore'||S.view==='home'&&S.homeSection==='markets')&&S.marketTab==='memes'){
       const graduated=S.nadMode==='dex';
-      try{const old=new Set((S[graduated?'nadGraduatedCatalog':'nadCatalog']?.tokens||[]).map(t=>t.id));const d=await catalog(graduated?'dex':'',(S.nadMode||'cap')==='cap'?'cap':'latest',true);for(const token of d.tokens){const cell=document.querySelector('[data-meme-token="'+token.id+'"]');if(cell)cell.innerHTML=metrics(token,true);}if(listState?.host.isConnected){const latest=new Map(d.tokens.map(t=>[t.id,t]));listState.tokens=listState.tokens.map(t=>latest.get(t.id)||t);}const count=d.tokens.filter(t=>!old.has(t.id)).length;if(count&&!$('#nad-new-launches'))$('.nad-list-head')?.insertAdjacentHTML('afterend',`<button class="r-new-posts" id="nad-new-launches" data-action="nad-refresh">${count} new ${graduated?'graduation'+(count===1?'':'s'):'launch'+(count===1?'':'es')} · Refresh</button>`);}catch{}return;
+      try{await refreshRows();}catch{}
+      try{const old=new Set((S[graduated?'nadGraduatedCatalog':'nadCatalog']?.tokens||[]).map(t=>t.id));const d=await catalog(graduated?'dex':'',(S.nadMode||'cap')==='cap'?'cap':'latest',true,S.filter.toLowerCase());for(const token of d.tokens){const cell=document.querySelector('[data-meme-token="'+token.id+'"]');if(cell)cell.innerHTML=metrics(token,true);}if(listState?.host.isConnected){const latest=new Map(d.tokens.map(t=>[t.id,t]));listState.tokens=listState.tokens.map(t=>latest.get(t.id)||t);}const count=d.tokens.filter(t=>!old.has(t.id)).length;if(count&&!$('#nad-new-launches'))$('.nad-list-head')?.insertAdjacentHTML('afterend',`<button class="r-new-posts" id="nad-new-launches" data-action="nad-refresh">${count} added · Refresh</button>`);}catch{}return;
     }
     if(!S.nadDetail||!S.nadOverlay&&S.view!=='token')return;
     const panel=S.nadOverlay,id=panel?.id||S.nadToken;try{const t=await api('/api/nadfun/token?token='+encodeURIComponent(id));if(panel?S.nadOverlay!==panel:S.view!=='token'||S.nadToken!==id)return;

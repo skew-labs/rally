@@ -158,3 +158,40 @@ Motion and in-app trade sheets share the same account and financial-busy boundar
 Deployment pins are snapshots, not permanent attestations: upgrades can require review and replacement pins. Oracle access, keepers, partner permissions and liquidity can leave listed venues unavailable for execution. The source includes unsigned builders and fixture verification; it does not establish that every token or perpetual market has completed a funded mainnet round trip.
 
 See [Trading](trading.md), [Verification](verification.md) and [Security](../SECURITY.md) for the practical limits of each layer.
+
+### Continuous launch and pool ingestion
+
+`launch_ingestion.py` separates recent launches, historical page collection,
+contract verification, finalized events and visible-token refresh. Provider
+candidates remain private to the queue until same-block Multicall reads verify
+address, name, symbol, decimals and lifecycle, plus the V2 creator and
+curve/pool/fee relationships. V1 creator profiles retain official API provenance.
+The index uses the official nad.fun V1/V2 contracts on Monad mainnet.
+
+- Recent launches are requested every 30 seconds; the unauthenticated API uses
+  one shared read budget. This cadence is a target, not a latency guarantee.
+- An ascending history cursor commits only after a complete provider page is
+  queued. Restarting resumes the saved page. Failed candidates use bounded
+  backoff and cannot prevent later candidates from being verified.
+- Finalized creation events supply a second discovery path. Graduation updates
+  the shared Spot asset registry; an indexed pool is not an executable quote.
+- Every supported V2 pool factory is checked in a separate one-minute loop.
+  Large factory backfills are bounded per venue so price refresh stays independent.
+- Both launch surfaces expose bounded server pages and full-registry search.
+  The UI initially renders 24 rows/cards and loads additional pages on demand.
+- Visible tokens receive separate read-only refreshes. Bonding-curve reserve
+  ratios use a fresh quote-asset USD reference and its timestamp; these are
+  display references, not order prices. Orders still use fresh router quotes.
+- Image collection covers the persisted launch registry, not just page one.
+  Original public artwork stays available while small first-party WebP
+  derivatives are prepared outside HTTP workers. Generated artwork is stored
+  in the writable runtime state directory; immutable, strictly named WebP
+  delivery works while the application directory stays read-only. Private
+  user uploads keep their authentication and no-store behavior. Provider errors retain identity
+  and metadata, while expired prices are hidden.
+
+`ingestion` reports provider totals, history progress, queued/retrying candidates
+and verified local coverage independently. Completion of provider pagination
+never means every candidate passed contract verification. API pagination can
+change after moderation/deletion; periodic history sweeps reconcile it. No claim
+of complete coverage of every Monad venue or all executable liquidity is made.
