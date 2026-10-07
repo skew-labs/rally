@@ -1,4 +1,6 @@
 /* Android touch and viewport rules share the existing Rally layout system. */
+.r-connection-status{position:fixed;top:calc(72px + env(safe-area-inset-top));right:16px;z-index:10000;padding:7px 12px;border-radius:100px;background:var(--paper);color:var(--muted);border:1px solid var(--line);font:500 12px Arial,Helvetica,sans-serif;pointer-events:none}
+.r-connection-status[hidden]{display:none}
 @media(max-width:760px){
  html{scroll-padding-top:72px}
  html :is(.r-icon-button,.r-theme-button,.r-header-create,.r-search-launch){min-width:48px;min-height:48px}

@@ -35,7 +35,10 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="rallydot.com" android:pathPrefix="/" />
+                <data android:scheme="https" android:host="rallydot.com" android:path="/" />
+                <data android:scheme="https" android:host="rallydot.com" android:path="/app" />
+                <data android:scheme="https" android:host="rallydot.com" android:path="/app/" />
+                <data android:scheme="https" android:host="rallydot.com" android:path="/authorize" />
             </intent-filter>
         </activity>
         <provider android:name="androidx.core.content.FileProvider"

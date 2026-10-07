@@ -15,7 +15,9 @@ import { launchpadUI } from './launchpad.js';
 import { experienceUI } from './experience.js';
 import { motionUI } from './motion.js';
 import { mobileUI } from './mobile-ui.js';
+import { connectionUI, networkRequest } from './network-ui.js';
 const Motion=motionUI();
+connectionUI();
 const $ = (s, r = document) => r.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const materialIcons=new Set(['nav-communities','nav-search','nav-home','markets','feeds','nav-agents','nav-notifications','nav-saved','nav-portfolio','nav-activity','nav-account','feed-latest','feed-watchlist','feed-popular','feed-media','feed-custom','launch']);
@@ -126,8 +128,7 @@ async function api(path,data,options={}){
     if(!initial.requests.size)delete window.__rallyInitial;
     if(Date.now()-initial.at<15000){const value=await pending;if(options.signal?.aborted)throw new DOMException('Request canceled','AbortError');if(value)return value;}
   }
-  const r=await fetch(path,{credentials:'same-origin',...options,headers:{'X-Rally-Request':'1',...(data!==undefined?{'Content-Type':'application/json','Idempotency-Key':options.key||crypto.randomUUID()}:{}),...options.headers},...(data!==undefined?{method:'POST',body:JSON.stringify(data)}:{})});
-  const value=await r.json().catch(()=>({message:'Connection interrupted. Try again.'}));
+  const {response:r,value}=await networkRequest(path,{credentials:'same-origin',...options,headers:{'X-Rally-Request':'1',...(data!==undefined?{'Content-Type':'application/json','Idempotency-Key':options.key||crypto.randomUUID()}:{}),...options.headers},...(data!==undefined?{method:'POST',body:JSON.stringify(data)}:{})});
   if(!r.ok){const e=new Error(value.message||'Could not complete this request');e.code=value.error;e.status=r.status;throw e;}if(!['GET','HEAD','OPTIONS'].includes(data!==undefined?'POST':options.method||'GET')&&path!=='/api/algorithms/event'){invalidateSocial();E.invalidate();}return value;
 }
 function shell(){

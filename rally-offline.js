@@ -1,0 +1,18 @@
+// A network-only navigation worker: no response cache and no transaction queue.
+const offline=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#ffffff"><title>Rally · Offline</title><style>
+:root{color-scheme:light;--paper:#fff;--text:#171719;--muted:#6f7078;--line:#e9e9ed}html[data-theme=dark]{color-scheme:dark;--paper:#18181c;--text:#f4f4f6;--muted:#a3a3ad;--line:#303038}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--text);font-family:Arial,Helvetica,sans-serif;min-height:100dvh;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column}.brand{font-size:32px;font-weight:700;letter-spacing:-1.7px}.brand span{color:#7c5cff}main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-bottom:60px}svg{width:56px;height:56px;stroke:var(--muted);margin-bottom:24px}h1{font-size:26px;line-height:1.2;letter-spacing:-.5px;margin:0 0 12px}p{font-size:15px;line-height:1.5;color:var(--muted);margin:0 0 28px}button{font:600 15px Arial,Helvetica,sans-serif;min-height:48px;padding:14px 32px;border:0;border-radius:16px;background:#0668ff;color:#fff;cursor:pointer}button:focus-visible{outline:2px solid var(--text);outline-offset:4px}button:active{opacity:.85}
+</style><script>try{document.documentElement.dataset.theme=localStorage.getItem('rally-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.querySelector('meta[name=theme-color]').content=document.documentElement.dataset.theme==='dark'?'#18181c':'#ffffff';}catch{}</script></head><body><div class="brand" aria-label="Rally">rally<span>.</span></div><main><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 2 20 20M8.5 16.5a5 5 0 0 1 5-.8M5 12a10 10 0 0 1 2.6-1.6M2 7.8a16 16 0 0 1 1.8-1M10.6 5.1A16 16 0 0 1 22 7.8M13.5 10.2A10 10 0 0 1 19 12"/><circle cx="12" cy="20" r=".8" fill="currentColor" stroke="none"/></svg><h1>Can’t connect</h1><p>Check your connection and try again.</p><button type="button" id="retry">Try again</button></main><script>if(navigator.onLine===false){document.querySelector('h1').textContent='You’re offline';document.querySelector('main p').textContent='Reconnect to continue.';}document.querySelector('#retry').onclick=()=>location.reload();</script></body></html>`;
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
+const recovery=()=>new Response(offline,{status:200,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Rally-Offline':'1','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"}});
+async function navigation(request){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+ try{const response=await fetch(request,{cache:'no-store',signal:controller.signal});return response.status>=500?recovery():response;}
+ catch{return recovery();}
+ finally{clearTimeout(timer);}
+}
+self.addEventListener('fetch',event=>{
+ const request=event.request,url=new URL(request.url);
+ if(request.method!=='GET'||request.mode!=='navigate'||url.origin!==self.location.origin||!['/','/app','/app/'].includes(url.pathname))return;
+ event.respondWith(navigation(request));
+});

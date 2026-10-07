@@ -14,7 +14,9 @@ The browser owns cookies, passkeys, uploads, embedded-wallet signing and externa
 - Swipe reuses the existing bounded card window, gesture handling and reduced-motion controls.
 - Financial preparation, wallet authorization, deadlines and receipt verification are the existing application handlers.
 
-Authentication and trading require a network connection. This package does not cache account responses or claim to execute offline transactions.
+Authentication and trading require a network connection. A navigation-only service worker supplies a Rally recovery screen when the app cannot connect or its upstream returns a server error. It stores no responses, excludes API and authentication requests, and has no transaction queue. Reconnecting restores the requested URL through the existing live application.
+
+The connection layer bounds read requests and response bodies, preserves caller cancellation, and shows an offline indicator without replacing an open form. It adds no deadline or automatic retry to writes. Android links cover the app entry paths and authorization page; API and download URLs remain browser links.
 
 ## Build
 
@@ -35,12 +37,14 @@ Publish the release certificate's SHA-256 fingerprint in `android-assetlinks.jso
 
 The public web manifest describes installed display mode and brand icons. Mobile-specific presentation lives in `mobile-ui.js` and `mobile.css`; it has no account or financial authority.
 
-## Release 0.1.1
+## Release 0.1.2
 
-The signed APK is [available here](https://rallydot.com/assets/rally-android-0.1.1.apk). It uses the same package and release certificate as 0.1.0 for in-place upgrades. The optimized package is 567,003 bytes, compared with 3,767,185 bytes for the previous release.
+The signed APK is [available here](https://rallydot.com/assets/rally-android-0.1.2.apk). It uses the same package and release certificate as the previous releases for in-place upgrades. The optimized package is 567,235 bytes. Android Browser Helper remains pinned to the current stable 2.7.4 release.
 
 ## Design references
 
 The mobile revision reviewed [FOMO's official product imagery](https://fomo.family/) for compact token identity and trade controls, [Meta's Threads performance report](https://engineering.fb.com/2024/12/18/ios/how-we-think-about-threads-ios-performance/) for separate navigation and rendering measurements, and [Android accessibility guidance](https://developer.android.com/guide/topics/ui/accessibility/apps) for touch targets. These references describe design goals, not a claim of matching another app's performance.
+
+[Service worker lifecycle and network handling](https://developer.chrome.com/docs/workbox/service-worker-overview) describes the offline recovery boundary.
 
 [Chrome's Trusted Web Activity documentation](https://developer.chrome.com/docs/android/trusted-web-activity) explains the browser and origin-verification boundary.

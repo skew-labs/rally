@@ -286,6 +286,7 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/':return self.file(s.ROOT/'landing.html','text/html; charset=utf-8')
         if path=='/manifest.webmanifest':return self.file(s.ROOT/'manifest.webmanifest','application/manifest+json')
         if path=='/.well-known/assetlinks.json':return self.file(s.ROOT/'android-assetlinks.json','application/json')
+        if path in {'/rally-offline.js','/network-ui.js'}:return self.file(s.ROOT/path.lstrip('/'),'text/javascript')
         if path in {'/mobile-ui.js','/prediction-ui.js','/mobile.css'}:return self.file(s.ROOT/path.lstrip('/'),'text/css' if path.endswith('.css') else 'text/javascript')
         if re.fullmatch(r'/assets/token-art-[a-f0-9]{20}\.webp',path):
             target=token_images.file(path.rsplit('/',1)[-1])
