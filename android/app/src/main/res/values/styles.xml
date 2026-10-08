@@ -1,1 +1,13 @@
-<resources><style name="RallyTheme" parent="android:style/Theme.Material.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:windowLightStatusBar">true</item><item name="android:colorAccent">#7659F6</item><item name="android:windowBackground">#FAFAFC</item></style></resources>
+<resources>
+    <style name="RallyTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">#7659F6</item>
+        <item name="android:windowBackground">@color/app_background</item>
+    </style>
+    <style name="RallyStartingTheme" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/app_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/RallyTheme</item>
+    </style>
+</resources>

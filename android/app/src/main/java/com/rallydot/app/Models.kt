@@ -66,3 +66,38 @@ fun nadChart(j: JSONObject,token: String,days: Int): JSONObject {
     j.objects("candles").filter { it.optLong("time") >= cutoff }.forEach { points.put(JSONObject().put("time",it.optLong("time")).put("value",it.number("close") ?: JSONObject.NULL)) }
     return JSONObject().put("points",points).put("reference","nad.fun · USD price").put("fetchedAt",j.optLong("fetchedAt"))
 }
+
+// Preserve the visible identity during background quote updates and pagination.
+fun mergePageItems(previous: List<JSONObject>, incoming: List<JSONObject>, preserveOrder: Boolean): List<JSONObject> {
+    fun identity(j: JSONObject)=j.string("venue")+":"+j.string("id",j.string("address"))
+    val latest=incoming.associateBy(::identity)
+    return (if(preserveOrder)previous.map { latest[identity(it)] ?: it }+incoming else incoming).distinctBy(::identity)
+}
+fun nearestChartPoint(points: List<ChartPoint>, fraction: Float): ChartPoint {
+    require(points.isNotEmpty())
+    val target=points.first().time+((points.last().time-points.first().time)*fraction.coerceIn(0f,1f)).toLong()
+    val found=points.binarySearch { it.time.compareTo(target) }
+    if(found>=0)return points[found]
+    val insertion=-found-1
+    if(insertion==0)return points.first()
+    if(insertion==points.size)return points.last()
+    return if(target-points[insertion-1].time<=points[insertion].time-target)points[insertion-1] else points[insertion]
+}
+data class PostDraft(val text: String="",val asset: String="",val file: String?=null,val media: String?=null,val requestKey: String="android-"+java.util.UUID.randomUUID())
+
+data class DraftIdentity(val account: String,val community: String)
+class DraftCache(private val capacity: Int=8) {
+    private var owner: String?=null
+    private val entries=linkedMapOf<DraftIdentity,PostDraft>()
+    fun get(key: DraftIdentity): PostDraft {
+        if(owner!=key.account) { clear();owner=key.account }
+        return entries[key] ?: PostDraft()
+    }
+    fun save(key: DraftIdentity,draft: PostDraft) {
+        if(key.account!=owner)return
+        entries.remove(key);entries[key]=draft
+        while(entries.size>capacity)entries.remove(entries.keys.first())
+    }
+    fun remove(key: DraftIdentity) { entries.remove(key) }
+    fun clear() { entries.clear();owner=null }
+}

@@ -85,7 +85,7 @@ import org.json.JSONObject
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun DiscoverScreen(vm: RallyViewModel,onPost: (Post)->Unit,onAlgorithm: (JSONObject)->Unit) {
-    val state by vm.state.collectAsStateWithLifecycle();var query by rememberSaveable { mutableStateOf("") };var applied by remember { mutableStateOf("") }
+    val state by vm.state.collectAsStateWithLifecycle();var query by rememberSaveable { mutableStateOf("") };var applied by rememberSaveable { mutableStateOf("") }
     val key="discover:$applied";val path="/api/discover?q="+Uri.encode(applied)+"&scope=all";val page=state.pages[key] ?: Page(loading=true);val scope=rememberCoroutineScope();val list=rememberLazyGridState()
     LaunchedEffect(query) { delay(280);applied=query.trim() };LaunchedEffect(key) { vm.load(key,path,"items") }
     LaunchedEffect(list,key,page.cursor) { snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { if(it>=page.items.size-4 && page.cursor!=null && !page.loading && page.error==null)vm.load(key,path+"&cursor="+Uri.encode(page.cursor),"items",append=true) } }
@@ -130,13 +130,20 @@ import org.json.JSONObject
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun ComposeSheet(vm: RallyViewModel,community: String?,close: ()->Unit) {
-    val state by vm.state.collectAsStateWithLifecycle();var text by rememberSaveable { mutableStateOf("") };var asset by rememberSaveable { mutableStateOf("") }
-    var file by rememberSaveable { mutableStateOf<String?>(null) };var media by rememberSaveable { mutableStateOf<String?>(null) };var uploading by remember { mutableStateOf(false) };var error by remember { mutableStateOf<String?>(null) };var requestKey by rememberSaveable { mutableStateOf("android-"+java.util.UUID.randomUUID()) };val scope=rememberCoroutineScope()
+    val state by vm.state.collectAsStateWithLifecycle()
+    val draftKey=vm.draftKey(community)
+    val initial=remember(draftKey) { vm.draft(draftKey) }
+    var text by rememberSaveable(draftKey) { mutableStateOf(initial.text) };var asset by rememberSaveable(draftKey) { mutableStateOf(initial.asset) }
+    var file by rememberSaveable(draftKey) { mutableStateOf(initial.file) };var media by rememberSaveable(draftKey) { mutableStateOf(initial.media) };var uploading by remember { mutableStateOf(false) };var error by remember { mutableStateOf<String?>(null) };var requestKey by rememberSaveable { mutableStateOf(initial.requestKey) };val scope=rememberCoroutineScope()
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri->file=uri?.toString();media=null;requestKey="android-"+java.util.UUID.randomUUID() }
+    var published by remember { mutableStateOf(false) }
+    val currentDraft by rememberUpdatedState(PostDraft(text,asset,file,media,requestKey))
+    DisposableEffect(draftKey) { onDispose { if(!published)vm.saveDraft(draftKey,currentDraft) } }
     val pending=state.busy || uploading
-    ModalBottomSheet(onDismissRequest={if(!pending)close()},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
+    val sheet=rememberModalBottomSheetState(skipPartiallyExpanded=true)
+    ModalBottomSheet(onDismissRequest={if(!pending)close()},sheetState=sheet,containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
         Column(Modifier.fillMaxWidth().imePadding().padding(24.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Create post",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);Button(onClick={scope.launch { error=null;try { if(file!=null && media==null) { uploading=true;media=vm.api.upload(Uri.parse(file)).string("id") };uploading=false;vm.action("/api/posts",JSONObject().put("text",text).put("asset",asset.ifBlank { JSONObject.NULL }).put("community",community ?: JSONObject.NULL).put("media",media ?: JSONObject.NULL),requestKey) { vm.refreshSocial();close();vm.message("Published") } } catch(e:Exception){error=e.message} finally { uploading=false } }},enabled=(text.isNotBlank() || file!=null) && text.length<=2000 && !pending) { Text(if(uploading)"Uploading…" else if(state.busy)"Publishing…" else "Publish") } }
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Create post",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);Button(onClick={scope.launch { error=null;try { if(file!=null && media==null) { uploading=true;media=vm.api.upload(Uri.parse(file)).string("id") };uploading=false;vm.action("/api/posts",JSONObject().put("text",text).put("asset",asset.ifBlank { JSONObject.NULL }).put("community",community ?: JSONObject.NULL).put("media",media ?: JSONObject.NULL),requestKey) { published=true;vm.discardDraft(draftKey);vm.refreshSocial();scope.launch { sheet.hide();close();vm.message("Published") } } } catch(e:Exception){error=e.message} finally { uploading=false } }},enabled=(text.isNotBlank() || file!=null) && text.length<=2000 && !pending) { Text(if(uploading)"Uploading…" else if(state.busy)"Publishing…" else "Publish") } }
             OutlinedTextField(text,{text=it;requestKey="android-"+java.util.UUID.randomUUID()},Modifier.fillMaxWidth().heightIn(min=180.dp),enabled=!pending,placeholder={Text("What's happening?")},shape=RoundedCornerShape(18.dp),supportingText={Text("${text.length} / 2000")})
             OutlinedTextField(asset,{asset=it;requestKey="android-"+java.util.UUID.randomUUID()},Modifier.fillMaxWidth(),enabled=!pending,singleLine=true,label={Text("Token address (optional)")},shape=RoundedCornerShape(16.dp))
             Row(verticalAlignment=Alignment.CenterVertically) { OutlinedButton(onClick={picker.launch(arrayOf("image/jpeg","image/png","image/webp","video/mp4","video/webm"))},enabled=!pending) { Icon(Icons.Outlined.PermMedia,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(if(file==null)"Photo / video" else "Change media") };if(file!=null)IconButton(onClick={file=null;media=null;requestKey="android-"+java.util.UUID.randomUUID()},enabled=!pending) { Icon(Icons.Outlined.Close,"Remove media") } }

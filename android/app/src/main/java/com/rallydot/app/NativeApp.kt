@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -23,7 +24,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.SubcomposeAsyncImage
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.view.WindowCompat
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -55,6 +62,13 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
     var community by rememberSaveable { mutableStateOf<String?>(null) }
     var composing by rememberSaveable { mutableStateOf(false) }
     val scope=rememberCoroutineScope()
+    val screenStates=rememberSaveableStateHolder()
+    val rememberedDestinations=remember { linkedSetOf<String>() }
+    val accountId=data.boot?.optJSONObject("me")?.string("id") ?: "guest"
+    LaunchedEffect(accountId) {
+        rememberedDestinations.forEach { screenStates.removeState(it) }
+        rememberedDestinations.clear()
+    }
     val snack=remember { SnackbarHostState() }
     LaunchedEffect(data.message) { data.message?.let { snack.showSnackbar(it);vm.message(null) } }
     fun showAsset(id: String) {
@@ -77,6 +91,19 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
         when { extra!=null->extra=null;community!=null->community=null;tab!=0->tab=0;else->home="Markets" }
     }
     RallyTheme(dark) {
+        val view=LocalView.current
+        val background=MaterialTheme.colorScheme.background.toArgb()
+        SideEffect {
+            var owner: Context=view.context
+            while(owner is android.content.ContextWrapper && owner !is android.app.Activity)owner=owner.baseContext
+            (owner as? android.app.Activity)?.window?.let { window ->
+                window.decorView.setBackgroundColor(background)
+                WindowCompat.getInsetsController(window,view).apply {
+                    isAppearanceLightStatusBars=!dark
+                    isAppearanceLightNavigationBars=!dark
+                }
+            }
+        }
         val title=extra ?: when { tab==0->"rally.";tab==1 && community!=null->data.boot?.objects("communities")?.firstOrNull { it.string("id")==community }?.string("name") ?: "Community";else->Tabs[tab].label }
         BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             val wide=maxWidth>=600.dp
@@ -88,8 +115,8 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                 }
                 Scaffold(modifier=Modifier.weight(1f),containerColor=MaterialTheme.colorScheme.background,
                     contentWindowInsets=WindowInsets.safeDrawing,
-                    topBar={TopAppBar(title={Text(title,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=if(tab==0 && extra==null)FontWeight.Bold else FontWeight.SemiBold,fontSize=if(tab==0 && extra==null)29.sp else 23.sp)},navigationIcon={if(extra!=null || community!=null)IconButton(onClick={extra=null;community=null}){Icon(Icons.Outlined.ArrowBack,"Back")}},actions={
-                        IconButton(onClick={dark=!dark;settings.edit().putBoolean("dark",dark).apply()}) { Icon(if(dark)Icons.Outlined.LightMode else Icons.Outlined.DarkMode,"Change theme") }
+                    topBar={TopAppBar(title={Text(title,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=if(tab==0 && extra==null)FontWeight.Bold else FontWeight.SemiBold,fontSize=if(tab==0 && extra==null)26.sp else 22.sp)},navigationIcon={if(extra!=null || community!=null)IconButton(onClick={extra=null;community=null}){Icon(Icons.Outlined.ArrowBack,"Back")}},actions={
+                        IconButton(onClick={dark=!dark;settings.edit().putBoolean("dark",dark).apply();if(android.os.Build.VERSION.SDK_INT>=31)context.getSystemService(android.app.UiModeManager::class.java).setApplicationNightMode(if(dark)android.app.UiModeManager.MODE_NIGHT_YES else android.app.UiModeManager.MODE_NIGHT_NO)}) { Icon(if(dark)Icons.Outlined.LightMode else Icons.Outlined.DarkMode,"Change theme") }
                         if(tab==0)IconButton(onClick={tab=2}) { Icon(Icons.Outlined.Search,"Search") }
                     },colors=TopAppBarDefaults.topAppBarColors(containerColor=MaterialTheme.colorScheme.background))},
                     bottomBar={if(!wide)Column { HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant);NavigationBar(containerColor=MaterialTheme.colorScheme.surface,tonalElevation=0.dp) { Tabs.forEachIndexed { i,t -> NavigationBarItem(selected=tab==i && extra==null,onClick={tab=i;extra=null;community=null},icon={Icon(t.icon,t.label)},label={Text(if(i==1)if(androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f)"Groups" else "Community" else if(i==3)"Ranks" else t.label,fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)},colors=NavigationBarItemDefaults.colors(indicatorColor=Violet.copy(alpha=.10f),selectedIconColor=Violet,selectedTextColor=Violet)) } } }},
@@ -97,20 +124,31 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                     Column(Modifier.fillMaxSize().padding(padding)) {
                         data.bootError?.let { Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically) { Text(it,Modifier.weight(1f),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall);TextButton(onClick={vm.bootstrap()}) { Text("Retry") } } }
                         if(tab==0 && extra==null)Segmented(listOf("Markets","Launch","Swipe","Feed"),home,{home=it},Modifier.padding(horizontal=20.dp,vertical=8.dp))
-                        AnimatedContent(targetState=extra ?: "$tab:${if(tab==0)home else community.orEmpty()}",transitionSpec={fadeIn(tween(150)) togetherWith fadeOut(tween(100))},label="screen") { destination ->
-                            when {
-                                destination=="Algorithms"->AlgorithmsScreen(vm,{algorithm=it})
-                                destination=="Agents"->AgentsScreen(data)
-                                destination=="Activity"->ActivityScreen(vm)
-                                destination=="0:Markets"->MarketsScreen(vm,{asset=it})
-                                destination=="0:Launch"->MarketsScreen(vm,{asset=it},launch=true,create={openBrowser(Uri.parse(ORIGIN+"/native-wallet").buildUpon().appendQueryParameter("nativeAction","launch").appendQueryParameter("account",vm.me?.string("id")).build().toString())})
-                                destination=="0:Swipe"->SwipeScreen(vm,{asset=it})
-                                destination=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4},onAlgorithm={extra="Algorithms"})
-                                destination.startsWith("1:") && community!=null->FeedScreen(vm,community=community,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4})
-                                destination.startsWith("1:")->CommunitiesScreen(vm,{community=it})
-                                destination.startsWith("2:")->DiscoverScreen(vm,onPost={post=it},onAlgorithm={algorithm=it})
-                                destination.startsWith("3:")->LeaderboardScreen(vm,{algorithm=it})
-                                else->ProfileScreen(vm,openBrowser,{extra=it})
+                        val destination=extra ?: "$tab:${if(tab==0)home else community.orEmpty()}"
+                        LaunchedEffect(destination,accountId) {
+                            val stateKey="$accountId/$destination"
+                            rememberedDestinations.remove(stateKey);rememberedDestinations.add(stateKey)
+                            while(rememberedDestinations.size>20)screenStates.removeState(rememberedDestinations.first().also { rememberedDestinations.remove(it) })
+                        }
+                        AnimatedContent(targetState=destination,modifier=Modifier.weight(1f).fillMaxWidth(),transitionSpec={
+                            (fadeIn(tween(180))+slideInHorizontally(tween(180)) { it/24 }) togetherWith
+                                (fadeOut(tween(100))+slideOutHorizontally(tween(140)) { -it/36 }) using SizeTransform(clip=false)
+                        },label="screen") { shown ->
+                            screenStates.SaveableStateProvider("$accountId/$shown") {
+                                when {
+                                    shown=="Algorithms"->AlgorithmsScreen(vm,{algorithm=it})
+                                    shown=="Agents"->AgentsScreen(data)
+                                    shown=="Activity"->ActivityScreen(vm)
+                                    shown=="0:Markets"->MarketsScreen(vm,{asset=it})
+                                    shown=="0:Launch"->MarketsScreen(vm,{asset=it},launch=true,create={openBrowser(Uri.parse(ORIGIN+"/native-wallet").buildUpon().appendQueryParameter("nativeAction","launch").appendQueryParameter("account",vm.me?.string("id")).build().toString())})
+                                    shown=="0:Swipe"->SwipeScreen(vm,{asset=it})
+                                    shown=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4},onAlgorithm={extra="Algorithms"})
+                                    shown.startsWith("1:") && shown.substringAfter(':').isNotEmpty()->FeedScreen(vm,community=shown.substringAfter(':'),onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4})
+                                    shown.startsWith("1:")->CommunitiesScreen(vm,{community=it})
+                                    shown.startsWith("2:")->DiscoverScreen(vm,onPost={post=it},onAlgorithm={algorithm=it})
+                                    shown.startsWith("3:")->LeaderboardScreen(vm,{algorithm=it})
+                                    else->ProfileScreen(vm,openBrowser,{extra=it})
+                                }
                             }
                         }
                     }
@@ -124,16 +162,36 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
     }
 }
 @Composable fun Segmented(options: List<String>,selected: String,onSelect: (String)->Unit,modifier: Modifier=Modifier) {
-    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(4.dp)) {
-        options.forEach { option -> val active=option==selected; val color by animateColorAsState(if(active)MaterialTheme.colorScheme.surface else Color.Transparent,label="selection")
-            Box(Modifier.weight(1f).heightIn(min=44.dp).clip(RoundedCornerShape(12.dp)).background(color).clickable(role=Role.Tab,onClick={onSelect(option)}).semantics { this.selected=active }.padding(horizontal=4.dp,vertical=12.dp),contentAlignment=Alignment.Center) { Text(option,maxLines=1,fontSize=13.sp,fontWeight=if(active)FontWeight.SemiBold else FontWeight.Normal,color=if(active)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant) }
+    val active=options.indexOf(selected).coerceAtLeast(0)
+    val haptic=LocalHapticFeedback.current
+    BoxWithConstraints(modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(4.dp)) {
+        val cell=maxWidth/options.size
+        val offset by animateDpAsState(cell*active,animationSpec=spring(dampingRatio=1f,stiffness=700f),label="selected tab")
+        Box(Modifier.matchParentSize().padding(start=offset,end=(maxWidth-cell-offset).coerceAtLeast(0.dp)).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surface))
+        Row(Modifier.fillMaxWidth()) {
+            options.forEach { option -> val chosen=option==selected
+                Box(Modifier.weight(1f).heightIn(min=44.dp).clip(RoundedCornerShape(12.dp)).clickable(role=Role.Tab,onClick={if(!chosen) { haptic.performHapticFeedback(HapticFeedbackType.SegmentTick);onSelect(option) } }).semantics { this.selected=chosen }.padding(horizontal=4.dp,vertical=12.dp),contentAlignment=Alignment.Center) {
+                    Text(option,maxLines=1,fontSize=13.sp,fontWeight=if(chosen)FontWeight.Medium else FontWeight.Normal,color=if(chosen)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }
 @Composable fun Artwork(url: String?,label: String,size: Dp=48.dp,round: Boolean=true) {
-    Box(Modifier.size(size).clip(if(round)CircleShape else RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainer),contentAlignment=Alignment.Center) {
-        val fallback: @Composable ()->Unit = { Text(label.take(2).uppercase(),fontSize=(size.value*.28f).sp,color=MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=FontWeight.Medium) }
-        if(url!=null)SubcomposeAsyncImage(url,contentDescription=label,modifier=Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Crop,loading={fallback()},error={fallback()}) else fallback()
+    val context=LocalContext.current
+    val request=remember(url,context) {
+        val artwork: Any?=when(url) {
+            ORIGIN+"/assets/agent-meta.svg"->R.drawable.brand_meta
+            ORIGIN+"/assets/agent-grok.svg"->R.drawable.brand_grok
+            else->url
+        }
+        ImageRequest.Builder(context).data(artwork).crossfade(if(android.os.Build.VERSION.SDK_INT>=26 && !android.animation.ValueAnimator.areAnimatorsEnabled())0 else 100).build()
+    }
+    var loaded by remember(url) { mutableStateOf(false) }
+    val companyLogo=url?.startsWith(ORIGIN+"/assets/agent-")==true
+    Box(Modifier.size(size).clip(if(round)CircleShape else RoundedCornerShape(14.dp)).background(if(companyLogo)Color.White else MaterialTheme.colorScheme.surfaceContainer),contentAlignment=Alignment.Center) {
+        if(!loaded)Text(label.take(2).uppercase(),fontSize=(size.value*.28f).sp,color=if(companyLogo)Color(0xFF727785) else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=FontWeight.Medium)
+        if(url!=null)AsyncImage(request,contentDescription=label,onSuccess={loaded=true},onError={loaded=false},modifier=Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Crop)
     }
 }
 @Composable fun EmptyState(title: String,detail: String?=null,action: String?=null,onAction: ()->Unit={}) {

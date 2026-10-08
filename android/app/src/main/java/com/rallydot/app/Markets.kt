@@ -2,7 +2,7 @@ package com.rallydot.app
 
 import android.net.Uri
 import androidx.compose.animation.*
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -18,6 +18,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.input.pointer.pointerInput
@@ -39,7 +43,7 @@ import kotlin.math.abs
     val state by vm.state.collectAsStateWithLifecycle()
     var category by rememberSaveable { mutableStateOf("Memes") }
     var query by rememberSaveable { mutableStateOf("") }
-    var applied by remember { mutableStateOf("") }
+    var applied by rememberSaveable { mutableStateOf("") }
     val field=when { launch->"tokens";category=="Perps"->"markets";category=="Prediction"->"pools";else->"tokens" }
     val path=when { launch->"/api/launchpad/tokens?limit=24&query="+Uri.encode(applied);category=="Memes"->"/api/nadfun/tokens?sort=cap&limit=24&query="+Uri.encode(applied);category=="Spot"->"/api/market-catalog?limit=40&query="+Uri.encode(applied);category=="Perps"->"/api/perps";else->"/api/predictions" }
     val key="markets:$launch:$category:$applied"
@@ -48,9 +52,11 @@ import kotlin.math.abs
     val assets=remember(page.items,query,kind) { page.items.map { Asset.parse(it,kind) }.filter { query.isBlank() || it.name.contains(query,true) || it.symbol.contains(query,true) || it.id.contains(query,true) } }
     LaunchedEffect(query) { delay(280);applied=query.trim() }
     LaunchedEffect(key) { vm.load(key,path,field) }
+    LaunchedEffect(key,assets.firstOrNull()?.key) { assets.take(2).filter { it.kind=="spot" }.forEach(vm::warmChart) }
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(key,lifecycle) { lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { while(true) { delay(30000);vm.load(key,path,field,true,retain=true) } } }
     val list=rememberLazyListState()
+    ReportDrawnWhen { page.items.isNotEmpty() || page.error!=null || (!page.loading && state.pages.containsKey(key)) }
     LaunchedEffect(list,key,page.cursor) { snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { index -> if(index>=assets.size-4 && page.cursor!=null && !page.loading && page.error==null)vm.load(key,path+if(category=="Spot" && !launch)"&offset="+page.cursor else "&cursor="+Uri.encode(page.cursor),field,append=true) } }
     Column(Modifier.fillMaxSize()) {
         if(!launch)ScrollableTabRow(selectedTabIndex=listOf("Memes","Spot","Perps","Prediction").indexOf(category),edgePadding=20.dp,containerColor=MaterialTheme.colorScheme.background,divider={},indicator={}) { listOf("Memes","Spot","Perps","Prediction").forEach { label -> Tab(selected=category==label,onClick={category=label;query="";applied=""},text={Text(label,color=if(category==label)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=if(category==label)FontWeight.SemiBold else FontWeight.Normal)}) } }
@@ -105,6 +111,22 @@ import kotlin.math.abs
     val assets=remember(page.items) { page.items.map { Asset.parse(it) } }
     val pager=rememberPagerState(pageCount={assets.size})
     val scope=rememberCoroutineScope()
+    val haptic=LocalHapticFeedback.current
+    val horizontal=remember { Animatable(0f) }
+    var drag by remember { mutableFloatStateOf(0f) }
+    var dragging by remember { mutableStateOf(false) }
+    var settling by remember { mutableStateOf(false) }
+    var settlement by remember { mutableStateOf<Job?>(null) }
+    val currentAssets by rememberUpdatedState(assets)
+    DisposableEffect(Unit) { onDispose { settlement?.cancel() } }
+    LaunchedEffect(pager) {
+        var previous=pager.settledPage
+        snapshotFlow { pager.settledPage }.collect { pageIndex ->
+            if(pageIndex!=previous)haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+            previous=pageIndex
+        }
+    }
+    LaunchedEffect(pager.settledPage,assets.firstOrNull()?.key) { assets.drop(pager.settledPage).take(2).forEach(vm::warmChart) }
     LaunchedEffect(pager.currentPage,page.cursor,page.loading) { if(pager.currentPage>=assets.size-4 && page.cursor!=null && !page.loading && page.error==null)vm.load(key,"/api/nadfun/tokens?sort=cap&limit=24&cursor="+Uri.encode(page.cursor),"tokens",append=true) }
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { while(true) { delay(30000);vm.load(key,"/api/nadfun/tokens?sort=cap&limit=24","tokens",true,retain=true) } } }
@@ -113,9 +135,37 @@ import kotlin.math.abs
         else {
             VerticalPager(pager,modifier=Modifier.weight(1f).fillMaxWidth(),beyondViewportPageCount=1,contentPadding=PaddingValues(horizontal=20.dp,vertical=12.dp),pageSpacing=12.dp,key={assets[it].key}) { index ->
                 val a=assets[index]
-                Surface(Modifier.fillMaxSize().pointerInput(pager) {
-                    var horizontal=0f
-                    detectHorizontalDragGestures(onDragStart={horizontal=0f},onDragEnd={if(abs(horizontal)>72.dp.toPx())scope.launch { pager.animateScrollToPage((pager.currentPage+if(horizontal<0)1 else -1).coerceIn(0,assets.lastIndex)) }}) { change,delta->change.consume();horizontal+=delta }
+                Surface(Modifier.fillMaxSize().semantics { if(index!=pager.currentPage)hideFromAccessibility() }.graphicsLayer {
+                    translationX=if(dragging)drag else horizontal.value
+                    val offset=abs(pager.currentPage-index+pager.currentPageOffsetFraction).coerceIn(0f,1f)
+                    scaleX=1f-offset*.025f;scaleY=1f-offset*.025f
+                    alpha=1f-offset*.12f
+                }.pointerInput(pager) {
+                    var captured=false
+                    fun settle(cancel: Boolean) {
+                        if(!captured)return
+                        captured=false;val distance=drag;val width=size.width.toFloat()
+                        dragging=false;settling=true
+                        settlement=scope.launch {
+                            try {
+                                horizontal.snapTo(distance)
+                                val next=(pager.currentPage+if(distance<0)1 else -1).coerceIn(0,currentAssets.lastIndex)
+                                if(!cancel && abs(distance)>72.dp.toPx() && next!=pager.currentPage) {
+                                    val direction=if(distance<0)-1f else 1f
+                                    horizontal.animateTo(direction*width,tween(120,easing=FastOutLinearInEasing))
+                                    pager.scrollToPage(next)
+                                    horizontal.snapTo(-direction*width)
+                                    horizontal.animateTo(0f,tween(160,easing=LinearOutSlowInEasing))
+                                } else horizontal.animateTo(0f,spring(dampingRatio=1f,stiffness=700f))
+                            } finally { horizontal.snapTo(0f);drag=0f;settling=false }
+                        }
+                    }
+                    detectHorizontalDragGestures(onDragStart={
+                        captured=!settling && !pager.isScrollInProgress
+                        if(captured) { drag=0f;dragging=true }
+                    },onDragCancel={settle(true)},onDragEnd={settle(false)}) { change,delta ->
+                        if(captured) { change.consume();drag=(drag+delta).coerceIn(-size.width.toFloat(),size.width.toFloat()) }
+                    }
                 },shape=RoundedCornerShape(28.dp),color=MaterialTheme.colorScheme.surface) {
                     BoxWithConstraints(Modifier.fillMaxSize()) {
                     val compactHeight=maxHeight<440.dp
@@ -155,9 +205,15 @@ import kotlin.math.abs
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun AssetSheet(asset: Asset,vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit) {
     val sheet=rememberModalBottomSheetState(skipPartiallyExpanded=true)
+    val scope=rememberCoroutineScope()
+    val focus=androidx.compose.ui.platform.LocalFocusManager.current
+    val density=androidx.compose.ui.platform.LocalDensity.current
+    val keyboard=WindowInsets.ime.getBottom(density)>0
     var period by rememberSaveable(asset.key) { mutableStateOf("1D") }
     var chart by remember(asset.key) { mutableStateOf<JSONObject?>(null) }
     var chartError by remember(asset.key) { mutableStateOf<String?>(null) }
+    var chartLoading by remember(asset.key) { mutableStateOf(true) }
+    var chartPeriod by remember(asset.key) { mutableStateOf(period) }
     var trade by rememberSaveable(asset.key) { mutableStateOf(asset.raw.has("nativeSide")) }
     var side by rememberSaveable(asset.key) { mutableStateOf(asset.raw.string("nativeSide","buy")) }
     var amount by rememberSaveable(asset.key) { mutableStateOf("") }
@@ -165,64 +221,102 @@ import kotlin.math.abs
     var quoteError by remember { mutableStateOf<String?>(null) }
     var quoting by remember { mutableStateOf(false) }
     var scrubbing by remember { mutableStateOf<ChartPoint?>(null) }
-    val graphHeight by animateDpAsState(if(trade)88.dp else 160.dp,label="trade chart")
+    val points=remember(chart) { chart?.let(::chartPoints).orEmpty() }
+    val graphHeight by animateDpAsState(if(keyboard)0.dp else if(trade)88.dp else 160.dp,tween(180),label="trade chart")
+    fun dismiss() { focus.clearFocus();scope.launch { sheet.hide();close() } }
     LaunchedEffect(asset.key,period) {
-        chart=null;chartError=null
-        try { if(asset.raw.optBoolean("nadfun")) {
-                val candles=vm.api.get("/api/nadfun/chart?token="+Uri.encode(asset.id)+"&interval="+if(period=="1D")"15" else "60")
-                chart=nadChart(candles,asset.id,if(period=="1D")1 else 7)
-            } else { if(asset.kind=="spot" && asset.id.startsWith("0x"))vm.api.get("/api/market-asset?address="+Uri.encode(asset.id))
-            val chartId=if(asset.kind=="prediction")asset.raw.optJSONObject("assetInfo")?.string("chartMarket") ?: asset.id else asset.id
-            chart=vm.api.get("/api/market-chart?asset="+Uri.encode(chartId)+"&kind="+(if(asset.kind=="prediction")"perps" else asset.kind)+"&period=$period")
-            }
+        chartError=null;chartLoading=true
+        try {
+            chart=vm.chart(asset,period)
+            chartPeriod=period
             if(chartPoints(chart!!).size<2)chartError="No chart history yet"
-        } catch(e:CancellationException) { throw e } catch(e:Exception) { chartError=if(e is ApiFailure)e.message else "Chart unavailable" }
+        } catch(e:CancellationException) { throw e } catch(e:Exception) { chartError=if(e is ApiFailure)e.message else "Chart unavailable" } finally { chartLoading=false }
     }
     LaunchedEffect(asset.key,side,amount,trade) {
         quote=null;quoteError=null;quoting=false
-        if(trade && asset.kind=="spot" && validAmount(amount)) { delay(380);quoting=true;try { quote=vm.quote(asset,side,amount) } catch(e:CancellationException){throw e} catch(e:Exception){quoteError=e.message ?: "No quote for this amount"} finally { quoting=false } }
+        if(trade && asset.kind=="spot" && validAmount(amount)) {
+            delay(380);quoting=true
+            try { quote=vm.quote(asset,side,amount) } catch(e:CancellationException){throw e} catch(e:Exception){quoteError=e.message ?: "No quote for this amount"} finally { quoting=false }
+        }
     }
     ModalBottomSheet(onDismissRequest=close,sheetState=sheet,containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing},dragHandle={BottomSheetDefaults.DragHandle()}) {
-        Column(Modifier.fillMaxWidth().heightIn(max=780.dp).verticalScroll(rememberScrollState()).imePadding().padding(start=24.dp,end=24.dp,bottom=28.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-            Row(verticalAlignment=Alignment.CenterVertically) { Artwork(asset.image,asset.symbol,44.dp);Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)) { Text(asset.symbol,style=MaterialTheme.typography.titleLarge);Text(asset.venue+if(asset.kind=="perps")" · Perpetual" else " · Monad",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall) };IconButton(onClick=close){Icon(Icons.Outlined.Close,"Close token") } }
-            Column { Text(money(scrubbing?.value?.toDouble() ?: asset.price),fontSize=34.sp,fontWeight=FontWeight.Medium,maxLines=1);Text(if(scrubbing!=null)java.text.SimpleDateFormat("MMM d · HH:mm",java.util.Locale.US).format(java.util.Date(scrubbing!!.time*1000)) else if(asset.freshness)"Last known price" else asset.raw.string("priceSource","Reference price"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
-            Box(Modifier.fillMaxWidth().height(graphHeight)) {
-                val points=chart?.let(::chartPoints).orEmpty()
-                if(points.size>1)PriceChart(points,{scrubbing=it}) else if(chartError!=null)Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { Text(chartError!!,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) } else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { CircularProgressIndicator(Modifier.size(24.dp),strokeWidth=2.dp) }
+        BoxWithConstraints(Modifier.fillMaxWidth().imePadding()) {
+            val available=maxHeight.coerceAtMost(780.dp)
+            Column(Modifier.fillMaxWidth().heightIn(max=available)) {
+                Row(Modifier.padding(horizontal=20.dp).padding(bottom=12.dp),verticalAlignment=Alignment.CenterVertically) {
+                    Artwork(asset.image,asset.symbol,40.dp);Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) { Text(asset.symbol,style=MaterialTheme.typography.titleLarge,maxLines=1,overflow=TextOverflow.Ellipsis);Text(asset.venue+if(asset.kind=="perps")" · Perpetual" else " · Monad",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis) }
+                    IconButton(onClick=::dismiss){Icon(Icons.Outlined.Close,"Close token")}
+                }
+                Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState()).padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                    if(!keyboard)Column {
+                        Text(money(scrubbing?.value?.toDouble() ?: asset.price),fontSize=32.sp,fontWeight=FontWeight.Medium,maxLines=1)
+                        Text(if(scrubbing!=null)java.text.SimpleDateFormat("MMM d · HH:mm",java.util.Locale.US).format(java.util.Date(scrubbing!!.time*1000)) else if(asset.freshness)"Last known price" else asset.raw.string("priceSource","Reference price"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if(graphHeight>0.dp)Box(Modifier.fillMaxWidth().height(graphHeight)) {
+                        if(points.size>1) {
+                            PriceChart(points,{scrubbing=it})
+                            if(chartLoading)LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
+                        }
+                        else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { if(chartError!=null)Text(chartError!!,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) else CircularProgressIndicator(Modifier.size(24.dp),strokeWidth=2.dp) }
+                    }
+                    if(!trade)Segmented(if(asset.raw.optBoolean("nadfun"))listOf("1D","7D") else listOf("1D","7D","1M"),period,{period=it})
+                    if(!keyboard) {
+                        chart?.let { Text(it.string("reference")+" · $chartPeriod"+if(chartLoading)" · Updating…" else if(it.optBoolean("stale") || chartError!=null)" · Last known" else "",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+                        if(chartError!=null && points.size>1)Text(chartError!!,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(asset.cap!=null)Fact("Market cap", "$"+compact(asset.cap))
+                        if(asset.raw.number("liquidity")!=null)Fact("Liquidity",money(asset.raw.number("liquidity")))
+                    }
+                    if(asset.kind=="prediction") { Fact("Entry stake",asset.raw.string("stake")+" "+asset.raw.string("stakeAsset"));Fact("Status",asset.raw.string("state").replace('_',' ')) }
+                    if(trade) {
+                        if(asset.kind!="prediction")Segmented(if(asset.kind=="perps")listOf("Buy / Long","Sell / Short") else listOf("Buy","Sell"),if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell",{side=if(it.startsWith("Buy"))"buy" else "sell"})
+                        val quantity=asset.kind=="perps" && asset.venue in listOf("Perpl","Drake")
+                        val denom=if(side=="sell" && asset.kind=="spot")asset.symbol else if(asset.kind=="spot")asset.raw.string("quoteSymbol","MON") else if(quantity)asset.symbol else if(asset.venue=="Pingu")"MON" else "USDC"
+                        OutlinedTextField(amount,{amount=it},Modifier.fillMaxWidth(),singleLine=true,label={Text(if(asset.kind=="prediction")"Predicted USD price" else if(quantity)"Quantity" else if(asset.kind=="perps")"Collateral" else "Amount")},suffix={Text(if(asset.kind=="prediction")"USD" else denom,maxLines=1)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal,imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={focus.clearFocus()}),shape=RoundedCornerShape(16.dp))
+                        if(asset.kind=="spot")Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) { listOf("0.1","1","5","10").forEach { preset->OutlinedButton(onClick={amount=preset;focus.clearFocus()},Modifier.weight(1f),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(12.dp)) { Text(preset) } } }
+                        Box(Modifier.fillMaxWidth().heightIn(min=28.dp)) {
+                            if(quoting)LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.Center))
+                            quote?.let { q->val best=q.objects("routes").firstOrNull { it.string("state")=="quoted" };Fact(best?.string("provider") ?: q.string("venue","nad.fun"),best?.string("output")?.let { "≈ ${displayAmount(it)} ${if(side=="buy")asset.symbol else "MON"}" } ?: q.string("receive").takeIf { it.isNotBlank() }?.let { "≈ ${displayAmount(it)} ${q.string("outputAsset")}" } ?: "No route for this amount") }
+                            quoteError?.let { Text(it,color=Sell,style=MaterialTheme.typography.bodySmall) }
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
+                Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    if(trade) {
+                        Button(onClick={focus.clearFocus();openBrowser(vm.walletURL(asset,side,amount))},enabled=validAmount(amount) && asset.executable,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=if(side=="buy")Buy else Sell,contentColor=Color.White)) {
+                            Text(if(asset.kind=="prediction")"Predict price" else if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell")
+                        }
+                        if(!keyboard)Text("Wallet approval opens secure checkout.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else if(asset.kind=="prediction")Button(onClick={trade=true},enabled=asset.executable,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(asset.executable)"Predict price" else asset.raw.string("state").replace('_',' ')) }
+                    else TradeButtons(if(asset.kind=="perps")"Buy / Long" else "Buy",if(asset.kind=="perps")"Sell / Short" else "Sell",{side="buy";trade=true},{side="sell";trade=true},asset.executable)
+                }
             }
-            if(!trade)Segmented(if(asset.raw.optBoolean("nadfun"))listOf("1D","7D") else listOf("1D","7D","1M"),period,{period=it})
-            chart?.let { Text(it.string("reference")+if(it.optBoolean("stale"))" · Last known" else "",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
-            if(asset.cap!=null)Fact("Market cap", "$"+compact(asset.cap))
-            if(asset.raw.number("liquidity")!=null)Fact("Liquidity",money(asset.raw.number("liquidity")))
-            if(asset.kind=="prediction") { Fact("Entry stake",asset.raw.string("stake")+" "+asset.raw.string("stakeAsset"));Fact("Status",asset.raw.string("state").replace('_',' ')) }
-            if(trade) {
-                if(asset.kind!="prediction")Segmented(if(asset.kind=="perps")listOf("Buy / Long","Sell / Short") else listOf("Buy","Sell"),if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell",{side=if(it.startsWith("Buy"))"buy" else "sell"})
-                val quantity=asset.kind=="perps" && asset.venue in listOf("Perpl","Drake")
-                val denom=if(side=="sell" && asset.kind=="spot")asset.symbol else if(asset.kind=="spot")asset.raw.string("quoteSymbol","MON") else if(quantity)asset.symbol else if(asset.venue=="Pingu")"MON" else "USDC"
-                OutlinedTextField(amount,{amount=it},Modifier.fillMaxWidth(),singleLine=true,label={Text(if(asset.kind=="prediction")"Predicted USD price" else if(quantity)"Quantity" else if(asset.kind=="perps")"Collateral" else "Amount")},suffix={Text(if(asset.kind=="prediction")"USD" else denom)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),shape=RoundedCornerShape(16.dp))
-                if(asset.kind=="spot")Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) { listOf("0.1","1","5","10").forEach { preset->OutlinedButton(onClick={amount=preset},Modifier.weight(1f),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(12.dp)) { Text(preset) } } }
-                if(quoting)LinearProgressIndicator(Modifier.fillMaxWidth())
-                quote?.let { q->val best=q.objects("routes").firstOrNull { it.string("state")=="quoted" };Fact(best?.string("provider") ?: q.string("venue","nad.fun"),best?.string("output")?.let { "≈ ${displayAmount(it)} ${if(side=="buy")asset.symbol else "MON"}" } ?: q.string("receive").takeIf { it.isNotBlank() }?.let { "≈ ${displayAmount(it)} ${q.string("outputAsset")}" } ?: "No route for this amount") }
-                quoteError?.let { Text(it,color=Sell,style=MaterialTheme.typography.bodySmall) }
-                Button(onClick={openBrowser(vm.walletURL(asset,side,amount))},enabled=validAmount(amount) && asset.executable,modifier=Modifier.fillMaxWidth().heightIn(min=56.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=if(side=="buy")Buy else Sell,contentColor=Color.White)) { Text(if(asset.kind=="prediction")"Predict price" else if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell") }
-                Text("Wallet approval opens secure checkout.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            } else if(asset.kind=="prediction")Button(onClick={trade=true},enabled=asset.executable,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(asset.executable)"Predict price" else asset.raw.string("state").replace('_',' ')) }
-            else TradeButtons(if(asset.kind=="perps")"Buy / Long" else "Buy",if(asset.kind=="perps")"Sell / Short" else "Sell",{side="buy";trade=true},{side="sell";trade=true},asset.executable)
         }
     }
 }
 @Composable fun Fact(label: String,value: String) { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(label,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium);Text(value,style=MaterialTheme.typography.bodyMedium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(start=12.dp).weight(1f),textAlign=androidx.compose.ui.text.style.TextAlign.End) } }
 @Composable fun PriceChart(points: List<ChartPoint>,onScrub: (ChartPoint?)->Unit) {
     val color=if(points.last().value>=points.first().value)Buy else Sell
-    var pointer by remember { mutableStateOf<Offset?>(null) }
-    Canvas(Modifier.fillMaxSize().semantics { contentDescription="Price chart, ${points.size} observations" }.pointerInput(points) { detectDragGestures(onDragEnd={pointer=null;onScrub(null)},onDragCancel={pointer=null;onScrub(null)}) { change,_ -> change.consume();pointer=change.position;val index=(change.position.x/size.width*(points.size-1)).toInt().coerceIn(0,points.lastIndex);onScrub(points[index]) } }) {
-        val low=points.minOf { it.value };val high=points.maxOf { it.value };val range=(high-low).takeIf { it>0 } ?: (abs(high)*.01f).coerceAtLeast(.0000001f)
+    val pointer=remember(points) { mutableStateOf<Offset?>(null) }
+    val scrub by rememberUpdatedState(onScrub)
+    Box(Modifier.fillMaxSize().semantics { contentDescription="Price chart, ${points.size} observations" }.pointerInput(points) {
+        detectDragGestures(onDragEnd={pointer.value=null;scrub(null)},onDragCancel={pointer.value=null;scrub(null)}) { change,_ ->
+            change.consume();pointer.value=change.position
+            scrub(nearestChartPoint(points,change.position.x/size.width))
+        }
+    }.drawWithCache {
+        val low=points.minOf { it.value };val high=points.maxOf { it.value }
+        val range=(high-low).takeIf { it>0 } ?: (abs(high)*.01f).coerceAtLeast(.0000001f)
         val start=points.first().time;val duration=(points.last().time-start).coerceAtLeast(1)
-        val offsets=points.map { Offset((it.time-start).toFloat()/duration*size.width,size.height-12-(it.value-low)/range*(size.height-24)) }
+        val offsets=points.map { Offset((it.time-start).toFloat()/duration*size.width,size.height-12-(it.value-low)/range*(size.height-24).coerceAtLeast(1f)) }
         val line=Path().apply { offsets.forEachIndexed { i,p->if(i==0)moveTo(p.x,p.y) else lineTo(p.x,p.y) } }
         val fill=Path().apply { addPath(line);lineTo(size.width,size.height);lineTo(0f,size.height);close() }
-        drawPath(fill,Brush.verticalGradient(listOf(color.copy(alpha=.14f),color.copy(alpha=0f))))
-        drawPath(line,color,style=androidx.compose.ui.graphics.drawscope.Stroke(width=2.dp.toPx(),cap=StrokeCap.Round,join=StrokeJoin.Round))
-        pointer?.let { p -> drawLine(color.copy(alpha=.3f),Offset(p.x,0f),Offset(p.x,size.height),1.dp.toPx()) }
-    }
+        val gradient=Brush.verticalGradient(listOf(color.copy(alpha=.14f),color.copy(alpha=0f)))
+        onDrawBehind {
+            drawPath(fill,gradient)
+            drawPath(line,color,style=androidx.compose.ui.graphics.drawscope.Stroke(width=2.dp.toPx(),cap=StrokeCap.Round,join=StrokeJoin.Round))
+            pointer.value?.let { p->drawLine(color.copy(alpha=.3f),Offset(p.x,0f),Offset(p.x,size.height),1.dp.toPx()) }
+        }
+    })
 }

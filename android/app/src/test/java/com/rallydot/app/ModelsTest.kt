@@ -18,4 +18,47 @@ class ModelsTest {
     @Test fun codexGetsOfficialArtwork() { assertEquals("https://rallydot.com/assets/agent-openai.svg",Person.parse(JSONObject("{\"name\":\"Codex\",\"avatar\":\"\"}")).image) }
     @Test fun nativeChartRejectsDifferentToken() { try { nadChart(JSONObject().put("token","other"),"expected",1);fail("mismatched chart accepted") } catch (_: IllegalArgumentException) {} }
     @Test fun nativeChartKeepsOnlySelectedWindow() { val now=System.currentTimeMillis()/1000;val j=JSONObject().put("token","0x1").put("candles",org.json.JSONArray().put(JSONObject().put("time",now-90000).put("close",1)).put(JSONObject().put("time",now-10).put("close",2)));val points=chartPoints(nadChart(j,"0x1",1));assertEquals(1,points.size);assertEquals(2f,points[0].value,0f) }
+    @Test fun backgroundQuotesPreserveVisibleTokenIdentity() {
+        fun row(id: String,price: Double)=JSONObject().put("id",id).put("price",price)
+        val previous=listOf(row("a",1.0),row("b",2.0),row("c",3.0))
+        val next=mergePageItems(previous,listOf(row("b",4.0),row("a",5.0),row("d",6.0)),true)
+        assertEquals(listOf("a","b","c","d"),next.map { it.string("id") })
+        assertEquals(5.0,next[0].number("price")!!,0.0)
+        assertEquals(4.0,next[1].number("price")!!,0.0)
+    }
+    @Test fun manualRefreshUsesNewRankingWhilePaginationDoesNotDuplicate() {
+        val a=JSONObject().put("id","a");val b=JSONObject().put("id","b")
+        assertEquals(listOf("b","a"),mergePageItems(listOf(a,b),listOf(b,a),false).map { it.string("id") })
+        assertEquals(2,mergePageItems(listOf(a),listOf(a,b),true).size)
+    }
+    @Test fun chartScrubbingUsesActualObservationTimes() {
+        val points=listOf(ChartPoint(1,1f),ChartPoint(2,2f),ChartPoint(100,3f))
+        assertEquals(2,nearestChartPoint(points,.4f).time)
+        assertEquals(100,nearestChartPoint(points,.9f).time)
+        assertEquals(1,nearestChartPoint(points,-1f).time)
+        assertEquals(100,nearestChartPoint(points,2f).time)
+    }
+
+    @Test fun closedDraftRetainsTextMediaAndRequestIdentity() {
+        val cache=DraftCache();val key=DraftIdentity("owner","group")
+        val draft=cache.get(key).copy(text="Draft",file="content://picked/file",media="upload-id")
+        cache.save(key,draft)
+        assertEquals(draft,cache.get(key))
+        assertEquals(draft.requestKey,cache.get(key).requestKey)
+    }
+    @Test fun accountSwitchCannotRecoverOrResavePreviousOwnersDraft() {
+        val cache=DraftCache();val first=DraftIdentity("a","group");val second=DraftIdentity("b","group")
+        cache.get(first);cache.save(first,PostDraft(text="private"))
+        assertEquals("",cache.get(second).text)
+        cache.save(first,PostDraft(text="late disposal"))
+        assertEquals("",cache.get(second).text)
+        assertEquals("",cache.get(first).text)
+    }
+    @Test fun draftsAreBoundedAndPublishedDraftCanBeRemoved() {
+        val cache=DraftCache(2);val a=DraftIdentity("a","one");val b=DraftIdentity("a","two");val c=DraftIdentity("a","three")
+        cache.get(a);cache.save(a,PostDraft(text="one"));cache.save(b,PostDraft(text="two"));cache.save(c,PostDraft(text="three"))
+        assertEquals("",cache.get(a).text);assertEquals("two",cache.get(b).text)
+        cache.remove(c);assertEquals("",cache.get(c).text)
+    }
+
 }

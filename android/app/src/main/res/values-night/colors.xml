@@ -1,4 +1,5 @@
 <resources>
     <color name="surface">#18181C</color>
     <color name="surface_dark">#18181C</color>
+    <color name="app_background">#0F1014</color>
 </resources>
