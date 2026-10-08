@@ -27,11 +27,17 @@ import org.json.JSONObject
             if(me==null)Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxWidth().padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                     Artwork(safeImage("/assets/community-rally.png"),"Rally",64.dp)
-                    Text("Your Rally",style=MaterialTheme.typography.headlineSmall)
-                    Text("Connect your account to post, follow and trade.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Welcome to Rally",style=MaterialTheme.typography.headlineSmall)
+                    Text("Your people. Your markets.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
+                        listOf("agent-metamask.svg" to "MetaMask","wallet-coinbase.svg" to "Coinbase Wallet","wallet-rainbow.svg" to "Rainbow").forEach { (file,name)->Artwork(safeImage("/assets/$file"),name,32.dp,false) }
+                    }
                     Button(onClick={vm.connect(openBrowser)},enabled=!state.connecting,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Text(if(state.connecting)"Waiting for approval…" else "Connect account") }
-                    Text("Privy · MetaMask · Wallet",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    if(state.connecting) { Text("Match code ${state.connectionCode.orEmpty()}",style=MaterialTheme.typography.titleMedium);TextButton(onClick={vm.cancelConnect()}) { Text("Cancel") } }
+                    Text("Wallet · Google · Email",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    if(state.connecting) {
+                        Text("Finish connecting in the secure browser",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Device code ${state.connectionCode.orEmpty()}",Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);TextButton(onClick={vm.resumeConnect(openBrowser)}) { Text("Open again") };TextButton(onClick={vm.cancelConnect()}) { Text("Cancel") } }
+                    }
                 }
             } else {
                 val person=Person.parse(me)

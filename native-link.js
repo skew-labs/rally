@@ -1,29 +1,31 @@
 /** Only invoked on the explicit first-party Android account / wallet bridge. */
+let stopPairing;
 export async function nativeLink(c) {
- const {S,api,$,esc,notify,trade,finance,nad,launch,needAccount,boot}=c;
+ const {S,api,$,esc,notify,trade,finance,nad,launch,needAccount,boot,auth}=c;
  const p=new URLSearchParams(location.search),id=p.get('nativeRequest');
  if(location.pathname==='/connect-native'&&/^[a-f0-9]{32}$/.test(id||'')){
-  const panel=document.createElement('section');panel.className='r-native-pair';
-  panel.style.cssText='margin:20px;padding:24px;background:var(--surface);border:1px solid var(--line);border-radius:20px;display:grid;gap:14px';
-  $('#page').prepend(panel);
-  let finished=false;
+  stopPairing?.();document.body.classList.add('r-native-auth');
+  const panel=document.createElement('section');panel.className='r-native-pair';$('#page').replaceChildren(panel);
+  let finished=false,timer;
+  stopPairing=()=>{finished=true;clearTimeout(timer);};
   const paint=async()=>{
    if(finished||!panel.isConnected)return;
    try{
     const request=await api('/api/native/request?id='+id);
     if(!panel.isConnected)return;
-    panel.innerHTML='<h2>Connect Rally for Android</h2><p>Match code <b>'+esc(request.code)+'</b> with your app.</p><p class="r-note">Connect only if you started this request. Wallet signing stays with your wallet.</p>'+(S.boot.me?'<p>@'+esc(S.boot.me.handle)+'</p><button class="r-btn primary" data-native-approve>Connect account</button><button class="r-btn" data-native-deny>Cancel</button>':'<button class="r-btn primary" data-action="account">Sign in</button>');
+    if(request.state!=='pending'){finished=true;panel.innerHTML='<h2>'+(['approved','consumed'].includes(request.state)?'Connected':'Cancelled')+'</h2><a class="r-btn primary full" href="/native-return">Return to Rally</a>';return;}
+    panel.innerHTML='<div class="r-native-brand">rally<span>.</span></div><h2>'+(S.boot.me?'Continue to your app':'Connect your account')+'</h2>'+(S.boot.me?'<p class="r-note">Approve only if this code matches your Rally app.</p><button class="r-btn primary full" data-native-approve>Continue as @'+esc(S.boot.me.handle)+'</button><button class="r-btn full" data-native-deny>Cancel</button>':auth.buttons())+'<div class="r-native-code"><span>Rally for Android · Device code</span><b>'+esc(request.code)+'</b></div>';
+    if(!S.boot.me)auth.bind();
     panel.querySelector('[data-native-approve]')?.addEventListener('click',()=>approve(true));
     panel.querySelector('[data-native-deny]')?.addEventListener('click',()=>approve(false));
    }catch(e){finished=true;panel.textContent=e.message;}
   };
   const approve=async allow=>{
    const buttons=[...panel.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);
-   try{await api('/api/native/approve',{id,allow});finished=true;clearInterval(timer);panel.innerHTML='<h2>'+ (allow?'Connected':'Cancelled')+'</h2><a class="r-btn primary" href="/native-return">Return to Rally</a>';}
+   try{await api('/api/native/approve',{id,allow});finished=true;clearTimeout(timer);panel.innerHTML='<div class="r-native-brand">rally<span>.</span></div><h2>'+ (allow?'You’re connected':'Cancelled')+'</h2><a class="r-btn primary full" href="/native-return">Return to Rally</a>';}
    catch(e){notify(e.message);buttons.forEach(b=>b.disabled=false);}
   };
-  await paint();const timer=setInterval(async()=>{if(document.hidden||finished)return;await boot(true);await paint();},3000);
-  setTimeout(()=>clearInterval(timer),180000);
+  await paint();timer=setTimeout(()=>{if(!finished&&panel.isConnected){finished=true;panel.innerHTML='<h2>Connection expired</h2><p class="r-note">Start again in your Rally app.</p><a class="r-btn primary full" href="/native-return">Return to Rally</a>';}},600000);
   return;
  }
  if(location.pathname!=='/native-wallet')return;

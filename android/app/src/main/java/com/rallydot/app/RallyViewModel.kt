@@ -100,6 +100,8 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
         viewModelScope.launch { try { val data=api.post(path,body,key);api.clearCache();done(data);bootstrap() } catch(e:Exception) { message(e.message ?: "Could not complete this action") } finally { mutable.update { it.copy(busy=false) } } }
     }
     fun refreshSocial() { mutable.update { it.copy(pages=it.pages.filterKeys { key->!key.startsWith("feed:") }) } }
+    private var connectionURL: String?=null
+    fun resumeConnect(open: (String)->Unit) { connectionURL?.let(open) }
     fun connect(open: (String)->Unit) {
         if(mutable.value.connecting)return
         connection?.cancel()
@@ -111,19 +113,24 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
                 val challenge=Base64.encodeToString(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()),Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING)
                 val request=api.post("/api/native/start",JSONObject().put("challenge",challenge))
                 mutable.update { it.copy(connectionCode=request.string("code")) }
-                open(request.string("url"))
-                withTimeout(180000) {
+                connectionURL=request.string("url");open(request.string("url"))
+                var failures=0
+                withTimeout(request.optLong("expiresIn",600).coerceIn(60,600)*1000) {
                     while(true) {
                         delay(2500)
-                        val result=api.post("/api/native/poll",JSONObject().put("id",request.string("id")).put("verifier",verifier))
+                        val result=try { api.post("/api/native/poll",JSONObject().put("id",request.string("id")).put("verifier",verifier)).also { failures=0 } } catch(e: CancellationException) { throw e } catch(e: Exception) {
+                            if(e is ApiFailure && e.status in 400..499 && e.status!=429)throw e
+                            if(++failures>=8)throw e
+                            delay(2500);continue
+                        }
                         when(result.string("state")) {
                             "approved" -> { jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear();api.signIn(result.string("session"));mutable.update { it.copy(boot=null,pages=emptyMap()) };bootstrap();message("Connected");break }
                             "denied" -> { message("Connection cancelled");break }
                         }
                     }
                 }
-            } catch(e: CancellationException) { message("Connection expired. Try again.") } catch(e: Exception) { message(e.message ?: "Could not connect") }
-            finally { mutable.update { it.copy(connecting=false,connectionCode=null) } }
+            } catch(e: CancellationException) { if(e is TimeoutCancellationException)message("Connection expired. Try again.") } catch(e: Exception) { message(e.message ?: "Could not connect") }
+            finally { connectionURL=null;mutable.update { it.copy(connecting=false,connectionCode=null) } }
         }
     }
     fun cancelConnect() { connection?.cancel() }

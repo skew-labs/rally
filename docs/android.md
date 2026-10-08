@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. It does not embed a WebView or launch a Trusted Web Activity. The package is `com.rallydot.app`, with Android 7.0 (API 24) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.2.2.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.2.3.apk)
 
 ## Interaction and data
 
@@ -40,7 +40,7 @@ The generator never submits a wallet request. [Android's Baseline Profile guidan
 
 ## Account and wallet boundary
 
-The first account connection uses an explicit first-party browser consent screen. The app holds a random verifier and sends its S256 challenge to Rally. A matching code, authenticated human consent, a three-minute expiry and an atomic one-use exchange bind the connection to that device. This creates a regular Rally session, not an agent OAuth grant or a wallet signing permission. The session is encrypted using Android Keystore; application backup is disabled.
+The first account connection uses an explicit first-party browser consent screen. The app holds a random verifier and sends its S256 challenge to Rally. A matching code, authenticated human consent, a ten-minute expiry and an atomic one-use exchange bind the connection to that device. This creates a regular Rally session, not an agent OAuth grant or a wallet signing permission. The session is encrypted using Android Keystore; application backup is disabled.
 
 The native order sheet hands the chosen asset, side and amount to Rally's existing secure browser checkout. Wallet login, signing, paid subscriptions and token issuance currently use that checkout. The web controllers remain responsible for quote validation, chain checks, wallet authorization and receipt reconciliation. Native screens never receive wallet keys or sign transactions. Account identifiers are checked at the handoff to prevent checkout under another browser account.
 
@@ -55,7 +55,7 @@ cd android
 ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.2.2 (code 6) uses the existing release certificate, allowing upgrades from the earlier APKs.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.2.3 (code 7) uses the existing release certificate, allowing upgrades from the earlier APKs.
 
 `/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
@@ -68,3 +68,5 @@ Native Android emulator checks cover operation with Chrome disabled, live public
 Version 0.2.2 passed 22 model tests, both baseline-profile journeys and release lint with zero errors. Native interaction checks verified retained market/search/pager state, horizontal finger tracking and snap-back, keyboard-visible Buy controls, launcher return and reduced motion. The social post deck, Perp and Prediction decks, nad.fun deck and Discover filters were checked with live public data. Layout checks covered a small phone, 1.5× text, landscape and a tablet. A compact caption preserves the complete accessibility label for Prediction at large text sizes. These checks made no wallet requests or financial transactions. Offline recovery was also verified in the preceding native release.
 
 The design uses [FOMO's official product imagery](https://fomo.family/) for compact token and trade presentation, [Meta's Threads performance report](https://engineering.fb.com/2024/12/18/ios/how-we-think-about-threads-ios-performance/) for separate navigation and rendering measurements, and [Android accessibility guidance](https://developer.android.com/guide/topics/ui/accessibility/apps) for touch targets. These are design references, not claims of equivalent performance.
+
+Version 0.2.3 adds branded wallet entry, a focused browser account screen and recovery for interrupted account pairing. Reopening the browser uses the same pending request and device code. Transient polling failures retry within the original expiry; cancellation and missing-browser failures restore the connection control. The release passed 22 model tests and lint with zero errors; emulator checks covered both profile themes, large text, browser handoff, return, reuse and cancellation. These checks did not sign a real wallet or submit a transaction.

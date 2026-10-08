@@ -1,3 +1,4 @@
+import {walletBrands,detectedWallets,detectedProvider} from './wallet-providers.js';
 // The auth SDK is loaded only after an explicit login or wallet action.
 export async function walletAccounts(provider,change=false){
   if(change){
@@ -44,7 +45,7 @@ export function agentSignature(value){
   return found.size===1?[...found][0]:null;
 }
 
-export function authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,afterLogin,connectWallet}) {
+export function authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,afterLogin,connectWallet,afterWallet=async next=>{if(next)await next();}}) {
   let sdkPromise,loginBusy=false;
   const mark='<img class="r-auth-mark" src="/assets/agent-metamask.svg" width="28" height="28" alt="MetaMask">';
   const cfg=()=>S.boot?.auth?.privy;
@@ -53,12 +54,19 @@ export function authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,aft
     if(!sdkPromise)sdkPromise=import(cfg().bridgeURL||'/assets/auth/privy-bridge.js').then(async module=>{await module.initialize(cfg());return module;}).catch(error=>{sdkPromise=null;throw error;});
     return sdkPromise;
   }
-  function buttons(){return `<div class="r-auth-methods"><button class="r-btn primary full" id="wallet-signin" type="button">${icon('wallet')}Connect wallet</button>${cfg()?.enabled?'<button class="r-btn full" id="privy-signin" type="button">Continue with email or Google</button>':''}<details class="r-auth-advanced"><summary>Agent wallet</summary><button class="r-btn full" id="agent-wallet-signin" type="button">${mark}MetaMask Agent Wallet</button><small>Connect through your external agent.</small></details></div>`;}
+  const brandImage=b=>`<img class="r-auth-mark" src="${b.image}" width="28" height="28" alt="">`;
+  function buttons(){
+    const detected=detectedWallets(),extra=detected.filter((x,i)=>!walletBrands.some(b=>b.id===x.id)&&detected.findIndex(y=>y.id===x.id)===i);
+    return `<div class="r-auth-methods"><div class="r-auth-wallets">${walletBrands.map(b=>`<button class="r-auth-wallet" data-auth-wallet="${b.id}" type="button">${brandImage(b)}<span>${b.name}</span>${detected.some(x=>x.id===b.id)?'<small>Installed</small>':''}${icon('chevron')}</button>`).join('')}${extra.map(b=>`<button class="r-auth-wallet" data-auth-wallet="${esc(b.id)}" type="button">${b.image?`<img class="r-auth-mark" src="${esc(b.image)}" width="28" height="28" alt="">`:icon('wallet')}<span>${esc(b.name==='Browser wallet'?b.id==='rabby'?'Rabby':b.id==='phantom'?'Phantom':'Browser wallet':b.name)}</span><small>Installed</small>${icon('chevron')}</button>`).join('')}<button class="r-auth-wallet" id="wallet-signin" type="button"><img class="r-auth-mark" src="/assets/wallet-connect.svg" width="28" height="28" alt=""><span>Other wallets</span>${icon('chevron')}</button></div>${cfg()?.enabled?`<div class="r-auth-divider"><span>or</span></div><div class="r-auth-social"><button class="r-btn full" id="privy-signin" type="button"><img class="r-auth-mark" src="/assets/auth-google.svg" width="22" height="22" alt="">Continue with Google</button><button class="r-btn full" id="email-signin" type="button">${icon('mail')}Continue with email</button></div>`:''}<div class="r-auth-error" role="alert"></div><details class="r-auth-advanced"><summary>Agent wallet</summary><button class="r-auth-wallet" id="agent-wallet-signin" type="button">${mark}<span>MetaMask Agent Wallet</span>${icon('chevron')}</button></details></div>`;
+  }
   function bind(next){
-    const button=$('#privy-signin');if(button)button.onclick=()=>signIn(false,next,button);
+    const button=$('#privy-signin');if(button)button.onclick=()=>signIn(Boolean(S.boot.me),next,button,'google');
+    const email=$('#email-signin');if(email)email.onclick=()=>signIn(Boolean(S.boot.me),next,email,'email');
+    document.querySelectorAll('[data-auth-wallet]').forEach(button=>button.onclick=()=>wallet(button.dataset.authWallet,next,button));
+    const all=$('#wallet-signin');if(all)all.onclick=()=>wallet(null,next,all);
     const agent=$('#agent-wallet-signin');if(agent)agent.onclick=()=>agentWallet(next);
   }
-  async function signIn(link=false,next,button){
+  async function signIn(link=false,next,button,method=null){
     if(loginBusy)return;loginBusy=true;
     const account=S.boot.me?.id,route=location.href;
     if(button){button.disabled=true;button.setAttribute('aria-busy','true');}
@@ -67,7 +75,7 @@ export function authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,aft
       if(sessionStorage.getItem('rally:privy-signout-pending')){await bridge.logout();sessionStorage.removeItem('rally:privy-signout-pending');}
       sessionStorage.setItem('rally:privy-intent',JSON.stringify({link,owner:account||null,path:location.pathname,created:Date.now()}));
       closeModal();
-      const tokens=await bridge.signIn();
+      const tokens=await bridge.signIn(method);
       if(S.boot.me?.id!==account||location.href!==route)throw new Error('The account or page changed. Start login again.');
       await api('/api/auth/privy',{...tokens,link});
       await boot();closeModal();await render();notify(link?'Login added':'Signed in');
@@ -75,6 +83,25 @@ export function authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,aft
       return true;
     }catch(error){notify(error.message||'Could not sign in. Try again.');return false;}
     finally{sessionStorage.removeItem('rally:privy-intent');loginBusy=false;if(button?.isConnected){button.disabled=false;button.removeAttribute('aria-busy');}}
+  }
+  async function wallet(id=null,next,button,change=false){
+    if(loginBusy)return;loginBusy=true;
+    const owner=S.boot.me?.id||null,route=location.href;
+    if(button){button.disabled=true;button.setAttribute('aria-busy','true');}
+    try{
+      S.walletBrand=walletBrands.find(b=>b.id===id)||null;
+      let selected=id?detectedProvider(id):null;
+      if(!selected){
+        if(!cfg()?.enabled)throw new Error('Use an installed wallet browser to connect.');
+        const bridge=await sdk();
+        if((S.boot.me?.id||null)!==owner||location.href!==route)throw new Error('The page changed. Connect again.');
+        closeModal(true);selected=await bridge.connectExternal(id);
+        if((S.boot.me?.id||null)!==owner||location.href!==route)throw new Error('The account or page changed. Connect again.');
+        try{localStorage.setItem('rally:wallet-client',id||'external');}catch{}
+      }
+      if(await connectWallet(selected,true,change))await afterWallet(next);
+    }catch(error){const message=error.message||'Could not connect. Try again.';const field=$('.r-auth-error');if(field)field.textContent=message;else notify(message);}
+    finally{loginBusy=false;if(button?.isConnected){button.disabled=false;button.removeAttribute('aria-busy');}}
   }
   function agentCard(){const c=S.boot.auth?.agentWallet;return `<section class="r-agent-wallet-card"><span>${mark}<span><b>MetaMask Agent Wallet</b><small>${c?.connected?'Connected · Monad':'Your agent’s wallet · Monad'}</small></span></span><button class="r-btn small ${c?.connected?'is-connected':''}" data-action="agent-wallet">${c?.connected?icon('check')+'Connected':'Connect'}</button></section>`;}
   let agentConnecting=false;
@@ -205,11 +232,12 @@ export function authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,aft
     form.onsubmit=e=>{e.preventDefault();complete();};
     input.onpaste=()=>setTimeout(()=>{if(S.modal===instance&&agentSignature(input.value))complete();},0);
   }
-  async function provider(address){if(!cfg()?.linked)return null;try{return await(await sdk()).walletProvider(address);}catch{return null;}}
+  async function provider(address){if(!cfg()?.enabled)return null;let remembered=false;try{remembered=!!localStorage.getItem('rally:wallet-client');}catch{}if(!sdkPromise&&!cfg()?.linked&&!remembered)return null;try{return await(await sdk()).walletProvider(address);}catch{return null;}}
+  function walletChooser(change=false){modal('Connect wallet',buttons(),'r-auth-login');bind(()=>{});const all=$('#wallet-signin');if(all)all.onclick=()=>wallet(null,null,all,change);document.querySelectorAll('[data-auth-wallet]').forEach(b=>b.onclick=()=>wallet(b.dataset.authWallet,null,b,change));return true;}
   function chooseWallet(change=false){
-    if(!cfg()?.linked)return false;
+    if(!cfg()?.linked)return walletChooser(change);
     modal('Connect wallet',`<div class="r-auth-methods"><button class="r-btn primary full" type="button" id="privy-wallet">Use Privy wallet</button><button class="r-btn full" type="button" id="external-wallet">${mark}Connect external wallet</button></div><p class="r-note">You approve transactions in your wallet.</p>`);
-    $('#external-wallet').onclick=()=>connectWallet(null,true,change);
+    $('#external-wallet').onclick=()=>walletChooser(change);
     $('#privy-wallet').onclick=async event=>{const button=event.currentTarget;button.disabled=true;try{
       const bridge=await sdk();
       if(!bridge.authenticated()){await signIn(true,()=>chooseWallet());return;}
@@ -237,5 +265,5 @@ export function authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,aft
     try{const bridge=await sdk();if(!bridge.authenticated())return false;return await signIn(intent.link);}catch(error){notify(error.message);return false;}
   }
   async function handle(action){if(action==='agent-wallet'){agentWallet();return true;}if(action==='privy-link'){await signIn(true);return true;}return false;}
-  return {buttons,bind,agentCard,agentWallet,provider,chooseWallet,logout,handle,resume};
+  return {buttons,bind,agentCard,agentWallet,provider,chooseWallet,logout,handle,resume,walletChooser};
 }

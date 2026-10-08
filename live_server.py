@@ -288,7 +288,7 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/':return self.file(s.ROOT/'landing.html','text/html; charset=utf-8')
         if path=='/manifest.webmanifest':return self.file(s.ROOT/'manifest.webmanifest','application/manifest+json')
         if path=='/.well-known/assetlinks.json':return self.file(s.ROOT/'android-assetlinks.json','application/json')
-        if path in {'/rally-offline.js','/network-ui.js','/native-link.js'}:return self.file(s.ROOT/path.lstrip('/'),'text/javascript')
+        if path in {'/rally-offline.js','/network-ui.js','/native-link.js','/wallet-providers.js'}:return self.file(s.ROOT/path.lstrip('/'),'text/javascript')
         if path in {'/mobile-ui.js','/prediction-ui.js','/mobile.css'}:return self.file(s.ROOT/path.lstrip('/'),'text/css' if path.endswith('.css') else 'text/javascript')
         if re.fullmatch(r'/assets/token-art-[a-f0-9]{20}\.webp',path):
             target=token_images.file(path.rsplit('/',1)[-1])
@@ -325,7 +325,7 @@ class Handler(BaseHTTPRequestHandler):
                         if path.name=='index.html':
                             # Publish reviewed module changes independently of the
                             # immutable CDN bundle; other assets retain the CDN.
-                            changed=('live-app.js','finance.js','market-ui.js','community.js','swipe.js','swipe-trade.js','swipe-motion.js','flow.js','market-logos.js','nadfun.js','checkout.js','auth-ui.js','community-token.js','creator-ui.js','launchpad.js','launch-activity.js','launch-income.js','experience.js','motion.js')
+                            changed=('live-app.js','finance.js','market-ui.js','community.js','swipe.js','swipe-trade.js','swipe-motion.js','flow.js','market-logos.js','nadfun.js','checkout.js','auth-ui.js','wallet-providers.js','community-token.js','creator-ui.js','launchpad.js','launch-activity.js','launch-income.js','experience.js','motion.js')
                             imports={CDN_BASE+'/'+name:'/'+name+'?v='+s.digest((s.ROOT/name).read_text())[:16] for name in changed}
                             for name in ('live-app.js','charts.js','finance.js','flow.js','nadfun.js','community.js','swipe.js','swipe-trade.js','checkout.js','feed-ui.js','market-ui.js','market-logos.js','swipe-motion.js','auth-ui.js','community-token.js','creator-ui.js','launchpad.js','launch-activity.js','launch-income.js','experience.js','motion.js'):
                                 imports['/'+name]=imports.get(CDN_BASE+'/'+name,CDN_BASE+'/'+name)

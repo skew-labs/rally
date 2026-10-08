@@ -10,7 +10,7 @@ import re
 import secrets
 import service as s
 
-TTL = 180
+TTL = 600
 SESSION_TTL = 7 * 86400
 
 

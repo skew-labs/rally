@@ -44,7 +44,9 @@ For larger media, request an upload URL, PUT bytes with the correct content type
 
 ## Wallet identity
 
-Direct wallet sign-in uses an application challenge scoped to the wallet and account. Privy verifies access and identity tokens against the configured application, trusted signing keys and linked-account mapping. The optional React bridge is loaded separately from the main client and provides embedded-wallet access to the wallet-controlled transaction flow.
+Direct wallet sign-in uses an application challenge scoped to the wallet and account. Privy verifies access and identity tokens against the configured application, trusted signing keys and linked-account mapping. The React bridge loads after a user chooses a login or wallet action. EIP-6963 identifies installed extensions, and the selected provider performs the Rally nonce signature. Standard mobile browsers and the Android account handoff use Privy external connectors for mobile wallets; Coinbase is configured for externally owned accounts on Monad. External-wallet connection does not require a second Privy identity login. Google and email are separate login actions; adding either to a signed-in Rally account verifies and links the identity to that account. Embedded-wallet creation remains explicit.
+
+The branded chooser offers MetaMask, Coinbase Wallet, Rainbow and other supported wallets. [Privy documents mobile and injected connector behavior](https://docs.privy.io/wallets/connectors/setup/configuring-external-connector-wallets). Reconnecting can restore a matching provider without changing the account; a wallet or chain change during signing aborts verification.
 
 Sign-in and wallet linkage do not authorize token spending. ERC-20 allowance and a final trade are distinct wallet actions.
 

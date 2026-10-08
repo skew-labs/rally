@@ -30,6 +30,15 @@ class NativeAuthTest(unittest.TestCase):
     def poll(self,**changes):return n.poll({'id':self.request['id'],'verifier':self.verifier,**changes},self.origin)
     def approve(self,allow=True):return n.approve(self.who,{'id':self.request['id'],'allow':allow},self.origin)
     def test_pending_has_no_session(self):self.assertEqual(self.poll(),{'state':'pending'})
+    def test_phone_auth_round_trip_survives_the_old_three_minute_window(self):
+        started=s.now()
+        with patch.object(s,'now',return_value=started+540):
+            self.assertEqual(self.poll(),{'state':'pending'})
+            self.approve();self.assertEqual(self.poll()['state'],'approved')
+    def test_phone_auth_is_still_bounded_to_ten_minutes(self):
+        with patch.object(s,'now',return_value=s.now()+600):
+            with self.assertRaises(s.Problem) as e:self.poll()
+            self.assertEqual(e.exception.status,410)
     def test_explicit_consent_creates_only_hashed_session(self):
         self.approve();result=self.poll();self.assertEqual(result['state'],'approved');row=s.one('SELECT * FROM sessions');self.assertEqual(row['hash'],s.digest(result['session']));self.assertEqual(row['user_id'],'alice');self.assertEqual(s.one('SELECT state FROM native_pairing')['state'],'consumed')
     def test_code_is_four_digits_and_has_no_verifier(self):self.assertRegex(self.request['code'],r'^\d{4}$');self.assertNotIn(self.verifier,self.request['url'])

@@ -1,0 +1,7 @@
+{
+  "wallet-coinbase.svg": {"source": "@privy-io/react-auth 3.47.0 official Coinbase Wallet artwork"},
+  "wallet-rainbow.svg": {"source": "https://github.com/rainbow-me/rainbowkit/blob/main/packages/rainbowkit/src/wallets/walletConnectors/rainbowWallet/rainbowWallet.svg"},
+  "wallet-connect.svg": {"source": "https://github.com/rainbow-me/rainbowkit/blob/main/packages/rainbowkit/src/wallets/walletConnectors/walletConnectWallet/walletConnectWallet.svg"},
+  "auth-google.svg": {"source": "@privy-io/react-auth 3.47.0 official Google login artwork"},
+  "agent-metamask.svg": {"source": "Existing MetaMask brand artwork; see agent-brand-sources.json"}
+}

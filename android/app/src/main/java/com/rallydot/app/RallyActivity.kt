@@ -50,6 +50,6 @@ class RallyActivity: ComponentActivity() {
     private fun openBrowser(url: String) {
         val uri=Uri.parse(url)
         if(uri.scheme!="https" || uri.host.isNullOrBlank() || uri.userInfo!=null) { model.message("Invalid link");return }
-        try { startActivity(Intent(Intent.ACTION_VIEW,uri)) } catch (_: Exception) { model.message("Install a browser to approve wallet or account requests. Rally's screens work without one.") }
+        try { startActivity(Intent(Intent.ACTION_VIEW,uri)) } catch (_: Exception) { model.cancelConnect();model.message("Install a browser to connect your account securely.") }
     }
 }
