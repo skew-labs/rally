@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,6 +39,33 @@ val RallyTypography=Typography().let { t->t.copy(
 // Votes on redraws only. Android retains control over battery, thermal and display limits.
 @OptIn(ExperimentalComposeUiApi::class)
 fun Modifier.highRefresh()=preferredFrameRate(FrameRateCategory.High)
+
+// Resize during layout so an expanding chart does not recompose the order sheet each frame.
+fun Modifier.animatedHeight(height: State<Dp>)=layout { measurable,constraints->
+    val pixels=constraints.constrainHeight(height.value.roundToPx())
+    val child=measurable.measure(constraints.copy(minHeight=pixels,maxHeight=pixels))
+    layout(child.width,pixels) { child.placeRelative(0,0) }
+}
+
+@Composable fun TradeAmount(value: String,onValue: (String)->Unit,label: String,unit: String,accent: Color,done: ()->Unit) {
+    Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surfaceContainer) {
+        Column(Modifier.padding(horizontal=18.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Text(label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                androidx.compose.foundation.text.BasicTextField(value,onValue,Modifier.weight(1f).heightIn(min=48.dp).semantics { contentDescription=label },singleLine=true,
+                    textStyle=MaterialTheme.typography.headlineMedium.copy(fontSize=32.sp,color=MaterialTheme.colorScheme.onSurface),cursorBrush=SolidColor(accent),
+                    keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(keyboardType=androidx.compose.ui.text.input.KeyboardType.Decimal,imeAction=androidx.compose.ui.text.input.ImeAction.Done),
+                    keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={done()}),decorationBox={ input->
+                        Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.CenterStart) {
+                            if(value.isEmpty())Text("0",style=MaterialTheme.typography.headlineMedium.copy(fontSize=32.sp),color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            input()
+                        }
+                    })
+                Text(unit,Modifier.widthIn(max=96.dp),style=MaterialTheme.typography.titleMedium,maxLines=1,overflow=TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
 
 @Composable fun Modifier.pressFeedback(source: MutableInteractionSource): Modifier {
     val pressed by source.collectIsPressedAsState()

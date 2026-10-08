@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. It does not embed a WebView or launch a Trusted Web Activity. The package is `com.rallydot.app`, with Android 7.0 (API 24) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.2.3.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.2.4.apk)
 
 ## Interaction and data
 
@@ -55,7 +55,7 @@ cd android
 ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.2.3 (code 7) uses the existing release certificate, allowing upgrades from the earlier APKs.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.2.4 (code 8) uses the existing release certificate, allowing upgrades from the earlier APKs.
 
 `/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
@@ -70,3 +70,8 @@ Version 0.2.2 passed 22 model tests, both baseline-profile journeys and release 
 The design uses [FOMO's official product imagery](https://fomo.family/) for compact token and trade presentation, [Meta's Threads performance report](https://engineering.fb.com/2024/12/18/ios/how-we-think-about-threads-ios-performance/) for separate navigation and rendering measurements, and [Android accessibility guidance](https://developer.android.com/guide/topics/ui/accessibility/apps) for touch targets. These are design references, not claims of equivalent performance.
 
 Version 0.2.3 adds branded wallet entry, a focused browser account screen and recovery for interrupted account pairing. Reopening the browser uses the same pending request and device code. Transient polling failures retry within the original expiry; cancellation and missing-browser failures restore the connection control. The release passed 22 model tests and lint with zero errors; emulator checks covered both profile themes, large text, browser handoff, return, reuse and cancellation. These checks did not sign a real wallet or submit a transaction.
+Version 0.2.4 unifies public social and nad.fun swipe cards under one native pager. Horizontal releases use distance and velocity, resist deck boundaries and settle without a second full-width entrance. Card translations, chart resizing and chart scrubbing avoid recomposing the full trading sheet on every frame. Artwork decoding is constrained to its rendered size, and social lists reuse typed content. Primary navigation uses short fades, while Home sections use small directional transitions.
+
+The trade sheet uses a large amount field with an explicit denomination, separate Buy and Sell colors, a faster cancellable quote debounce and a footer that remains above the keyboard. Market rows constrain long prices and venue names. Secondary text is darker in the light palette for readability on quiet surfaces. Wallet handoff and server-side execution validation are unchanged.
+
+Version 0.2.4 passed 25 model tests, both baseline-profile journeys and release lint with zero errors. Native checks covered gesture thresholds and deck boundaries, retained navigation state, light/dark order sheets, keyboard-visible Buy and Sell controls, reduced motion, and public market, community and algorithm screens. Small-phone, 1.5× text, landscape and tablet layouts passed. These checks made no wallet requests or financial transactions; they do not establish physical-device 144 Hz frame performance.

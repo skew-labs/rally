@@ -4,6 +4,19 @@ import org.junit.Test
 import org.junit.Assert.*
 
 class ModelsTest {
+    @Test fun shortSlowSwipeKeepsTheCurrentCard() { assertEquals(2,swipeTargetPage(2,6,-50f,400f,-100f)) }
+    @Test fun quickFlickMovesOneCardInTheFingerDirection() {
+        assertEquals(3,swipeTargetPage(2,6,-40f,400f,-1800f))
+        assertEquals(1,swipeTargetPage(2,6,40f,400f,1800f))
+        assertEquals(2,swipeTargetPage(2,6,-40f,400f,1800f))
+    }
+    @Test fun deliberateSwipeScalesWithTheScreenAndCannotEscapeTheDeck() {
+        assertEquals(3,swipeTargetPage(2,6,-100f,400f,0f))
+        assertEquals(2,swipeTargetPage(2,6,-100f,1200f,0f))
+        assertEquals(0,swipeTargetPage(0,6,180f,400f,1800f))
+        assertEquals(5,swipeTargetPage(5,6,-180f,400f,-1800f))
+        assertEquals(2,swipeTargetPage(2,6,Float.NaN,400f,0f))
+    }
     @Test fun missingPriceRemainsMissing() { val a=Asset.parse(JSONObject("{\"id\":\"x\",\"symbol\":\"X\"}"));assertNull(a.price);assertEquals("—",money(a.price));assertTrue(a.freshness) }
     @Test fun invalidPriceIsNotAZeroQuote() { listOf("null","\"NaN\"","\"Infinity\"","\"bad\"").forEach { assertNull(Asset.parse(JSONObject("{\"price\":$it}")).price) } }
     @Test fun numericStringsKeepPrecision() { val a=Asset.parse(JSONObject("{\"price\":\"0.000000001\",\"marketCap\":\"3000000\"}"));assertEquals(1e-9,a.price!!,1e-18);assertEquals(3000000.0,a.cap!!,0.0) }

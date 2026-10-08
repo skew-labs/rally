@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
@@ -89,9 +90,9 @@ import kotlin.math.abs
             Text(asset.symbol,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.SemiBold,fontSize=14.sp)
             Text(if(asset.kind=="perps")asset.venue else asset.name,maxLines=1,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Column(horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)) {
-            Text(if(cap && asset.cap!=null)"$"+compact(asset.cap) else money(asset.price),fontWeight=FontWeight.SemiBold,fontSize=14.sp,maxLines=1)
-            Text(if(asset.freshness && asset.price!=null)"Last known" else if(cap)money(asset.price) else asset.change?.let { (if(it>=0)"+" else "")+String.format(java.util.Locale.US,"%.2f%%",it) } ?: asset.venue,style=MaterialTheme.typography.bodySmall,color=if(asset.change!=null && !cap)if(asset.change>=0)MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.widthIn(max=148.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            Text(if(cap && asset.cap!=null)"$"+compact(asset.cap) else money(asset.price),fontWeight=FontWeight.SemiBold,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Text(if(asset.freshness && asset.price!=null)"Last known" else if(cap)money(asset.price) else asset.change?.let { (if(it>=0)"+" else "")+String.format(java.util.Locale.US,"%.2f%%",it) } ?: asset.venue,maxLines=1,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodySmall,color=if(asset.change!=null && !cap)if(asset.change>=0)MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     HorizontalDivider(Modifier.padding(horizontal=20.dp),color=MaterialTheme.colorScheme.outlineVariant)
@@ -110,64 +111,18 @@ import kotlin.math.abs
     val state by vm.state.collectAsStateWithLifecycle();val key="swipe";val page=state.pages[key] ?: Page(loading=true)
     LaunchedEffect(Unit) { vm.load(key,"/api/nadfun/tokens?sort=cap&limit=24","tokens") }
     val assets=remember(page.items) { page.items.map { Asset.parse(it) } }
-    val pager=rememberPagerState(pageCount={assets.size})
-    val scope=rememberCoroutineScope()
-    val haptic=LocalHapticFeedback.current
-    val horizontal=remember { Animatable(0f) }
-    var drag by remember { mutableFloatStateOf(0f) }
-    var dragging by remember { mutableStateOf(false) }
-    var settling by remember { mutableStateOf(false) }
-    var settlement by remember { mutableStateOf<Job?>(null) }
-    val currentAssets by rememberUpdatedState(assets)
-    DisposableEffect(Unit) { onDispose { settlement?.cancel() } }
-    LaunchedEffect(pager) {
-        var previous=pager.settledPage
-        snapshotFlow { pager.settledPage }.collect { pageIndex ->
-            if(pageIndex!=previous)haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-            previous=pageIndex
-        }
-    }
-    LaunchedEffect(pager.settledPage,assets.firstOrNull()?.key) { assets.drop(pager.settledPage).take(2).forEach(vm::warmChart) }
-    LaunchedEffect(pager.currentPage,page.cursor,page.loading) { if(pager.currentPage>=assets.size-4 && page.cursor!=null && !page.loading && page.error==null)vm.load(key,"/api/nadfun/tokens?sort=cap&limit=24&cursor="+Uri.encode(page.cursor),"tokens",append=true) }
+    val keys=remember(assets) { assets.map { it.key } }
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { while(true) { delay(30000);vm.load(key,"/api/nadfun/tokens?sort=cap&limit=24","tokens",true,retain=true) } } }
     Column(Modifier.fillMaxSize()) {
         if(assets.isEmpty()) { if(page.loading)LoadingRows() else EmptyState("Swipe is unavailable",page.error,"Retry",{vm.load(key,"/api/nadfun/tokens?sort=cap&limit=24","tokens",true)}) }
         else {
-            VerticalPager(pager,modifier=Modifier.weight(1f).fillMaxWidth().highRefresh(),beyondViewportPageCount=1,contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),pageSpacing=12.dp,key={assets[it].key}) { index ->
+            NativeSwipeDeck(keys,Modifier.weight(1f),onPage={index->
+                assets.drop(index).take(2).forEach(vm::warmChart)
+                if(index>=assets.size-4 && page.cursor!=null && !page.loading && page.error==null)
+                    vm.load(key,"/api/nadfun/tokens?sort=cap&limit=24&cursor="+Uri.encode(page.cursor),"tokens",append=true)
+            }) { index ->
                 val a=assets[index]
-                Surface(Modifier.fillMaxSize().highRefresh().semantics { if(index!=pager.currentPage)hideFromAccessibility() }.graphicsLayer {
-                    translationX=if(dragging)drag else horizontal.value
-                    val offset=abs(pager.currentPage-index+pager.currentPageOffsetFraction).coerceIn(0f,1f)
-                    scaleX=1f-offset*.025f;scaleY=1f-offset*.025f
-                    alpha=1f-offset*.12f
-                }.pointerInput(pager) {
-                    var captured=false
-                    fun settle(cancel: Boolean) {
-                        if(!captured)return
-                        captured=false;val distance=drag;val width=size.width.toFloat()
-                        dragging=false;settling=true
-                        settlement=scope.launch {
-                            try {
-                                horizontal.snapTo(distance)
-                                val next=(pager.currentPage+if(distance<0)1 else -1).coerceIn(0,currentAssets.lastIndex)
-                                if(!cancel && abs(distance)>72.dp.toPx() && next!=pager.currentPage) {
-                                    val direction=if(distance<0)-1f else 1f
-                                    horizontal.animateTo(direction*width,tween(120,easing=FastOutLinearInEasing))
-                                    pager.scrollToPage(next)
-                                    horizontal.snapTo(-direction*width)
-                                    horizontal.animateTo(0f,tween(160,easing=LinearOutSlowInEasing))
-                                } else horizontal.animateTo(0f,spring(dampingRatio=1f,stiffness=700f))
-                            } finally { horizontal.snapTo(0f);drag=0f;settling=false }
-                        }
-                    }
-                    detectHorizontalDragGestures(onDragStart={
-                        captured=!settling && !pager.isScrollInProgress
-                        if(captured) { drag=0f;dragging=true }
-                    },onDragCancel={settle(true)},onDragEnd={settle(false)}) { change,delta ->
-                        if(captured) { change.consume();drag=(drag+delta).coerceIn(-size.width.toFloat(),size.width.toFloat()) }
-                    }
-                },shape=RoundedCornerShape(24.dp),border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),color=MaterialTheme.colorScheme.surface) {
                     BoxWithConstraints(Modifier.fillMaxSize()) {
                     val compactHeight=maxHeight<440.dp
                     val short=compactHeight || androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
@@ -192,7 +147,6 @@ import kotlin.math.abs
                         if(!short)Spacer(Modifier.height(12.dp));if(!short)Text("Swipe for the next token",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     }
-                }
             }
         }
     }
@@ -223,9 +177,9 @@ import kotlin.math.abs
     var quote by remember { mutableStateOf<JSONObject?>(null) }
     var quoteError by remember { mutableStateOf<String?>(null) }
     var quoting by remember { mutableStateOf(false) }
-    var scrubbing by remember { mutableStateOf<ChartPoint?>(null) }
+    val scrubbing=remember { mutableStateOf<ChartPoint?>(null) }
     val points=remember(chart) { chart?.let(::chartPoints).orEmpty() }
-    val graphHeight by animateDpAsState(if(keyboard)0.dp else if(trade)88.dp else 160.dp,tween(180),label="trade chart")
+    val graphHeight=animateDpAsState(if(keyboard)0.dp else if(trade)88.dp else 160.dp,tween(180),label="trade chart")
     fun dismiss() { focus.clearFocus();scope.launch { sheet.hide();close() } }
     LaunchedEffect(asset.key,period) {
         chartError=null;chartLoading=true
@@ -238,7 +192,7 @@ import kotlin.math.abs
     LaunchedEffect(asset.key,side,amount,trade) {
         quote=null;quoteError=null;quoting=false
         if(trade && asset.kind=="spot" && validAmount(amount)) {
-            delay(380);quoting=true
+            delay(240);quoting=true
             try { quote=vm.quote(asset,side,amount) } catch(e:CancellationException){throw e} catch(e:Exception){quoteError=e.message ?: "No quote for this amount"} finally { quoting=false }
         }
     }
@@ -252,13 +206,10 @@ import kotlin.math.abs
                     IconButton(onClick=::dismiss){Icon(Icons.Outlined.Close,"Close token")}
                 }
                 Column(Modifier.weight(1f,fill=false).highRefresh().verticalScroll(rememberScrollState()).padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-                    if(!keyboard)Column {
-                        Text(money(scrubbing?.value?.toDouble() ?: asset.price),fontSize=32.sp,fontWeight=FontWeight.Medium,maxLines=1)
-                        Text(if(scrubbing!=null)java.text.SimpleDateFormat("MMM d · HH:mm",java.util.Locale.US).format(java.util.Date(scrubbing!!.time*1000)) else if(asset.freshness)"Last known price" else asset.raw.string("priceSource","Reference price"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if(graphHeight>0.dp)Box(Modifier.fillMaxWidth().height(graphHeight)) {
+                    if(!keyboard)MarketPrice(asset,scrubbing)
+                    Box(Modifier.fillMaxWidth().animatedHeight(graphHeight).clipToBounds()) {
                         if(points.size>1) {
-                            PriceChart(points,{scrubbing=it})
+                            PriceChart(points,{scrubbing.value=it})
                             if(chartLoading)LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
                         }
                         else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { if(chartError!=null)Text(chartError!!,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) else CircularProgressIndicator(Modifier.size(24.dp),strokeWidth=2.dp) }
@@ -272,10 +223,10 @@ import kotlin.math.abs
                     }
                     if(asset.kind=="prediction") { Fact("Entry stake",asset.raw.string("stake")+" "+asset.raw.string("stakeAsset"));Fact("Status",asset.raw.string("state").replace('_',' ')) }
                     if(trade) {
-                        if(asset.kind!="prediction")Segmented(if(asset.kind=="perps")listOf("Buy / Long","Sell / Short") else listOf("Buy","Sell"),if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell",{side=if(it.startsWith("Buy"))"buy" else "sell"})
+                        if(asset.kind!="prediction")Segmented(if(asset.kind=="perps")listOf("Buy / Long","Sell / Short") else listOf("Buy","Sell"),if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell",{side=if(it.startsWith("Buy"))"buy" else "sell"},accent=if(side=="buy")Buy else Sell)
                         val quantity=asset.kind=="perps" && asset.venue in listOf("Perpl","Drake")
                         val denom=if(side=="sell" && asset.kind=="spot")asset.symbol else if(asset.kind=="spot")asset.raw.string("quoteSymbol","MON") else if(quantity)asset.symbol else if(asset.venue=="Pingu")"MON" else "USDC"
-                        OutlinedTextField(amount,{amount=it},Modifier.fillMaxWidth(),singleLine=true,label={Text(if(asset.kind=="prediction")"Predicted USD price" else if(quantity)"Quantity" else if(asset.kind=="perps")"Collateral" else "Amount")},suffix={Text(if(asset.kind=="prediction")"USD" else denom,maxLines=1)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal,imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={focus.clearFocus()}),shape=RoundedCornerShape(16.dp))
+                        TradeAmount(amount,{amount=it},if(asset.kind=="prediction")"Predicted USD price" else if(quantity)"Quantity" else if(asset.kind=="perps")"Collateral" else if(side=="buy")"You pay" else "You sell",if(asset.kind=="prediction")"USD" else denom,if(side=="buy")Buy else Sell,{focus.clearFocus()})
                         if(asset.kind=="spot")Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) { listOf("0.1","1","5","10").forEach { preset->TextButton(onClick={amount=preset;focus.clearFocus()},Modifier.weight(1f).heightIn(min=44.dp),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceContainer,contentColor=if(amount==preset)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)) { Text(preset) } } }
                         Box(Modifier.fillMaxWidth().heightIn(min=28.dp)) {
                             if(quoting)LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.Center))
@@ -288,7 +239,8 @@ import kotlin.math.abs
                 Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     if(trade) {
                         Button(onClick={focus.clearFocus();openBrowser(vm.walletURL(asset,side,amount))},enabled=validAmount(amount) && asset.executable,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=if(side=="buy")Buy else Sell,contentColor=Color.White)) {
-                            Text(if(asset.kind=="prediction")"Predict price" else if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell")
+                            Text(if(asset.kind=="prediction")"Predict price" else if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell",fontWeight=FontWeight.SemiBold)
+                            Spacer(Modifier.width(8.dp));Icon(Icons.Outlined.ArrowForward,null,Modifier.size(18.dp))
                         }
                         if(!keyboard)Text("Wallet approval opens secure checkout.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     } else if(asset.kind=="prediction")Button(onClick={trade=true},enabled=asset.executable,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(asset.executable)"Predict price" else asset.raw.string("state").replace('_',' ')) }
@@ -296,6 +248,14 @@ import kotlin.math.abs
                 }
             }
         }
+    }
+}
+@Composable private fun MarketPrice(asset: Asset,scrubbing: State<ChartPoint?>) {
+    val point=scrubbing.value
+    val time=remember(point?.time) { point?.let { java.text.SimpleDateFormat("MMM d · HH:mm",java.util.Locale.US).format(java.util.Date(it.time*1000)) } }
+    Column {
+        Text(money(point?.value?.toDouble() ?: asset.price),fontSize=32.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
+        Text(time ?: if(asset.freshness)"Last known price" else asset.raw.string("priceSource","Reference price"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 @Composable fun Fact(label: String,value: String) { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(label,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium);Text(value,style=MaterialTheme.typography.bodyMedium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(start=12.dp).weight(1f),textAlign=androidx.compose.ui.text.style.TextAlign.End) } }

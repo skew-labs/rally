@@ -49,7 +49,7 @@ import org.json.JSONObject
                 }
             }
             if(page.error!=null)item { EmptyState("Couldn't refresh",page.error,"Retry",{vm.load(key,path,"posts",true)}) }
-            items(page.items,key={it.string("id")}) { j->val p=Post.parse(j);PostCard(p,{onPost(p)},{onAsset(p.asset)},{vm.action("/api/reaction",JSONObject().put("post",p.id).put("kind","like").put("active",!p.liked)) { vm.load(key,path,"posts",true) }}) }
+            items(page.items,key={it.string("id")},contentType={"post"}) { j->val p=remember(j) { Post.parse(j) };PostCard(p,{onPost(p)},{onAsset(p.asset)},{vm.action("/api/reaction",JSONObject().put("post",p.id).put("kind","like").put("active",!p.liked)) { vm.load(key,path,"posts",true) }}) }
             if(page.items.isEmpty() && !page.loading && page.error==null)item { EmptyState("No posts yet",action="Create a post",onAction=compose) }
             if(page.cursor!=null)item { TextButton(onClick={vm.load(key,path+"&cursor="+Uri.encode(page.cursor),"posts",append=true)},modifier=Modifier.fillMaxWidth(),enabled=!page.loading) { Text(if(page.loading)"Loading…" else "Load more") } }
         }
@@ -97,7 +97,7 @@ import org.json.JSONObject
         PullToRefreshBox(isRefreshing=page.loading && page.items.isNotEmpty(),onRefresh={vm.load(key,path,"items",true)},modifier=Modifier.weight(1f)) {
             if(page.items.isEmpty() && page.loading)LoadingRows() else LazyVerticalGrid(GridCells.Adaptive(110.dp),state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(horizontal=4.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                 if(page.error!=null)item(span={GridItemSpan(maxLineSpan)}) { EmptyState("Couldn't load discovery",page.error,"Retry",{vm.load(key,path,"items",true)}) }
-                items(page.items,key={it.string("id")}) { item -> val cover=safeImage(item.string("cover"));val algorithm=item.string("kind")=="algorithm";Box(Modifier.aspectRatio(1f).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainer).clickable {
+                items(page.items,key={it.string("id")},contentType={it.string("kind")}) { item -> val cover=safeImage(item.string("cover"));val algorithm=item.string("kind")=="algorithm";Box(Modifier.aspectRatio(1f).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainer).clickable {
                     if(item.string("kind")=="algorithm")onAlgorithm(item) else scope.launch { try { onPost(Post.parse(vm.api.get("/api/post?id="+Uri.encode(item.string("id").removePrefix("post:"))))) } catch(e:Exception){vm.message(e.message)} }
                 }) {
                     if(cover!=null)AsyncImage(cover,item.string("title"),Modifier.fillMaxSize().padding(if(item.string("coverType")=="token")20.dp else 0.dp),contentScale=if(item.string("coverType")=="token")ContentScale.Fit else ContentScale.Crop)

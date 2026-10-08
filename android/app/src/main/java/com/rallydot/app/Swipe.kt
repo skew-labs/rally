@@ -53,35 +53,6 @@ import kotlin.math.abs
     }
 }
 
-@Composable private fun NativeSwipeDeck(keys: List<String>,modifier: Modifier,onPage: (Int)->Unit,content: @Composable (Int)->Unit) {
-    val pager=rememberPagerState(pageCount={keys.size});val scope=rememberCoroutineScope();val haptic=LocalHapticFeedback.current
-    val horizontal=remember { Animatable(0f) };var drag by remember { mutableFloatStateOf(0f) };var dragging by remember { mutableStateOf(false) };var settling by remember { mutableStateOf(false) };var job by remember { mutableStateOf<Job?>(null) }
-    val count by rememberUpdatedState(keys.size);val pageCallback by rememberUpdatedState(onPage)
-    DisposableEffect(Unit) { onDispose { job?.cancel() } }
-    LaunchedEffect(pager) { var previous=pager.settledPage;snapshotFlow { pager.settledPage }.collect { i->if(previous!=i)haptic.performHapticFeedback(HapticFeedbackType.SegmentTick);previous=i;pageCallback(i) } }
-    VerticalPager(pager,modifier.fillMaxWidth().highRefresh(),beyondViewportPageCount=1,contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),pageSpacing=12.dp,key={keys[it]}) { index->
-        Surface(Modifier.fillMaxSize().highRefresh().semantics { if(index!=pager.currentPage)hideFromAccessibility() }.graphicsLayer {
-            translationX=if(dragging)drag else horizontal.value
-            val distance=abs(pager.currentPage-index+pager.currentPageOffsetFraction).coerceIn(0f,1f)
-            scaleX=1f-distance*.02f;scaleY=scaleX;alpha=1f-distance*.10f
-        }.pointerInput(pager) {
-            var captured=false
-            fun settle(cancel: Boolean) {
-                if(!captured)return;captured=false;val distance=drag;val width=size.width.toFloat();dragging=false;settling=true
-                job=scope.launch {
-                    try {
-                        horizontal.snapTo(distance);val next=(pager.currentPage+if(distance<0)1 else -1).coerceIn(0,count-1)
-                        if(!cancel && abs(distance)>72.dp.toPx() && next!=pager.currentPage) {
-                            val direction=if(distance<0)-1f else 1f;horizontal.animateTo(direction*width,tween(120,easing=FastOutLinearInEasing));pager.scrollToPage(next);horizontal.snapTo(-direction*width);horizontal.animateTo(0f,tween(160,easing=LinearOutSlowInEasing))
-                        } else horizontal.animateTo(0f,spring(dampingRatio=1f,stiffness=700f))
-                    } finally { horizontal.snapTo(0f);drag=0f;settling=false }
-                }
-            }
-            detectHorizontalDragGestures(onDragStart={captured=!settling && !pager.isScrollInProgress;if(captured){drag=0f;dragging=true}},onDragCancel={settle(true)},onDragEnd={settle(false)}) { change,delta->if(captured){change.consume();drag=(drag+delta).coerceIn(-size.width.toFloat(),size.width.toFloat())} }
-        },shape=RoundedCornerShape(24.dp),border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),color=MaterialTheme.colorScheme.surface) { content(index) }
-    }
-}
-
 @Composable private fun SocialSwipeCard(item: JSONObject,mode: String,index: Int,total: Int,vm: RallyViewModel,onAsset: (Asset)->Unit,onPost: (Post)->Unit) {
     val post=remember(item,mode) { if(mode=="Spot")Post.parse(item) else null }
     val fixed=remember(item,mode) { if(post==null)Asset.parse(item,if(mode=="Perps")"perps" else "prediction") else null }

@@ -40,7 +40,7 @@ class RallyProfiles {
         device.tapCurrent(By.text("MOE"))
         check(device.wait(Until.hasObject(By.desc("Close token")),10000))
         device.tapCurrent(By.text("Buy"))
-        check(device.wait(Until.hasObject(By.text("Amount")),10000))
+        check(device.wait(Until.hasObject(By.text("You pay")),10000))
         device.tapCurrent(By.desc("Close token"))
         device.waitForIdle()
         val width=device.displayWidth;val height=device.displayHeight

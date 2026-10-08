@@ -41,7 +41,7 @@ val Sell=Color(0xFFD62F49)
 val Gain=Color(0xFF12845A)
 @Composable fun RallyTheme(dark: Boolean,content: @Composable ()->Unit) {
     val scheme=if(dark)darkColorScheme(primary=Color(0xFFAD96FF),background=Color(0xFF18181C),surface=Color(0xFF18181C),surfaceContainer=Color(0xFF24242B),surfaceVariant=Color(0xFF1E1E23),onSurface=Color(0xFFEDEDF2),onSurfaceVariant=Color(0xFFA0A0B0),outlineVariant=Color(0xFF2A2A32),tertiary=Color(0xFF75D1AD),error=Color(0xFFFF8797))
-        else lightColorScheme(primary=Violet,background=Color.White,surface=Color.White,surfaceContainer=Color(0xFFF0F0F4),surfaceVariant=Color(0xFFF9F9FB),onSurface=Color(0xFF202024),onSurfaceVariant=Color(0xFF71717B),outlineVariant=Color(0xFFECECF0),tertiary=Color(0xFF188461),error=Color(0xFFD94C60))
+        else lightColorScheme(primary=Violet,background=Color.White,surface=Color.White,surfaceContainer=Color(0xFFF0F0F4),surfaceVariant=Color(0xFFF9F9FB),onSurface=Color(0xFF202024),onSurfaceVariant=Color(0xFF686873),outlineVariant=Color(0xFFECECF0),tertiary=Color(0xFF188461),error=Color(0xFFD94C60))
     MaterialTheme(colorScheme=scheme,typography=RallyTypography,content=content)
 }
 data class Tab(val label: String,val icon: ImageVector)
@@ -131,8 +131,13 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                             while(rememberedDestinations.size>20)screenStates.removeState(rememberedDestinations.first().also { rememberedDestinations.remove(it) })
                         }
                         AnimatedContent(targetState=destination,modifier=Modifier.weight(1f).fillMaxWidth().highRefresh(),transitionSpec={
-                            (fadeIn(tween(180))+slideInHorizontally(tween(180)) { it/24 }) togetherWith
-                                (fadeOut(tween(100))+slideOutHorizontally(tween(140)) { -it/36 }) using SizeTransform(clip=false)
+                            val homeOptions=listOf("0:Markets","0:Launch","0:Swipe","0:Feed")
+                            val from=homeOptions.indexOf(initialState);val to=homeOptions.indexOf(targetState)
+                            val direction=if(to>from)1 else -1
+                            if(from>=0 && to>=0)
+                                (fadeIn(tween(150))+slideInHorizontally(tween(180)) { direction*it/40 }) togetherWith
+                                    fadeOut(tween(80)) using SizeTransform(clip=false)
+                            else fadeIn(tween(120)) togetherWith fadeOut(tween(70)) using SizeTransform(clip=false)
                         },label="screen") { shown ->
                             screenStates.SaveableStateProvider("$accountId/$shown") {
                                 when {
@@ -161,7 +166,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
         if(composing)ComposeSheet(vm,community,{composing=false})
     }
 }
-@Composable fun Segmented(options: List<String>,selected: String,onSelect: (String)->Unit,modifier: Modifier=Modifier) {
+@Composable fun Segmented(options: List<String>,selected: String,onSelect: (String)->Unit,modifier: Modifier=Modifier,accent: Color?=null) {
     val active=options.indexOf(selected).coerceAtLeast(0)
     val haptic=LocalHapticFeedback.current
     val largeText=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
@@ -172,7 +177,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
         Row(Modifier.fillMaxWidth()) {
             options.forEach { option -> val chosen=option==selected
                 Box(Modifier.weight(1f).heightIn(min=44.dp).clip(RoundedCornerShape(100.dp)).clickable(role=Role.Tab,onClick={if(!chosen) { haptic.performHapticFeedback(HapticFeedbackType.SegmentTick);onSelect(option) } }).semantics { this.selected=chosen;contentDescription=option }.padding(horizontal=4.dp,vertical=12.dp),contentAlignment=Alignment.Center) {
-                    Text(if(largeText && option=="Prediction")"Predict" else option,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=13.sp,fontWeight=if(chosen)FontWeight.Medium else FontWeight.Normal,color=if(chosen)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if(largeText && option=="Prediction")"Predict" else option,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=13.sp,fontWeight=if(chosen)FontWeight.Medium else FontWeight.Normal,color=if(chosen)accent ?: MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -180,13 +185,15 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
 }
 @Composable fun Artwork(url: String?,label: String,size: Dp=48.dp,round: Boolean=true) {
     val context=LocalContext.current
-    val request=remember(url,context) {
+    val density=androidx.compose.ui.platform.LocalDensity.current
+    val pixels=with(density) { size.roundToPx() }.coerceAtLeast(1)
+    val request=remember(url,context,pixels) {
         val artwork: Any?=when(url) {
             ORIGIN+"/assets/agent-meta.svg"->R.drawable.brand_meta
             ORIGIN+"/assets/agent-grok.svg"->R.drawable.brand_grok
             else->url
         }
-        ImageRequest.Builder(context).data(artwork).crossfade(if(android.os.Build.VERSION.SDK_INT>=26 && !android.animation.ValueAnimator.areAnimatorsEnabled())0 else 100).build()
+        ImageRequest.Builder(context).data(artwork).size(pixels).crossfade(if(android.os.Build.VERSION.SDK_INT>=26 && !android.animation.ValueAnimator.areAnimatorsEnabled())0 else 100).build()
     }
     var loaded by remember(url) { mutableStateOf(false) }
     val companyLogo=url?.startsWith(ORIGIN+"/assets/agent-")==true
