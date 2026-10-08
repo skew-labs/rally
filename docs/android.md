@@ -1,50 +1,45 @@
 # Android
 
-Rally's Android application opens the same HTTPS product in a Chrome Trusted Web Activity. Markets, social feeds, algorithm access and transaction reconciliation share the web application's code and origin. The Android package has no wallet keys, custody backend, JavaScript signing bridge or separate trading engine.
+Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. It does not embed a WebView or launch a Trusted Web Activity. The package is `com.rallydot.app`, with Android 7.0 (API 24) as the minimum and API 36 as the target.
 
-The browser owns cookies, passkeys, uploads, embedded-wallet signing and external wallet handoffs. A verified Digital Asset Link binds `rallydot.com` to the package's release certificate. An unverified origin retains browser chrome; the app does not conceal a failed origin check.
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.2.0.apk)
 
-## Mobile interaction
+## Interaction and data
 
-- Installed mode uses a stable bottom navigation bar and system safe areas.
-- Sheets use the visible viewport when the keyboard opens. Background navigation hides during input.
-- Android Back closes the top sheet before leaving its market. Nested asset pickers keep the underlying trade open.
-- Drag a sheet header downward to dismiss it; short drags return to their starting position. Keyboard input, pending financial actions and submitted trades block this gesture.
-- Sheet entry and dismissal use one interruptible motion track. Touch controls give immediate pressed feedback and respect reduced-motion preferences.
-- Swipe reuses the existing bounded card window, gesture handling and reduced-motion controls.
-- Financial preparation, wallet authorization, deadlines and receipt verification are the existing application handlers.
+- Five destinations use bottom navigation on phones and a navigation rail on wider displays. System insets and the on-screen keyboard are included in screen and sheet layout.
+- Swipe uses a native vertical pager with one adjacent page prepared. Horizontal drags also move between tokens. Buy and Sell open a sheet over the current screen.
+- Token sheets show real provider history on a native Canvas, with a drag crosshair. nad.fun tokens use the token-specific nad.fun chart endpoint; other markets use the normalized market-chart endpoint. Missing history stays missing.
+- Light and dark palettes share blue Buy and red Sell controls. System typography, native pressed states and Compose transitions provide feedback. Android's animation-duration setting applies to Compose animations.
+- Token discovery is paginated. Visible market screens refresh while the activity is started. Images use Coil's caches, public thumbnail URLs and SVG decoding.
+- Social posts, replies, reactions and community joins use the existing authenticated API. Selected photos and videos upload from the system document picker; videos play through Media3. Post publishing uses a stable idempotency key per draft. Upload retries remain explicit.
 
-Authentication and trading require a network connection. A navigation-only service worker supplies a Rally recovery screen when the app cannot connect or its upstream returns a server error. It stores no responses, excludes API and authentication requests, and has no transaction queue. Reconnecting restores the requested URL through the existing live application.
+OkHttp requests use fixed HTTPS API paths, bounded response bodies and cancellable calls. Catalog responses have a short, bounded in-memory cache. Account changes clear data and reject responses from the previous session. An interrupted request preserves the visible list and offers Retry. The app does not queue transactions offline.
 
-The connection layer bounds read requests and response bodies, preserves caller cancellation, and shows an offline indicator without replacing an open form. It adds no deadline or automatic retry to writes. Android links cover the app entry paths and authorization page; API and download URLs remain browser links.
+## Account and wallet boundary
 
-## Build
+The first account connection uses an explicit first-party browser consent screen. The app holds a random verifier and sends its S256 challenge to Rally. A matching code, authenticated human consent, a three-minute expiry and an atomic one-use exchange bind the connection to that device. This creates a regular Rally session, not an agent OAuth grant or a wallet signing permission. The session is encrypted using Android Keystore; application backup is disabled.
 
-Requirements: JDK 17, Android SDK 36, build tools, and the pinned Gradle wrapper. Minimum Android version is 7.0 (API 24); target API is 36. The launcher uses Android Browser Helper 2.7.4. Release builds use R8 code optimization and resource shrinking; retain each build's mapping file privately for crash analysis. Build on a suitable remote Linux host.
+The native order sheet hands the chosen asset, side and amount to Rally's existing secure browser checkout. Wallet login, signing, paid subscriptions and token issuance currently use that checkout. The web controllers remain responsible for quote validation, chain checks, wallet authorization and receipt reconciliation. Native screens never receive wallet keys or sign transactions. Account identifiers are checked at the handoff to prevent checkout under another browser account.
+
+The main application works without Chrome. Account consent and wallet checkout require an installed compatible browser. Native wallet SDK integration is a separate boundary from native screen rendering.
+
+## Build and release
+
+Use JDK 17, Android SDK/build tools 36 and the pinned Gradle wrapper on a remote Linux builder. Kotlin, the Compose compiler and Compose BOM are pinned to a mutually compatible SDK 36 toolchain. Release builds use R8 and resource shrinking; retain each build's mapping file privately.
 
 ```sh
 cd android
-./gradlew :app:assembleDebug :app:lintDebug
+./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing uses `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment. Keep the keystore and password private. They are not application assets or wallet credentials. The alias is `rally`.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.2.0 (code 4) uses the existing release certificate, allowing upgrades from the earlier browser-based APKs.
 
-```sh
-./gradlew :app:assembleRelease :app:lintRelease
-```
+`/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
-Publish the release certificate's SHA-256 fingerprint in `android-assetlinks.json`, served at `/.well-known/assetlinks.json`, before testing trusted fullscreen mode. A replacement signing key requires updating that association and affects application upgrades. Reuse the existing release key for subsequent APKs.
+## Verification
 
-The public web manifest describes installed display mode and brand icons. Mobile-specific presentation lives in `mobile-ui.js` and `mobile.css`; it has no account or financial authority.
+Model tests cover missing and invalid prices, exact token/venue identity, unavailable execution, amount validation, image URL schemes and chart normalization. Backend tests cover pairing expiry, cross-origin isolation, consent requirements, verifier mismatch, replay and competing claims. Browser integration is tested with isolated QA identities; those tests do not assert funded mainnet fills.
 
-## Release 0.1.2
+Native Android emulator checks cover operation with Chrome disabled, live public market reads, native token charts, sheets, paging and screen sizes. Physical-device, OEM and funded trading checks remain distinct from emulator and fixture evidence.
 
-The signed APK is [available here](https://rallydot.com/assets/rally-android-0.1.2.apk). It uses the same package and release certificate as the previous releases for in-place upgrades. The optimized package is 567,235 bytes. Android Browser Helper remains pinned to the current stable 2.7.4 release.
-
-## Design references
-
-The mobile revision reviewed [FOMO's official product imagery](https://fomo.family/) for compact token identity and trade controls, [Meta's Threads performance report](https://engineering.fb.com/2024/12/18/ios/how-we-think-about-threads-ios-performance/) for separate navigation and rendering measurements, and [Android accessibility guidance](https://developer.android.com/guide/topics/ui/accessibility/apps) for touch targets. These references describe design goals, not a claim of matching another app's performance.
-
-[Service worker lifecycle and network handling](https://developer.chrome.com/docs/workbox/service-worker-overview) describes the offline recovery boundary.
-
-[Chrome's Trusted Web Activity documentation](https://developer.chrome.com/docs/android/trusted-web-activity) explains the browser and origin-verification boundary.
+The design uses [FOMO's official product imagery](https://fomo.family/) for compact token and trade presentation, [Meta's Threads performance report](https://engineering.fb.com/2024/12/18/ios/how-we-think-about-threads-ios-performance/) for separate navigation and rendering measurements, and [Android accessibility guidance](https://developer.android.com/guide/topics/ui/accessibility/apps) for touch targets. These are design references, not claims of equivalent performance.

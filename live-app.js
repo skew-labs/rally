@@ -15,6 +15,7 @@ import { launchpadUI } from './launchpad.js';
 import { experienceUI } from './experience.js';
 import { motionUI } from './motion.js';
 import { mobileUI } from './mobile-ui.js';
+import { nativeLink } from './native-link.js';
 import { connectionUI, networkRequest } from './network-ui.js';
 const Motion=motionUI();
 connectionUI();
@@ -385,6 +386,7 @@ async function connectWallet(provided=null,external=false,change=false){
   closeModal();notify(signingIn?'Signed in':'Wallet connected');
   if(signingIn){await render();if(location.pathname==='/authorize')await oauthConsent();}
   else if(S.view==='portfolio')await render();
+  if(['/connect-native','/native-wallet'].includes(location.pathname)){await nativeLink({S,api,$,esc,notify,trade,finance:F,nad:N,launch:L,needAccount,boot});return true;}
   if(S.view!=='launch')await T.onboard();return true;
  }catch(error){
   if(S.modal===instance){
@@ -555,7 +557,7 @@ const M=marketUI({S,$,api,esc,usd,priceHTML,volumeHTML,age,logo,token,modal,trad
 const J=journeyUI({S,$,api,esc,icon,avatar,token,postCard,pageHeader,empty,loading,boot,navigate,notify,modal,closeModal,closeTrade,age,finance:F});
 const P=feedUI({S,$,esc,icon,safeURL,scope:socialScope});
 const W=swipeUI({homeHeader:()=>E.homeHeader(),nad:N,readingAnchor:()=>P.anchor(),S,$,api,esc,icon,logo,avatar,usd,age,mediaCard,safeURL,token,navigate,notify,trade,finance:F,needAccount,walletReady,openPost:replies});
-const U=authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,connectWallet,afterLogin:async next=>{if(location.pathname==='/authorize'){if(next)await next();else await oauthConsent();return;}if(S.view==='launch'){if(next)await next();else await L.create();return;}if(await T.onboard(next))return;if(next)await next();}});
+const U=authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,connectWallet,afterLogin:async next=>{if(['/connect-native','/native-wallet'].includes(location.pathname)){if(next)await next();else await nativeLink({S,api,$,esc,notify,trade,finance:F,nad:N,launch:L,needAccount,boot});return;}if(location.pathname==='/authorize'){if(next)await next();else await oauthConsent();return;}if(S.view==='launch'){if(next)await next();else await L.create();return;}if(await T.onboard(next))return;if(next)await next();}});
 const G=creatorUI({S,$,api,esc,icon,avatar,priceHTML,notify,navigate,render,closeModal,trade,openCommunityToken:()=>T.open(),pageHeader,empty,loading,modal,needAccount,walletReady,afterEarnings:()=>L.earningsPanel()});
 const T=communityTokenUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,walletReady,receipt,navigate,trade,creator:G});
 const L=launchpadUI({homeHeader:()=>E.homeHeader(),S,$,api,esc,icon,avatar,usd,age,navigate,needAccount,walletReady,notify,modal,closeModal,boot,finance:F,nad:N,creator:G});
@@ -578,6 +580,7 @@ async function start(){
   else if(params.has('post')){try{const p=await api('/api/post?id='+encodeURIComponent(params.get('post')));if(!S.posts.some(x=>x.id===p.id))S.posts.push(p);await replies(p.id);}catch(e){notify(e.message);}}
   const restore=async()=>{try{const pending=JSON.parse(localStorage.getItem('rally:pending-order')||'null');if(pending&&pending.user===S.boot.me?.id){const recorded=await recordOrder(pending.quote,pending.tx);if(recorded)notify('Submitted order restored. Check Activity.');}await F.resume();}catch(e){notify(e.message);}};
   restore();S.feedTimer=setInterval(()=>{checkNewPosts();C.poll().catch(()=>{});J.poll().catch(()=>{});N.poll().catch(()=>{});L.poll().catch(()=>{});},12000);
+  if(['/connect-native','/native-wallet'].includes(location.pathname)){await nativeLink({S,api,$,esc,notify,trade,finance:F,nad:N,launch:L,needAccount,boot});return true;}
   if(S.view!=='launch')await T.onboard();
   let refreshing=false;refreshTimer=setInterval(async()=>{if(document.hidden||refreshing||S.view==='swipe')return;refreshing=true;try{const m=await api('/api/markets');S.tokens=[...new Map([...S.tokens,...m.tokens].map(t=>[t.id,t])).values()];S.marketData=m;refreshPriceSurfaces();if((S.view==='explore'||S.view==='home'&&S.homeSection==='markets')&&['spot','rwa'].includes(S.marketTab))($('#market-list [data-spot-market]')?M.patchSpot():marketList());}catch{}finally{refreshing=false;}},20000);
  }catch(e){$('#page').innerHTML=empty('Rally is reconnecting',esc(e.message),'<button class="r-btn" data-action="retry-start">Retry</button>');$('[data-action=retry-start]').onclick=start;}

@@ -31,6 +31,7 @@ import community_tokens
 import discovery
 import app_assets
 import token_images
+import native_auth
 from serve import candles
 
 PORT=int(os.environ.get('RALLY_PORT','4186'))
@@ -131,6 +132,7 @@ class Handler(BaseHTTPRequestHandler):
     def get(self):
         u=urlsplit(self.path);path=u.path;params={k:v[0] for k,v in parse_qs(u.query).items()};who=self.who()
         if path=='/api/health':return self.response({'ok':True,'storage':'sqlite','messages':False,'rpc':{'provider':'QuickNode' if (urlsplit(s.RPC_URL).hostname or '').endswith('.quiknode.pro') else 'Public Monad' if s.RPC_URL=='https://rpc.monad.xyz' else 'Configured RPC','networkVerified':bool(s.RPC_CHECKED_AT and time.monotonic()-s.RPC_CHECKED_AT<300)}})
+        if path=='/api/native/request':return self.response(native_auth.status(params.get('id'),self.public_origin()))
         if path=='/api/auth/config':return self.response({'privy':privy_auth.config(),'agentWallet':agent_wallet.config(who,self.agent_device(),self.public_origin())})
         if path=='/api/agent-wallet/config':return self.response(agent_wallet.config(who,self.agent_device(),self.public_origin()))
         if path=='/api/agent-wallet/request':return self.response(agent_wallet.status(who,self.agent_device(),self.public_origin(),params.get('id')))
@@ -282,11 +284,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.file(target,mime)
         if path=='/mcp':return self.response({'error':'method_not_allowed'},405,{'Allow':'POST'})
         if path=='/app/':return self.response(b'',302,{'Location':'/app'+('?' + u.query if u.query else '')},'text/plain')
-        if path in {'/app','/authorize'} or path=='/' and any(k in params for k in ('view','tab','id','market','phase')):return self.file(s.ROOT/'index.html','text/html; charset=utf-8')
+        if path in {'/app','/authorize','/connect-native','/native-wallet','/native-return'} or path=='/' and any(k in params for k in ('view','tab','id','market','phase')):return self.file(s.ROOT/'index.html','text/html; charset=utf-8')
         if path=='/':return self.file(s.ROOT/'landing.html','text/html; charset=utf-8')
         if path=='/manifest.webmanifest':return self.file(s.ROOT/'manifest.webmanifest','application/manifest+json')
         if path=='/.well-known/assetlinks.json':return self.file(s.ROOT/'android-assetlinks.json','application/json')
-        if path in {'/rally-offline.js','/network-ui.js'}:return self.file(s.ROOT/path.lstrip('/'),'text/javascript')
+        if path in {'/rally-offline.js','/network-ui.js','/native-link.js'}:return self.file(s.ROOT/path.lstrip('/'),'text/javascript')
         if path in {'/mobile-ui.js','/prediction-ui.js','/mobile.css'}:return self.file(s.ROOT/path.lstrip('/'),'text/css' if path.endswith('.css') else 'text/javascript')
         if re.fullmatch(r'/assets/token-art-[a-f0-9]{20}\.webp',path):
             target=token_images.file(path.rsplit('/',1)[-1])
@@ -401,6 +403,9 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/api/nadfun/quote':
             if who and who['grant']:s.require(who,'markets:read')
             return self.response(nadfun.quote(data.get('token'),data.get('kind'),data.get('amount'),data.get('slippage',100)))
+        if path=='/api/native/start':return self.response(native_auth.start(data,self.public_origin()))
+        if path=='/api/native/poll':return self.response(native_auth.poll(data,self.public_origin()))
+        if path=='/api/native/approve':return self.response(native_auth.approve(who,data,self.public_origin()))
         if path=='/api/auth/wallet/challenge':return self.response(wallet_auth.challenge(data,self.public_origin()))
         if path=='/api/agent-wallet/prepare':return self.response(agent_wallet.prepare(who,self.agent_device(),self.public_origin()))
         if path=='/api/agent-wallet/start':return self.response(agent_wallet.start(who,self.agent_device(),self.public_origin(),data))

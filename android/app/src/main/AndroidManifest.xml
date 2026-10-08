@@ -1,50 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.INTERNET" />
-    <queries>
-        <intent><action android:name="android.support.customtabs.action.CustomTabsService" /></intent>
-    </queries>
-    <application android:label="Rally" android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher" android:allowBackup="false"
-        android:usesCleartextTraffic="false" android:supportsRtl="true"
-        android:manageSpaceActivity="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
-        android:theme="@android:style/Theme.Translucent.NoTitleBar">
-        <meta-data android:name="asset_statements" android:resource="@string/asset_statements" />
-        <activity android:name="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity" android:exported="false">
-            <meta-data android:name="android.support.customtabs.trusted.MANAGE_SPACE_URL" android:value="https://rallydot.com/" />
-        </activity>
-        <activity android:name="com.google.androidbrowserhelper.trusted.FocusActivity" android:exported="false" />
-        <activity android:name="com.rallydot.app.RallyActivity" android:exported="true"
-            android:label="Rally">
-            <meta-data android:name="android.support.customtabs.trusted.DEFAULT_URL"
-                android:value="https://rallydot.com/?view=home&amp;section=markets&amp;tab=memes" />
-            <meta-data android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR" android:resource="@color/surface" />
-            <meta-data android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR_DARK" android:resource="@color/surface_dark" />
-            <meta-data android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR" android:resource="@color/surface" />
-            <meta-data android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR_DARK" android:resource="@color/surface_dark" />
-            <meta-data android:name="android.support.customtabs.trusted.DISPLAY_MODE" android:value="default" />
-            <meta-data android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY" android:value="customtabs" />
-            <meta-data android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE" android:resource="@drawable/rally_mark" />
-            <meta-data android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR" android:resource="@color/surface" />
-            <meta-data android:name="android.support.customtabs.trusted.SPLASH_SCREEN_FADE_OUT_DURATION" android:value="120" />
-            <meta-data android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY" android:value="com.rallydot.app.fileprovider" />
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="rallydot.com" android:path="/" />
-                <data android:scheme="https" android:host="rallydot.com" android:path="/app" />
-                <data android:scheme="https" android:host="rallydot.com" android:path="/app/" />
-                <data android:scheme="https" android:host="rallydot.com" android:path="/authorize" />
-            </intent-filter>
-        </activity>
-        <provider android:name="androidx.core.content.FileProvider"
-            android:authorities="com.rallydot.app.fileprovider" android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/filepaths" />
-        </provider>
-    </application>
+ <uses-permission android:name="android.permission.INTERNET" />
+ <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+ <application android:name=".RallyApplication" android:label="Rally" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:allowBackup="false" android:usesCleartextTraffic="false" android:supportsRtl="true" android:theme="@style/RallyTheme">
+  <activity android:name=".RallyActivity" android:exported="true" android:launchMode="singleTop" android:windowSoftInputMode="adjustResize">
+   <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+   <intent-filter android:autoVerify="true">
+    <action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="https" /><data android:host="rallydot.com" /><data android:path="/" /><data android:path="/app" /><data android:path="/app/" /><data android:path="/native-return" />
+   </intent-filter>
+  </activity>
+ </application>
 </manifest>

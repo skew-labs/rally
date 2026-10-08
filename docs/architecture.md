@@ -149,7 +149,9 @@ The application operator controls offchain availability, moderation and content 
 
 ## Client delivery
 
-The main client uses native modules and a shared application state. A content-addressed JS/CSS bundle collapses the startup request graph. `app_assets.py` validates source/output hashes before serving a bundle; stale manifests fall back to source modules. Optional Privy and chart code load separately.
+The web client uses JavaScript modules and a shared application state. A content-addressed JS/CSS bundle collapses the startup request graph. `app_assets.py` validates source/output hashes before serving a bundle; stale manifests fall back to source modules. Optional Privy and chart code load separately.
+
+The Android client uses Kotlin and Jetpack Compose over the same HTTPS APIs. It renders markets, Swipe, token charts, social feeds, discovery, algorithm previews and profiles natively. A short-lived S256 pairing exchange connects an existing human account after explicit browser consent; the app session is encrypted with Android Keystore. Order sheets hand asset identity, side and amount to the existing wallet checkout controllers, which retain signing and reconciliation authority. See [Android](android.md) for these boundaries.
 
 Discover and meme-market routes start with a compact identity/navigation bootstrap and read-ahead content requests. Catalog requests coalesce; transient caches are viewer-sensitive. Lists render progressively while retaining the full fetched inventory for search and subsequent rows. Small WebP artwork is generated only from an allowlisted public nad.fun source, outside request handling.
 
