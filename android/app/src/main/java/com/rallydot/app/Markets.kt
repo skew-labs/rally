@@ -61,12 +61,12 @@ import kotlin.math.abs
     Column(Modifier.fillMaxSize()) {
         if(!launch)ScrollableTabRow(selectedTabIndex=listOf("Memes","Spot","Perps","Prediction").indexOf(category),edgePadding=20.dp,containerColor=MaterialTheme.colorScheme.background,divider={},indicator={}) { listOf("Memes","Spot","Perps","Prediction").forEach { label -> Tab(selected=category==label,onClick={category=label;query="";applied=""},text={Text(label,color=if(category==label)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=if(category==label)FontWeight.SemiBold else FontWeight.Normal)}) } }
         Row(Modifier.padding(horizontal=20.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically) {
-            OutlinedTextField(query,{query=it},Modifier.weight(1f),singleLine=true,placeholder={Text(if(launch)"Find a launch" else "Search tokens",style=MaterialTheme.typography.bodyMedium)},leadingIcon={Icon(Icons.Outlined.Search,null)},trailingIcon={if(query.isNotEmpty())IconButton(onClick={query=""}){Icon(Icons.Outlined.Close,"Clear search")}},shape=RoundedCornerShape(18.dp),colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=Color.Transparent,focusedBorderColor=Violet,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceContainer,focusedContainerColor=MaterialTheme.colorScheme.surfaceContainer))
+            OutlinedTextField(query,{query=it},Modifier.weight(1f),singleLine=true,placeholder={Text(if(launch)"Find a launch" else "Search tokens",style=MaterialTheme.typography.bodyMedium)},leadingIcon={Icon(Icons.Outlined.Search,null)},trailingIcon={if(query.isNotEmpty())IconButton(onClick={query=""}){Icon(Icons.Outlined.Close,"Clear search")}},shape=RoundedCornerShape(100.dp),colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=Color.Transparent,focusedBorderColor=Violet,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceContainer,focusedContainerColor=MaterialTheme.colorScheme.surfaceContainer))
             if(launch) { Spacer(Modifier.width(8.dp));FilledIconButton(onClick=create,modifier=Modifier.size(52.dp),colors=IconButtonDefaults.filledIconButtonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Icon(Icons.Outlined.Add,"Launch a token") } }
         }
         PullToRefreshBox(isRefreshing=page.loading && page.items.isNotEmpty(),onRefresh={vm.load(key,path,field,true)},modifier=Modifier.weight(1f)) {
             if(page.items.isEmpty() && page.loading)LoadingRows()
-            else LazyColumn(state=list,contentPadding=PaddingValues(bottom=24.dp)) {
+            else LazyColumn(state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(bottom=24.dp)) {
                 if(page.error!=null)item { EmptyState("Connection interrupted",page.error,"Retry",{vm.load(key,path,field,true)}) }
                 if(assets.isEmpty() && !page.loading && page.error==null)item { EmptyState("No markets found",if(query.isNotBlank())"Try a token name or address" else "Pull to refresh") }
                 if(category=="Prediction") {
@@ -84,16 +84,17 @@ import kotlin.math.abs
 }
 @Composable fun AssetRow(asset: Asset,cap: Boolean,onClick: ()->Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=20.dp,vertical=14.dp).heightIn(min=58.dp),verticalAlignment=Alignment.CenterVertically) {
-        Artwork(asset.image,asset.symbol,46.dp);Spacer(Modifier.width(12.dp))
+        Artwork(asset.image,asset.symbol,34.dp);Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f).padding(end=8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-            Text(asset.symbol,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Medium)
+            Text(asset.symbol,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.SemiBold,fontSize=14.sp)
             Text(if(asset.kind=="perps")asset.venue else asset.name,maxLines=1,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)) {
-            Text(if(cap && asset.cap!=null)"$"+compact(asset.cap) else money(asset.price),fontWeight=FontWeight.Medium,maxLines=1)
-            Text(if(asset.freshness && asset.price!=null)"Last known" else if(cap)money(asset.price) else asset.change?.let { (if(it>=0)"+" else "")+String.format(java.util.Locale.US,"%.2f%%",it) } ?: asset.venue,style=MaterialTheme.typography.bodySmall,color=if(asset.change!=null && !cap)if(asset.change>=0)Gain else Sell else MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(if(cap && asset.cap!=null)"$"+compact(asset.cap) else money(asset.price),fontWeight=FontWeight.SemiBold,fontSize=14.sp,maxLines=1)
+            Text(if(asset.freshness && asset.price!=null)"Last known" else if(cap)money(asset.price) else asset.change?.let { (if(it>=0)"+" else "")+String.format(java.util.Locale.US,"%.2f%%",it) } ?: asset.venue,style=MaterialTheme.typography.bodySmall,color=if(asset.change!=null && !cap)if(asset.change>=0)MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+    HorizontalDivider(Modifier.padding(horizontal=20.dp),color=MaterialTheme.colorScheme.outlineVariant)
 }
 @Composable fun PredictionRow(asset: Asset,onClick: ()->Unit) {
     val raw=asset.raw;val status=raw.string("state").replace('_',' ')
@@ -105,7 +106,7 @@ import kotlin.math.abs
         }
     }
 }
-@Composable fun SwipeScreen(vm: RallyViewModel,onAsset: (Asset)->Unit) {
+@Composable fun NadSwipeScreen(vm: RallyViewModel,onAsset: (Asset)->Unit) {
     val state by vm.state.collectAsStateWithLifecycle();val key="swipe";val page=state.pages[key] ?: Page(loading=true)
     LaunchedEffect(Unit) { vm.load(key,"/api/nadfun/tokens?sort=cap&limit=24","tokens") }
     val assets=remember(page.items) { page.items.map { Asset.parse(it) } }
@@ -133,9 +134,9 @@ import kotlin.math.abs
     Column(Modifier.fillMaxSize()) {
         if(assets.isEmpty()) { if(page.loading)LoadingRows() else EmptyState("Swipe is unavailable",page.error,"Retry",{vm.load(key,"/api/nadfun/tokens?sort=cap&limit=24","tokens",true)}) }
         else {
-            VerticalPager(pager,modifier=Modifier.weight(1f).fillMaxWidth(),beyondViewportPageCount=1,contentPadding=PaddingValues(horizontal=20.dp,vertical=12.dp),pageSpacing=12.dp,key={assets[it].key}) { index ->
+            VerticalPager(pager,modifier=Modifier.weight(1f).fillMaxWidth().highRefresh(),beyondViewportPageCount=1,contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),pageSpacing=12.dp,key={assets[it].key}) { index ->
                 val a=assets[index]
-                Surface(Modifier.fillMaxSize().semantics { if(index!=pager.currentPage)hideFromAccessibility() }.graphicsLayer {
+                Surface(Modifier.fillMaxSize().highRefresh().semantics { if(index!=pager.currentPage)hideFromAccessibility() }.graphicsLayer {
                     translationX=if(dragging)drag else horizontal.value
                     val offset=abs(pager.currentPage-index+pager.currentPageOffsetFraction).coerceIn(0f,1f)
                     scaleX=1f-offset*.025f;scaleY=1f-offset*.025f
@@ -166,7 +167,7 @@ import kotlin.math.abs
                     },onDragCancel={settle(true)},onDragEnd={settle(false)}) { change,delta ->
                         if(captured) { change.consume();drag=(drag+delta).coerceIn(-size.width.toFloat(),size.width.toFloat()) }
                     }
-                },shape=RoundedCornerShape(28.dp),color=MaterialTheme.colorScheme.surface) {
+                },shape=RoundedCornerShape(24.dp),border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),color=MaterialTheme.colorScheme.surface) {
                     BoxWithConstraints(Modifier.fillMaxSize()) {
                     val compactHeight=maxHeight<440.dp
                     val short=compactHeight || androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
@@ -198,8 +199,10 @@ import kotlin.math.abs
 }
 @Composable fun TradeButtons(buyLabel: String,sellLabel: String,buy: ()->Unit,sell: ()->Unit,enabled: Boolean=true) {
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-        Button(onClick=buy,enabled=enabled,modifier=Modifier.weight(1f).heightIn(min=54.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=Buy,contentColor=Color.White)) { Text(buyLabel) }
-        Button(onClick=sell,enabled=enabled,modifier=Modifier.weight(1f).heightIn(min=54.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=Sell,contentColor=Color.White)) { Text(sellLabel) }
+        val buyInteraction=remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+        val sellInteraction=remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+        Button(onClick=buy,enabled=enabled,interactionSource=buyInteraction,modifier=Modifier.weight(1f).pressFeedback(buyInteraction).heightIn(min=52.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=Buy,contentColor=Color.White)) { Text(buyLabel) }
+        Button(onClick=sell,enabled=enabled,interactionSource=sellInteraction,modifier=Modifier.weight(1f).pressFeedback(sellInteraction).heightIn(min=52.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=Sell,contentColor=Color.White)) { Text(sellLabel) }
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
@@ -248,7 +251,7 @@ import kotlin.math.abs
                     Column(Modifier.weight(1f)) { Text(asset.symbol,style=MaterialTheme.typography.titleLarge,maxLines=1,overflow=TextOverflow.Ellipsis);Text(asset.venue+if(asset.kind=="perps")" · Perpetual" else " · Monad",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis) }
                     IconButton(onClick=::dismiss){Icon(Icons.Outlined.Close,"Close token")}
                 }
-                Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState()).padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(1f,fill=false).highRefresh().verticalScroll(rememberScrollState()).padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                     if(!keyboard)Column {
                         Text(money(scrubbing?.value?.toDouble() ?: asset.price),fontSize=32.sp,fontWeight=FontWeight.Medium,maxLines=1)
                         Text(if(scrubbing!=null)java.text.SimpleDateFormat("MMM d · HH:mm",java.util.Locale.US).format(java.util.Date(scrubbing!!.time*1000)) else if(asset.freshness)"Last known price" else asset.raw.string("priceSource","Reference price"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -273,7 +276,7 @@ import kotlin.math.abs
                         val quantity=asset.kind=="perps" && asset.venue in listOf("Perpl","Drake")
                         val denom=if(side=="sell" && asset.kind=="spot")asset.symbol else if(asset.kind=="spot")asset.raw.string("quoteSymbol","MON") else if(quantity)asset.symbol else if(asset.venue=="Pingu")"MON" else "USDC"
                         OutlinedTextField(amount,{amount=it},Modifier.fillMaxWidth(),singleLine=true,label={Text(if(asset.kind=="prediction")"Predicted USD price" else if(quantity)"Quantity" else if(asset.kind=="perps")"Collateral" else "Amount")},suffix={Text(if(asset.kind=="prediction")"USD" else denom,maxLines=1)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal,imeAction=androidx.compose.ui.text.input.ImeAction.Done),keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={focus.clearFocus()}),shape=RoundedCornerShape(16.dp))
-                        if(asset.kind=="spot")Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) { listOf("0.1","1","5","10").forEach { preset->OutlinedButton(onClick={amount=preset;focus.clearFocus()},Modifier.weight(1f),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(12.dp)) { Text(preset) } } }
+                        if(asset.kind=="spot")Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) { listOf("0.1","1","5","10").forEach { preset->TextButton(onClick={amount=preset;focus.clearFocus()},Modifier.weight(1f).heightIn(min=44.dp),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceContainer,contentColor=if(amount==preset)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)) { Text(preset) } } }
                         Box(Modifier.fillMaxWidth().heightIn(min=28.dp)) {
                             if(quoting)LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.Center))
                             quote?.let { q->val best=q.objects("routes").firstOrNull { it.string("state")=="quoted" };Fact(best?.string("provider") ?: q.string("venue","nad.fun"),best?.string("output")?.let { "≈ ${displayAmount(it)} ${if(side=="buy")asset.symbol else "MON"}" } ?: q.string("receive").takeIf { it.isNotBlank() }?.let { "≈ ${displayAmount(it)} ${q.string("outputAsset")}" } ?: "No route for this amount") }
@@ -284,7 +287,7 @@ import kotlin.math.abs
                 }
                 Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     if(trade) {
-                        Button(onClick={focus.clearFocus();openBrowser(vm.walletURL(asset,side,amount))},enabled=validAmount(amount) && asset.executable,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=if(side=="buy")Buy else Sell,contentColor=Color.White)) {
+                        Button(onClick={focus.clearFocus();openBrowser(vm.walletURL(asset,side,amount))},enabled=validAmount(amount) && asset.executable,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=if(side=="buy")Buy else Sell,contentColor=Color.White)) {
                             Text(if(asset.kind=="prediction")"Predict price" else if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell")
                         }
                         if(!keyboard)Text("Wallet approval opens secure checkout.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)

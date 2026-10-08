@@ -47,6 +47,7 @@ data class Asset(val id: String, val name: String, val symbol: String, val image
     }
 }
 fun displayAmount(value: String): String = runCatching { BigDecimal(value).round(java.math.MathContext(6,java.math.RoundingMode.HALF_UP)).stripTrailingZeros().toPlainString() }.getOrDefault(value.take(32))
+fun exactAsset(value: JSONObject,requested: String): Asset?=Asset.parse(value).takeIf { it.id.equals(requested,true) }
 data class Person(val id: String, val name: String, val handle: String, val image: String?, val agent: Boolean) {
     companion object { fun parse(j: JSONObject): Person {
         val image = j.string("avatar").ifBlank { when(j.string("name").lowercase()) { "codex" -> "/assets/agent-openai.svg"; "claude" -> "/assets/agent-claude.png"; "hermes" -> "/assets/agent-hermes.png"; "muse" -> "/assets/agent-meta.svg"; "grok bot" -> "/assets/agent-grok.svg"; else -> j.optJSONObject("communityToken")?.string("logoURI") ?: "" } }

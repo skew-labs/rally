@@ -17,6 +17,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.*
@@ -34,14 +35,14 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-val Violet=Color(0xFF7659F6)
+val Violet=Color(0xFF765AF2)
 val Buy=Color(0xFF0866FF)
 val Sell=Color(0xFFD62F49)
 val Gain=Color(0xFF12845A)
 @Composable fun RallyTheme(dark: Boolean,content: @Composable ()->Unit) {
-    val scheme=if(dark)darkColorScheme(primary=Violet,background=Color(0xFF0F1014),surface=Color(0xFF0F1014),surfaceContainer=Color(0xFF1C1D24),surfaceVariant=Color(0xFF252630),onSurface=Color(0xFFF6F6FA),onSurfaceVariant=Color(0xFFABAEBE),outlineVariant=Color(0xFF2C2E39))
-        else lightColorScheme(primary=Violet,background=Color(0xFFFAFAFC),surface=Color.White,surfaceContainer=Color(0xFFF1F2F7),surfaceVariant=Color(0xFFF1F2F7),onSurface=Color(0xFF171820),onSurfaceVariant=Color(0xFF727785),outlineVariant=Color(0xFFE8EAF0))
-    MaterialTheme(colorScheme=scheme,typography=Typography().let { t -> t.copy(titleLarge=t.titleLarge.copy(fontWeight=FontWeight.SemiBold),titleMedium=t.titleMedium.copy(fontWeight=FontWeight.Medium),bodyLarge=t.bodyLarge.copy(lineHeight=23.sp),labelLarge=t.labelLarge.copy(fontWeight=FontWeight.Medium)) },content=content)
+    val scheme=if(dark)darkColorScheme(primary=Color(0xFFAD96FF),background=Color(0xFF18181C),surface=Color(0xFF18181C),surfaceContainer=Color(0xFF24242B),surfaceVariant=Color(0xFF1E1E23),onSurface=Color(0xFFEDEDF2),onSurfaceVariant=Color(0xFFA0A0B0),outlineVariant=Color(0xFF2A2A32),tertiary=Color(0xFF75D1AD),error=Color(0xFFFF8797))
+        else lightColorScheme(primary=Violet,background=Color.White,surface=Color.White,surfaceContainer=Color(0xFFF0F0F4),surfaceVariant=Color(0xFFF9F9FB),onSurface=Color(0xFF202024),onSurfaceVariant=Color(0xFF71717B),outlineVariant=Color(0xFFECECF0),tertiary=Color(0xFF188461),error=Color(0xFFD94C60))
+    MaterialTheme(colorScheme=scheme,typography=RallyTypography,content=content)
 }
 data class Tab(val label: String,val icon: ImageVector)
 val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined.PeopleOutline),Tab("Discover",Icons.Outlined.Search),Tab("Leaderboard",Icons.Outlined.EmojiEvents),Tab("Profile",Icons.Outlined.PersonOutline))
@@ -76,9 +77,8 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
         val known=rows.firstOrNull { it.string("id")==id || it.string("address")==id } ?: rows.mapNotNull { it.optJSONObject("assetInfo") }.firstOrNull { it.string("id",it.string("address"))==id }
         if(known!=null && known.has("symbol")) { asset=Asset.parse(known);return }
         scope.launch { try {
-            val result=if(id=="MON")vm.api.get("/api/markets") else vm.api.get("/api/market-asset?address="+Uri.encode(id))
-            val token=if(id=="MON")result.objects("tokens").firstOrNull { it.string("id")=="MON" } else result.optJSONObject("token") ?: result.optJSONObject("asset") ?: result.takeIf { it.has("symbol") }
-            if(token!=null)asset=Asset.parse(token) else vm.message("Token details unavailable")
+            val token=vm.resolveAsset(id)
+            if(token!=null)asset=token else vm.message("Token details unavailable")
         } catch(e:Exception) { vm.message(e.message ?: "Could not load token") } }
     }
     LaunchedEffect(link) {
@@ -115,11 +115,11 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                 }
                 Scaffold(modifier=Modifier.weight(1f),containerColor=MaterialTheme.colorScheme.background,
                     contentWindowInsets=WindowInsets.safeDrawing,
-                    topBar={TopAppBar(title={Text(title,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=if(tab==0 && extra==null)FontWeight.Bold else FontWeight.SemiBold,fontSize=if(tab==0 && extra==null)26.sp else 22.sp)},navigationIcon={if(extra!=null || community!=null)IconButton(onClick={extra=null;community=null}){Icon(Icons.Outlined.ArrowBack,"Back")}},actions={
+                    topBar={TopAppBar(title={if(tab==0 && extra==null)RallyBrand() else Text(title,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.SemiBold,fontSize=25.sp)},navigationIcon={if(extra!=null || community!=null)IconButton(onClick={extra=null;community=null}){Icon(Icons.Outlined.ArrowBack,"Back")}},actions={
                         IconButton(onClick={dark=!dark;settings.edit().putBoolean("dark",dark).apply();if(android.os.Build.VERSION.SDK_INT>=31)context.getSystemService(android.app.UiModeManager::class.java).setApplicationNightMode(if(dark)android.app.UiModeManager.MODE_NIGHT_YES else android.app.UiModeManager.MODE_NIGHT_NO)}) { Icon(if(dark)Icons.Outlined.LightMode else Icons.Outlined.DarkMode,"Change theme") }
                         if(tab==0)IconButton(onClick={tab=2}) { Icon(Icons.Outlined.Search,"Search") }
                     },colors=TopAppBarDefaults.topAppBarColors(containerColor=MaterialTheme.colorScheme.background))},
-                    bottomBar={if(!wide)Column { HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant);NavigationBar(containerColor=MaterialTheme.colorScheme.surface,tonalElevation=0.dp) { Tabs.forEachIndexed { i,t -> NavigationBarItem(selected=tab==i && extra==null,onClick={tab=i;extra=null;community=null},icon={Icon(t.icon,t.label)},label={Text(if(i==1)if(androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f)"Groups" else "Community" else if(i==3)"Ranks" else t.label,fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)},colors=NavigationBarItemDefaults.colors(indicatorColor=Violet.copy(alpha=.10f),selectedIconColor=Violet,selectedTextColor=Violet)) } } }},
+                    bottomBar={if(!wide)RallyNavigation(tab) { tab=it;extra=null;community=null }},
                     snackbarHost={SnackbarHost(snack)}) { padding ->
                     Column(Modifier.fillMaxSize().padding(padding)) {
                         data.bootError?.let { Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically) { Text(it,Modifier.weight(1f),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall);TextButton(onClick={vm.bootstrap()}) { Text("Retry") } } }
@@ -130,7 +130,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                             rememberedDestinations.remove(stateKey);rememberedDestinations.add(stateKey)
                             while(rememberedDestinations.size>20)screenStates.removeState(rememberedDestinations.first().also { rememberedDestinations.remove(it) })
                         }
-                        AnimatedContent(targetState=destination,modifier=Modifier.weight(1f).fillMaxWidth(),transitionSpec={
+                        AnimatedContent(targetState=destination,modifier=Modifier.weight(1f).fillMaxWidth().highRefresh(),transitionSpec={
                             (fadeIn(tween(180))+slideInHorizontally(tween(180)) { it/24 }) togetherWith
                                 (fadeOut(tween(100))+slideOutHorizontally(tween(140)) { -it/36 }) using SizeTransform(clip=false)
                         },label="screen") { shown ->
@@ -141,7 +141,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                                     shown=="Activity"->ActivityScreen(vm)
                                     shown=="0:Markets"->MarketsScreen(vm,{asset=it})
                                     shown=="0:Launch"->MarketsScreen(vm,{asset=it},launch=true,create={openBrowser(Uri.parse(ORIGIN+"/native-wallet").buildUpon().appendQueryParameter("nativeAction","launch").appendQueryParameter("account",vm.me?.string("id")).build().toString())})
-                                    shown=="0:Swipe"->SwipeScreen(vm,{asset=it})
+                                    shown=="0:Swipe"->SwipeScreen(vm,{asset=it},{post=it})
                                     shown=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4},onAlgorithm={extra="Algorithms"})
                                     shown.startsWith("1:") && shown.substringAfter(':').isNotEmpty()->FeedScreen(vm,community=shown.substringAfter(':'),onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4})
                                     shown.startsWith("1:")->CommunitiesScreen(vm,{community=it})
@@ -164,14 +164,15 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
 @Composable fun Segmented(options: List<String>,selected: String,onSelect: (String)->Unit,modifier: Modifier=Modifier) {
     val active=options.indexOf(selected).coerceAtLeast(0)
     val haptic=LocalHapticFeedback.current
-    BoxWithConstraints(modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(4.dp)) {
+    val largeText=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
+    BoxWithConstraints(modifier.fillMaxWidth().clip(RoundedCornerShape(100.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(4.dp)) {
         val cell=maxWidth/options.size
-        val offset by animateDpAsState(cell*active,animationSpec=spring(dampingRatio=1f,stiffness=700f),label="selected tab")
-        Box(Modifier.matchParentSize().padding(start=offset,end=(maxWidth-cell-offset).coerceAtLeast(0.dp)).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surface))
+        val offset=animateDpAsState(cell*active,animationSpec=spring(dampingRatio=1f,stiffness=700f),label="selected tab")
+        Box(Modifier.matchParentSize().padding(end=(maxWidth-cell).coerceAtLeast(0.dp)).graphicsLayer { translationX=offset.value.toPx() }.clip(RoundedCornerShape(100.dp)).background(MaterialTheme.colorScheme.surface).highRefresh())
         Row(Modifier.fillMaxWidth()) {
             options.forEach { option -> val chosen=option==selected
-                Box(Modifier.weight(1f).heightIn(min=44.dp).clip(RoundedCornerShape(12.dp)).clickable(role=Role.Tab,onClick={if(!chosen) { haptic.performHapticFeedback(HapticFeedbackType.SegmentTick);onSelect(option) } }).semantics { this.selected=chosen }.padding(horizontal=4.dp,vertical=12.dp),contentAlignment=Alignment.Center) {
-                    Text(option,maxLines=1,fontSize=13.sp,fontWeight=if(chosen)FontWeight.Medium else FontWeight.Normal,color=if(chosen)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                Box(Modifier.weight(1f).heightIn(min=44.dp).clip(RoundedCornerShape(100.dp)).clickable(role=Role.Tab,onClick={if(!chosen) { haptic.performHapticFeedback(HapticFeedbackType.SegmentTick);onSelect(option) } }).semantics { this.selected=chosen;contentDescription=option }.padding(horizontal=4.dp,vertical=12.dp),contentAlignment=Alignment.Center) {
+                    Text(if(largeText && option=="Prediction")"Predict" else option,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=13.sp,fontWeight=if(chosen)FontWeight.Medium else FontWeight.Normal,color=if(chosen)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

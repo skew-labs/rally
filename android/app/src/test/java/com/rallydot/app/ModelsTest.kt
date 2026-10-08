@@ -61,4 +61,15 @@ class ModelsTest {
         cache.remove(c);assertEquals("",cache.get(c).text)
     }
 
+    @Test fun swipeAssetLookupRejectsAnotherTokenAndMissingIdentity() {
+        assertNull(exactAsset(JSONObject().put("id","MON").put("symbol","MON"),"0x1111111111111111111111111111111111111111"))
+        assertNull(exactAsset(JSONObject().put("symbol","MON"),"MON"))
+    }
+    @Test fun swipeAssetLookupAcceptsOnlyTheRequestedAddressRegardlessOfCase() {
+        val id="0xAbCd111111111111111111111111111111111111"
+        val asset=exactAsset(JSONObject().put("address",id).put("symbol","TOKEN").put("price",1),id.lowercase())
+        assertEquals(id,asset?.id)
+        assertEquals("TOKEN",asset?.symbol)
+    }
+
 }

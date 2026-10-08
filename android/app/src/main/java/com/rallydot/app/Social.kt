@@ -41,7 +41,7 @@ import org.json.JSONObject
     val list=rememberLazyListState()
     LaunchedEffect(list,key,page.cursor) { snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { if(it>=page.items.size-3 && page.cursor!=null && !page.loading && page.error==null)vm.load(key,path+"&cursor="+Uri.encode(page.cursor),"posts",append=true) } }
     PullToRefreshBox(isRefreshing=page.loading && page.items.isNotEmpty(),onRefresh={vm.load(key,path,"posts",true)}) {
-        if(page.loading && page.items.isEmpty())LoadingRows() else LazyColumn(state=list,contentPadding=PaddingValues(bottom=24.dp)) {
+        if(page.loading && page.items.isEmpty())LoadingRows() else LazyColumn(state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(bottom=24.dp)) {
             item {
                 Row(Modifier.padding(20.dp).fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                     OutlinedButton(onClick=onAlgorithm,shape=RoundedCornerShape(14.dp)) { Icon(Icons.Outlined.Layers,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(state.boot?.objects("feeds")?.firstOrNull { it.string("id")==feed }?.string("name") ?: "Latest",maxLines=1) }
@@ -70,7 +70,7 @@ import org.json.JSONObject
 }
 @Composable fun CommunitiesScreen(vm: RallyViewModel,onCommunity: (String)->Unit) {
     val state by vm.state.collectAsStateWithLifecycle();val communities=state.boot?.objects("communities").orEmpty()
-    LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    LazyColumn(modifier=Modifier.highRefresh(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         if(state.boot==null && state.bootError==null)item { LoadingRows() }
         items(communities,key={it.string("id")}) { c->val image=when { c.string("id")=="monad"->"/assets/MON.png";c.string("name")=="Rally"->"/assets/community-rally.png";else->c.string("logoURI") }
             Surface(Modifier.fillMaxWidth().clickable { onCommunity(c.string("id")) },shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface) {
@@ -85,22 +85,32 @@ import org.json.JSONObject
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun DiscoverScreen(vm: RallyViewModel,onPost: (Post)->Unit,onAlgorithm: (JSONObject)->Unit) {
-    val state by vm.state.collectAsStateWithLifecycle();var query by rememberSaveable { mutableStateOf("") };var applied by rememberSaveable { mutableStateOf("") }
-    val key="discover:$applied";val path="/api/discover?q="+Uri.encode(applied)+"&scope=all";val page=state.pages[key] ?: Page(loading=true);val scope=rememberCoroutineScope();val list=rememberLazyGridState()
+    val state by vm.state.collectAsStateWithLifecycle();var query by rememberSaveable { mutableStateOf("") };var applied by rememberSaveable { mutableStateOf("") };var filter by rememberSaveable { mutableStateOf("all") }
+    val key="discover:$filter:$applied";val path="/api/discover?q="+Uri.encode(applied)+"&scope="+filter;val page=state.pages[key] ?: Page(loading=true);val scope=rememberCoroutineScope();val list=rememberLazyGridState()
     LaunchedEffect(query) { delay(280);applied=query.trim() };LaunchedEffect(key) { vm.load(key,path,"items") }
     LaunchedEffect(list,key,page.cursor) { snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { if(it>=page.items.size-4 && page.cursor!=null && !page.loading && page.error==null)vm.load(key,path+"&cursor="+Uri.encode(page.cursor),"items",append=true) } }
     Column(Modifier.fillMaxSize()) {
-        OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=12.dp),singleLine=true,placeholder={Text("Search people, tokens, algorithms",fontSize=14.sp)},leadingIcon={Icon(Icons.Outlined.Search,null)},shape=RoundedCornerShape(18.dp),colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=Color.Transparent,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceContainer))
+        OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=12.dp),singleLine=true,placeholder={Text("Search people, posts, algorithms",fontSize=14.sp)},leadingIcon={Icon(Icons.Outlined.Search,null)},shape=RoundedCornerShape(100.dp),colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=Color.Transparent,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceContainer))
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=20.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+            listOf("all" to "For you","algorithms" to "Algorithms","photos" to "Photos","videos" to "Videos").forEach { (id,label)->TextButton(onClick={filter=id},shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(contentColor=if(filter==id)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,containerColor=if(filter==id)MaterialTheme.colorScheme.surfaceContainer else Color.Transparent)) { Text(label,fontSize=11.sp) } }
+        }
         PullToRefreshBox(isRefreshing=page.loading && page.items.isNotEmpty(),onRefresh={vm.load(key,path,"items",true)},modifier=Modifier.weight(1f)) {
-            if(page.items.isEmpty() && page.loading)LoadingRows() else LazyVerticalGrid(GridCells.Adaptive(110.dp),state=list,contentPadding=PaddingValues(horizontal=2.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(2.dp),verticalArrangement=Arrangement.spacedBy(2.dp)) {
+            if(page.items.isEmpty() && page.loading)LoadingRows() else LazyVerticalGrid(GridCells.Adaptive(110.dp),state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(horizontal=4.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                 if(page.error!=null)item(span={GridItemSpan(maxLineSpan)}) { EmptyState("Couldn't load discovery",page.error,"Retry",{vm.load(key,path,"items",true)}) }
-                items(page.items,key={it.string("id")}) { item -> val cover=safeImage(item.string("cover"));Box(Modifier.aspectRatio(1f).background(MaterialTheme.colorScheme.surfaceContainer).clickable {
+                items(page.items,key={it.string("id")}) { item -> val cover=safeImage(item.string("cover"));val algorithm=item.string("kind")=="algorithm";Box(Modifier.aspectRatio(1f).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainer).clickable {
                     if(item.string("kind")=="algorithm")onAlgorithm(item) else scope.launch { try { onPost(Post.parse(vm.api.get("/api/post?id="+Uri.encode(item.string("id").removePrefix("post:"))))) } catch(e:Exception){vm.message(e.message)} }
                 }) {
-                    if(cover!=null)AsyncImage(cover,item.string("title"),Modifier.fillMaxSize(),contentScale=ContentScale.Crop) else Artwork(Person.parse(item.optJSONObject("author") ?: JSONObject()).image,item.string("title"),52.dp)
-                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color.Black.copy(alpha=.75f)),startY=100f)))
-                    if(item.string("kind")=="algorithm")Icon(Icons.Outlined.Layers,"Algorithm",Modifier.align(Alignment.TopEnd).padding(8.dp).size(20.dp),tint=Color.White)
-                    Text(item.string("title"),Modifier.align(Alignment.BottomStart).padding(10.dp),color=Color.White,fontSize=12.sp,lineHeight=16.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
+                    if(cover!=null)AsyncImage(cover,item.string("title"),Modifier.fillMaxSize().padding(if(item.string("coverType")=="token")20.dp else 0.dp),contentScale=if(item.string("coverType")=="token")ContentScale.Fit else ContentScale.Crop)
+                    else if(algorithm)Icon(Icons.Outlined.Layers,null,Modifier.align(Alignment.Center).size(32.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=.45f))
+                    else Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { Artwork(Person.parse(item.optJSONObject("author") ?: JSONObject()).image,item.string("title"),32.dp);Text(item.string("title"),fontSize=12.sp,maxLines=3,overflow=TextOverflow.Ellipsis) }
+                    if(algorithm) {
+                        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color.Black.copy(alpha=.75f)),startY=70f)))
+                        Icon(Icons.Outlined.Layers,"Algorithm",Modifier.align(Alignment.TopEnd).padding(8.dp).size(16.dp),tint=if(cover==null)MaterialTheme.colorScheme.onSurfaceVariant else Color.White)
+                        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                            Text(item.string("title"),color=Color.White,fontSize=11.sp,lineHeight=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(item.optJSONObject("performance")?.number("roi")?.let { String.format(java.util.Locale.US,"%.1f%%",it) } ?: "—",color=Color.White,fontSize=12.sp);Text(item.optJSONObject("feed")?.let { if((it.number("price") ?: 0.0)>0)it.string("price")+" USDC" else "Free" } ?: "",color=Color.White,fontSize=9.sp) }
+                        }
+                    } else Text("@"+Person.parse(item.optJSONObject("author") ?: JSONObject()).handle,Modifier.align(Alignment.BottomStart).padding(8.dp).background(Color.Black.copy(alpha=.45f),RoundedCornerShape(100.dp)).padding(horizontal=5.dp,vertical=2.dp),color=Color.White,fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 } }
                 if(page.items.isEmpty() && !page.loading)item(span={GridItemSpan(maxLineSpan)}) { EmptyState("No results","Try another name") }
                 if(page.cursor!=null)item(span={GridItemSpan(maxLineSpan)}) { TextButton(onClick={vm.load(key,path+"&cursor="+Uri.encode(page.cursor),"items",append=true)},enabled=!page.loading,modifier=Modifier.fillMaxWidth()) { Text(if(page.loading)"Loading…" else "Load more") } }

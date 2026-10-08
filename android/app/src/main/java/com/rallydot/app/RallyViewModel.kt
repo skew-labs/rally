@@ -21,6 +21,21 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
     private val jobs=mutableMapOf<String,Job>()
     private var connection: Job?=null
     private val chartReads=linkedMapOf<String,Pair<Long,Deferred<JSONObject>>>()
+    private val assetReads=linkedMapOf<String,Pair<Long,Deferred<Asset?>>>()
+    suspend fun resolveAsset(id: String): Asset?=withContext(Dispatchers.Main.immediate) {
+        if(id!="MON" && !Regex("0x[0-9a-fA-F]{40}").matches(id))return@withContext null
+        val key=id.lowercase()
+        val saved=assetReads[key]?.takeIf { System.currentTimeMillis()-it.first<30000 && !it.second.isCancelled }
+        val task=saved?.second ?: viewModelScope.async(start=CoroutineStart.LAZY) {
+            val data=api.get(if(id=="MON")"/api/markets" else "/api/market-asset?address="+Uri.encode(id))
+            val value=if(id=="MON")data.objects("tokens").firstOrNull { it.string("id")=="MON" } else data.optJSONObject("token") ?: data.optJSONObject("asset") ?: data.takeIf { it.has("symbol") }
+            value?.let { exactAsset(it,id) }
+        }.also {
+            assetReads.remove(key)?.second?.cancel();assetReads[key]=System.currentTimeMillis() to it
+            while(assetReads.size>12)assetReads.remove(assetReads.keys.first())?.second?.cancel()
+        }
+        task.await()
+    }
     private fun chartRead(asset: Asset,period: String): Deferred<JSONObject> {
         val key=asset.key+":"+period
         chartReads[key]?.takeIf { System.currentTimeMillis()-it.first<20000 && !it.second.isCancelled }?.let { return it.second }
@@ -41,7 +56,7 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
     }
     fun warmChart(asset: Asset) { chartRead(asset,"1D").start() }
     suspend fun chart(asset: Asset,period: String): JSONObject=withContext(Dispatchers.Main.immediate) { chartRead(asset,period).await() }
-    private fun clearCharts() { chartReads.values.forEach { it.second.cancel() };chartReads.clear() }
+    private fun clearCharts() { chartReads.values.forEach { it.second.cancel() };chartReads.clear();assetReads.values.forEach { it.second.cancel() };assetReads.clear() }
     private val drafts=DraftCache()
     fun draftKey(community: String?)=DraftIdentity(me?.string("id") ?: "guest",community.orEmpty())
     fun draft(key: DraftIdentity)=drafts.get(key)
