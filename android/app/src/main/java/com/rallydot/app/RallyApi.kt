@@ -24,9 +24,9 @@ import okio.Buffer
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-/** Only the app session is persisted. No wallet key, credential, quote or pending transaction. */
-class CredentialStore(context: Context) {
-    private val preferences=context.getSharedPreferences("native-session", Context.MODE_PRIVATE)
+/** Encrypted app state. Wallet keys remain exclusively inside the wallet SDK. */
+class CredentialStore(context: Context,namespace: String="native-session",private val strict: Boolean=false) {
+    private val preferences=context.getSharedPreferences(namespace, Context.MODE_PRIVATE)
     private fun key(): SecretKey {
         val ks=KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         return (ks.getKey("rally-session",null) as? SecretKey) ?: KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES,"AndroidKeyStore").apply {
@@ -35,9 +35,9 @@ class CredentialStore(context: Context) {
     }
     fun load(): String? = try {
         preferences.getString("session",null)?.let { value -> val fields=value.split(':'); val c=Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,Base64.decode(fields[0],Base64.NO_WRAP))); String(c.doFinal(Base64.decode(fields[1],Base64.NO_WRAP)),Charsets.UTF_8) }
-    } catch (_: Exception) { clear(); null }
-    fun save(value: String) { val c=Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.ENCRYPT_MODE,key()); preferences.edit().putString("session",Base64.encodeToString(c.iv,Base64.NO_WRAP)+":"+Base64.encodeToString(c.doFinal(value.toByteArray(Charsets.UTF_8)),Base64.NO_WRAP)).apply() }
-    fun clear() { preferences.edit().remove("session").apply() }
+    } catch (e: Exception) { if(strict)throw IOException("Pending transaction storage is unavailable. Check your wallet before continuing.",e);clear();null }
+    fun save(value: String) { val c=Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.ENCRYPT_MODE,key()); check(preferences.edit().putString("session",Base64.encodeToString(c.iv,Base64.NO_WRAP)+":"+Base64.encodeToString(c.doFinal(value.toByteArray(Charsets.UTF_8)),Base64.NO_WRAP)).commit()) { "Could not save wallet request" } }
+    fun clear() { check(preferences.edit().remove("session").commit()) { "Could not clear wallet request" } }
 }
 class ApiFailure(val status: Int, message: String): IOException(message)
 class RallyApi(private val context: Context) {
@@ -82,16 +82,21 @@ class RallyApi(private val context: Context) {
             val data=JSONObject(String(bytes,Charsets.UTF_8))
             if(!it.isSuccessful)throw ApiFailure(it.code,data.string("message","Could not load this screen"))
             if(requestGeneration!=generation)throw kotlinx.coroutines.CancellationException("Account changed")
+            if(path in setOf("/api/auth/privy","/api/auth/wallet/verify")) {
+                val token=it.headers.values("Set-Cookie").mapNotNull { raw->Cookie.parse(it.request.url,raw) }.singleOrNull { cookie->cookie.name=="rally_session" }?.value
+                    ?: throw IOException("Login has no account session")
+                signIn(token)
+            }
             data
         } }
     }
-    suspend fun upload(uri: Uri): JSONObject = withContext(Dispatchers.IO) {
+    suspend fun upload(uri: Uri,maxBytes: Int=25*1024*1024): JSONObject = withContext(Dispatchers.IO) {
         val requestGeneration=generation
         val mime=context.contentResolver.getType(uri) ?: throw IOException("Unsupported file")
         require(mime in setOf("image/jpeg","image/png","image/webp","video/mp4","video/webm")) { "Choose a photo or an MP4 / WebM video" }
         val file=java.io.File.createTempFile("rally-upload-",null,context.cacheDir)
         try {
-            context.contentResolver.openInputStream(uri)?.use { input -> file.outputStream().use { output -> val bytes=ByteArray(8192);var total=0L;while(true) { val n=input.read(bytes);if(n<0)break;total+=n;if(total>25*1024*1024)throw IOException("Choose a file under 25 MB");output.write(bytes,0,n) } } } ?: throw IOException("Choose this file again")
+            context.contentResolver.openInputStream(uri)?.use { input -> file.outputStream().use { output -> val bytes=ByteArray(8192);var total=0L;while(true) { val n=input.read(bytes);if(n<0)break;total+=n;if(total>maxBytes)throw IOException("Choose a file under ${maxBytes/(1024*1024)} MB");output.write(bytes,0,n) } } } ?: throw IOException("Choose this file again")
             val builder=Request.Builder().url(ORIGIN+"/api/media").header("X-Rally-Request","1").put(file.asRequestBody(mime.toMediaType()))
             session?.let { builder.header("Cookie","rally_session=$it") }
             val call=client.newBuilder().callTimeout(0,TimeUnit.SECONDS).writeTimeout(30,TimeUnit.SECONDS).readTimeout(60,TimeUnit.SECONDS).build().newCall(builder.build())

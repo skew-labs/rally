@@ -9,5 +9,11 @@
     <data android:scheme="https" /><data android:host="rallydot.com" /><data android:path="/" /><data android:path="/app" /><data android:path="/app/" /><data android:path="/native-return" />
    </intent-filter>
   </activity>
+  <activity android:name="io.privy.sdk.oAuth.PrivyRedirectActivity" android:exported="true" android:launchMode="singleTask">
+   <intent-filter>
+    <action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="rallywallet" />
+   </intent-filter>
+  </activity>
  </application>
 </manifest>

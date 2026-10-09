@@ -20,6 +20,11 @@ import coil.memory.MemoryCache
 import coil.disk.DiskCache
 
 class RallyApplication: Application(), ImageLoaderFactory {
+    private var walletSDK: io.privy.sdk.Privy?=null
+    fun privy(app: String,client: String): io.privy.sdk.Privy {
+        check(android.os.Looper.myLooper()==android.os.Looper.getMainLooper())
+        return walletSDK ?: io.privy.sdk.Privy.init(this,io.privy.sdk.PrivyConfig(app,client,io.privy.logging.PrivyLogLevel.NONE)).also { walletSDK=it }
+    }
     override fun newImageLoader()=ImageLoader.Builder(this)
         .components { add(SvgDecoder.Factory()) }
         .memoryCache { MemoryCache.Builder(this).maxSizePercent(.15).build() }

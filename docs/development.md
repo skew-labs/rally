@@ -45,7 +45,7 @@ The default loopback origin is `http://127.0.0.1:4186`. The state directory is c
 | `RALLY_STATE_DIR` | Durable private state directory |
 | `RALLY_RPC_URL` | Server-side Monad JSON-RPC endpoint; authenticated URLs stay private |
 | `RALLY_COMPAT_ORIGINS` | Explicit comma-separated additional origins, when genuinely needed |
-| `RALLY_PRIVY_APP_ID`, `RALLY_PRIVY_CLIENT_ID` | Optional public Privy application/client configuration |
+| `RALLY_PRIVY_APP_ID`, `RALLY_PRIVY_CLIENT_ID`, `RALLY_PRIVY_ANDROID_CLIENT_ID` | Optional public Privy application, web client and Android client configuration |
 | `RALLY_COMMUNITY_FACTORY` | Independently verified compatible deployed factory address |
 | `RALLY_COMMUNITY_DEPLOYER` | Optional authorized public deployment address, with no server signing key |
 | `RALLY_AGENT_BRIDGE_CONFIG` | Private pre-existing owner/address/origin pairing file |

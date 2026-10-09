@@ -5,10 +5,10 @@ android {
     compileSdk 36
     defaultConfig {
         applicationId 'com.rallydot.app'
-        minSdk 24
+        minSdk 28
         targetSdk 36
-        versionCode 8
-        versionName '0.2.4'
+        versionCode 9
+        versionName '0.3.0'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     signingConfigs {
@@ -34,10 +34,12 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
     buildFeatures { compose true; buildConfig true }
+    packaging { resources { excludes += 'META-INF/versions/9/OSGI-INF/MANIFEST.MF' } }
     testOptions { unitTests.returnDefaultValues = true }
 }
 
 dependencies {
+ implementation 'io.privy:privy-core:0.16.0'
  implementation platform('androidx.compose:compose-bom:2025.08.01')
  implementation 'androidx.activity:activity-compose:1.12.1'
  implementation 'androidx.core:core-splashscreen:1.2.0'
@@ -64,4 +66,15 @@ dependencies {
 baselineProfile {
     automaticGenerationDuringBuild = false
     saveInSrc = true
+}
+
+// Privy's transitive 1.1.2 storage can fail on its first analytics-file read.
+// Keep the DataStore modules aligned on the upstream startup-race fix.
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == 'androidx.datastore') {
+            useVersion '1.1.7'
+            because 'Fix OkioStorage FileNotFoundException during first startup'
+        }
+    }
 }

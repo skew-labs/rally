@@ -16,6 +16,7 @@ KEY_LOCK = threading.Lock()
 def config():
     app = os.environ.get('RALLY_PRIVY_APP_ID', '').strip()
     client = os.environ.get('RALLY_PRIVY_CLIENT_ID', '').strip()
+    android_client = os.environ.get('RALLY_PRIVY_ANDROID_CLIENT_ID', '').strip()
     valid = bool(re.fullmatch(r'[a-zA-Z0-9_-]{8,128}', app))
     bridge='/assets/auth/privy-bridge.js'
     try:
@@ -24,6 +25,7 @@ def config():
     except (OSError,ValueError,KeyError,TypeError):pass
     return {'enabled': valid, 'appId': app if valid else None, 'bridgeURL':bridge,
             'clientId': client if re.fullmatch(r'[a-zA-Z0-9_-]{8,128}', client) else None,
+            'androidClientId': android_client if re.fullmatch(r'[a-zA-Z0-9_-]{8,128}', android_client) else None,
             'loginMethods': ['email', 'google', 'wallet'], 'chainId': 143}
 
 

@@ -28,6 +28,13 @@ class Privy(unittest.TestCase):
     def test_oversized_token_rejected(self):
         with self.assertRaises(s.Problem):p.claims('a'*32001,self.app)
         self.lookup.assert_not_called()
+    def test_android_client_is_public_and_separate_from_web(self):
+        with patch.dict(os.environ,{'RALLY_PRIVY_APP_ID':self.app,'RALLY_PRIVY_CLIENT_ID':'client-web-fixture','RALLY_PRIVY_ANDROID_CLIENT_ID':'client-android-fixture','RALLY_PRIVY_APP_SECRET':'never-expose-fixture'}):
+            value=p.config()
+            self.assertEqual(value['clientId'],'client-web-fixture')
+            self.assertEqual(value['androidClientId'],'client-android-fixture')
+            self.assertNotIn('never-expose-fixture',json.dumps(value))
+        with patch.dict(os.environ,{'RALLY_PRIVY_ANDROID_CLIENT_ID':'../../invalid'}):self.assertIsNone(p.config()['androidClientId'])
     def test_signed_identity_mismatch_rejected(self):
         identity={**self.claims,'sub':'did:privy:other','linked_accounts':'[]'};identity.pop('sid')
         with patch.dict(os.environ,{'RALLY_PRIVY_APP_ID':self.app}),self.assertRaises(s.Problem) as error:p.login(None,{'accessToken':self.token(),'identityToken':self.token(identity)})

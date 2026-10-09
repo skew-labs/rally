@@ -32,8 +32,9 @@ import org.json.JSONObject
                     Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
                         listOf("agent-metamask.svg" to "MetaMask","wallet-coinbase.svg" to "Coinbase Wallet","wallet-rainbow.svg" to "Rainbow").forEach { (file,name)->Artwork(safeImage("/assets/$file"),name,32.dp,false) }
                     }
-                    Button(onClick={vm.connect(openBrowser)},enabled=!state.connecting,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Text(if(state.connecting)"Waiting for approval…" else "Connect account") }
-                    Text("Wallet · Google · Email",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(onClick={vm.showWallet()},enabled=!state.connecting,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Text(if(state.connecting)"Waiting for approval…" else "Connect account") }
+                    Text("Google · Email · Embedded wallet",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick={vm.connect(openBrowser)},enabled=!state.connecting) { Text("Connect an external wallet") }
                     if(state.connecting) {
                         Text("Finish connecting in the secure browser",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Device code ${state.connectionCode.orEmpty()}",Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);TextButton(onClick={vm.resumeConnect(openBrowser)}) { Text("Open again") };TextButton(onClick={vm.cancelConnect()}) { Text("Cancel") } }
@@ -50,7 +51,7 @@ import org.json.JSONObject
             }
         }
         item { Surface(shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface) { Column {
-            listOf(Triple("Algorithms",Icons.Outlined.Layers,"Algorithms"),Triple("Agents",Icons.Outlined.Hub,"Agents"),Triple("Activity",Icons.Outlined.History,"Activity")).forEach { (label,icon,destination)->OptionRow(label,icon,{onExtra(destination)}) }
+            listOf(Triple("Wallet",Icons.Outlined.AccountBalanceWallet,"Wallet"),Triple("Algorithms",Icons.Outlined.Layers,"Algorithms"),Triple("Agents",Icons.Outlined.Hub,"Agents"),Triple("Activity",Icons.Outlined.History,"Activity")).forEach { (label,icon,destination)->OptionRow(label,icon,{onExtra(destination)}) }
             if(me!=null)OptionRow("Sign out",Icons.Outlined.Logout,{vm.signOut()})
         } } }
         item { Text("Rally for Android · ${BuildConfig.VERSION_NAME}",Modifier.fillMaxWidth(),textAlign=androidx.compose.ui.text.style.TextAlign.Center,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -103,6 +104,7 @@ import org.json.JSONObject
 @Composable fun AlgorithmSheet(item: JSONObject,vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit) {
     val feed=item.optJSONObject("feed") ?: item;val id=feed.string("id",item.string("id")).removePrefix("feed:")
     var preview by remember { mutableStateOf<JSONObject?>(null) };var error by remember { mutableStateOf<String?>(null) };val scope=rememberCoroutineScope()
+    val app by vm.state.collectAsStateWithLifecycle()
     val sheet=rememberModalBottomSheetState(skipPartiallyExpanded=true)
     LaunchedEffect(id) { try { preview=vm.api.get("/api/discover/preview?id="+Uri.encode("feed:$id")) } catch(e:Exception){error=e.message} }
     ModalBottomSheet(onDismissRequest=close,sheetState=sheet,containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
@@ -114,7 +116,8 @@ import org.json.JSONObject
             val price=feed.number("price") ?: 0.0;Fact("Subscription",if(price>0)feed.string("price")+" USDC / ${feed.optInt("periodDays",30)} days" else "Free")
             preview?.let { p->p.objects("posts").take(1).forEach { Text(it.string("text"),style=MaterialTheme.typography.bodyLarge) };p.optJSONObject("post")?.let { Text(it.string("text"),style=MaterialTheme.typography.bodyLarge) } }
             error?.let { Text(it,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall) }
-            Button(onClick={ if(price>0 && !feed.optBoolean("access"))openBrowser(Uri.parse(ORIGIN+"/native-wallet").buildUpon().appendQueryParameter("nativeAction","subscribe").appendQueryParameter("feed",id).appendQueryParameter("account",vm.me?.string("id")).build().toString()) else vm.action("/api/feeds/use",JSONObject().put("id",id)) { scope.launch { sheet.hide();close();vm.message("Feed selected") } } },modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(price>0 && !feed.optBoolean("access"))"Subscribe" else "Use algorithm") }
+            OrderStatus(vm)
+            Button(onClick={ if(price>0 && !feed.optBoolean("access"))vm.subscribe(JSONObject(feed.toString()).put("id",id)) else vm.action("/api/feeds/use",JSONObject().put("id",id)) { scope.launch { sheet.hide();close();vm.message("Feed selected") } } },enabled=!app.order.blocksOrder,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(price>0 && !feed.optBoolean("access"))"Subscribe" else "Use algorithm") }
         }
     }
 }

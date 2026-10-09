@@ -1,8 +1,8 @@
 # Android
 
-Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. It does not embed a WebView or launch a Trusted Web Activity. The package is `com.rallydot.app`, with Android 7.0 (API 24) as the minimum and API 36 as the target.
+Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.2.4.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.3.0.apk)
 
 ## Interaction and data
 
@@ -22,7 +22,7 @@ The Meta and xAI marks use bundled PNG renderings of the original SVGs listed in
 
 The system splash screen shows Rally branding and exits with a short fade into the first native frame. It never waits for an API response or an artificial minimum duration. Day/night resources and system-bar contrast follow the chosen theme. Reduced motion skips the splash fade and uses Android's duration scale for Compose transitions.
 
-Tab selection uses one moving indicator, and destination transitions use a small offset and fade. The purchase sheet keeps its action separate from the scrollable body and above the keyboard; chart space collapses while typing. Close actions animate the token sheet out before removing it. Chart paths and fills are cached for the current data and bounds; crosshair movement redraws without rebuilding that geometry and selects observations by their actual timestamps.
+Tab selection uses one moving indicator, and destination transitions use a small offset and fade. The purchase sheet keeps its action separate from the scrollable body and above the keyboard; chart space collapses while typing. Short trade sheets prioritize amount and order controls over charts, and secondary token statistics remain in the browsing view. Close actions animate the token sheet out before removing it. Chart paths and fills are cached for the current data and bounds; crosshair movement redraws without rebuilding that geometry and selects observations by their actual timestamps.
 
 Moving indicators, pressed controls, scrolling lists, pagers and sheets use Compose's `preferredFrameRate(FrameRateCategory.High)` during redraws. Card translations, press scaling and the segmented indicator update through graphics layers without relaying out their content for every animation frame. [Android's adaptive refresh guidance](https://developer.android.com/develop/ui/views/animations/adaptive-refresh-rate) describes the system-controlled vote: compatible displays may use their supported high rates, including 144 Hz where available. The app does not force 144 Hz, cap all screens at 60 Hz or keep a continuous rendering loop running while idle. Device hardware, Android version, thermal limits and power settings determine the actual rate. A 60 Hz emulator does not establish physical-device 144 fps performance.
 
@@ -40,11 +40,17 @@ The generator never submits a wallet request. [Android's Baseline Profile guidan
 
 ## Account and wallet boundary
 
-The first account connection uses an explicit first-party browser consent screen. The app holds a random verifier and sends its S256 challenge to Rally. A matching code, authenticated human consent, a ten-minute expiry and an atomic one-use exchange bind the connection to that device. This creates a regular Rally session, not an agent OAuth grant or a wallet signing permission. The session is encrypted using Android Keystore; application backup is disabled.
+The native Privy SDK supports email codes and Google login. Google authentication opens the provider's browser authorization page and returns through `rallywallet`; trade screens and embedded-wallet signing stay inside Rally. The public Android client configuration is returned by `/api/auth/config`. Register `com.rallydot.app`, the release certificate fingerprint and the `rallywallet` scheme in the Privy Android app client. `RALLY_PRIVY_ANDROID_CLIENT_ID` is separate from the web client; App Secrets and release signing keys never enter the APK.
 
-The native order sheet hands the chosen asset, side and amount to Rally's existing secure browser checkout. Wallet login, signing, paid subscriptions and token issuance currently use that checkout. The web controllers remain responsible for quote validation, chain checks, wallet authorization and receipt reconciliation. Native screens never receive wallet keys or sign transactions. Account identifiers are checked at the handoff to prevent checkout under another browser account.
+The server verifies Privy access and identity tokens against the existing app audience, then returns a first-party session cookie. A domain- and chain-bound wallet challenge connects the embedded wallet to the account. If an existing account uses a different wallet, the app shows both addresses and requires the user's explicit choice before linking the new wallet. This does not move balances from the previous wallet.
 
-The main application works without Chrome. Account consent and wallet checkout require an installed compatible browser. Native wallet SDK integration is a separate boundary from native screen rendering.
+Native Buy/Sell uses the same quote, approval, preflight and receipt APIs as the web application. Spot routes compare actual quoted venues and try a bounded set of executable compilers. nad.fun curve and DEX trades, perpetual requests, fixed-stake price predictions, token creation and subscriptions retain their venue-specific server builders. Subscription invoices must match the displayed feed, price, currency, period and version before signing; token creation must match the displayed creation fee. Perpl funding uses AUSD, shown separately from wallet balances. Server availability, wallet funds, venue collateral and a valid current market determine whether a request can execute.
+
+Before calling the embedded wallet, the app checks the linked account/address, chain 143, recipient, calldata, bounded gas and quote expiry. The provider switches to Monad's public RPC and verifies `eth_chainId`; private server RPC credentials stay on the server. Exact token approvals are confirmed before preparing a fresh execution request. The SDK retains wallet keys; Rally stores only its account session and encrypted pending intent/hash.
+
+A pending intent is committed to storage before the wallet request. Once returned, its transaction hash is committed before any network reconciliation. A timeout after submission blocks another order. Recovery checks the same owned reference and hash without signing again, including after a process restart. A manually entered incorrect hash can be corrected until the server verifies it. Confirmed inclusion, keeper pending, no fill, partial fill, finalized execution and active subscription entitlement have distinct results.
+
+External wallets retain the optional first-party browser pairing flow. A random S256 verifier, matching device code, authenticated human consent, ten-minute expiry and atomic one-use exchange create a regular Rally session. This is not an agent OAuth grant or native access to an external wallet's private key. External-wallet signing is handled by its existing browser/wallet flow; the native signing path described above uses Privy embedded wallets.
 
 ## Build and release
 
@@ -55,7 +61,7 @@ cd android
 ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.2.4 (code 8) uses the existing release certificate, allowing upgrades from the earlier APKs.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.3.0 (code 9) uses the existing release certificate, allowing upgrades from the earlier APKs.
 
 `/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
@@ -75,3 +81,7 @@ Version 0.2.4 unifies public social and nad.fun swipe cards under one native pag
 The trade sheet uses a large amount field with an explicit denomination, separate Buy and Sell colors, a faster cancellable quote debounce and a footer that remains above the keyboard. Market rows constrain long prices and venue names. Secondary text is darker in the light palette for readability on quiet surfaces. Wallet handoff and server-side execution validation are unchanged.
 
 Version 0.2.4 passed 25 model tests, both baseline-profile journeys and release lint with zero errors. Native checks covered gesture thresholds and deck boundaries, retained navigation state, light/dark order sheets, keyboard-visible Buy and Sell controls, reduced motion, and public market, community and algorithm screens. Small-phone, 1.5× text, landscape and tablet layouts passed. These checks made no wallet requests or financial transactions; they do not establish physical-device 144 Hz frame performance.
+
+Version 0.3.0 adds the Privy Android wallet integration, native order submission, token creation, subscription payment, wallet balances and Perpl funding controls. AndroidX DataStore modules are aligned on 1.1.7 to resolve a first-start file-read race in the SDK's transitive storage dependency. Fresh baseline profiles cover startup and browsing/order-sheet journeys.
+
+The signed release passed 40 native unit tests, 34 backend authentication tests and release lint with zero errors. Unit tests cover transaction identity and chain validation, quote expiry, approval sequencing, interrupted submission, duplicate prevention, account changes, venue outcomes and changed subscription terms. Emulator checks passed three fresh-data starts, small-phone, 1.5× text, landscape and tablet purchase/login layouts, keyboard-visible actions, native Perpl size/protection fields and both login themes. No user completed authentication, signed a real wallet request or submitted a financial transaction in these checks.

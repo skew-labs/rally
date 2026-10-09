@@ -61,6 +61,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
     var post by remember { mutableStateOf<Post?>(null) }
     var algorithm by remember { mutableStateOf<JSONObject?>(null) }
     var community by rememberSaveable { mutableStateOf<String?>(null) }
+    var launching by rememberSaveable { mutableStateOf(false) }
     var composing by rememberSaveable { mutableStateOf(false) }
     val scope=rememberCoroutineScope()
     val screenStates=rememberSaveableStateHolder()
@@ -122,6 +123,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                     bottomBar={if(!wide)RallyNavigation(tab) { tab=it;extra=null;community=null }},
                     snackbarHost={SnackbarHost(snack)}) { padding ->
                     Column(Modifier.fillMaxSize().padding(padding)) {
+                        if(data.order.blocksOrder && asset==null && algorithm==null && !launching)Box(Modifier.padding(horizontal=20.dp,vertical=6.dp).clickable { extra="Wallet" }) { OrderStatus(vm,compact=true) }
                         data.bootError?.let { Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically) { Text(it,Modifier.weight(1f),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall);TextButton(onClick={vm.bootstrap()}) { Text("Retry") } } }
                         if(tab==0 && extra==null)Segmented(listOf("Markets","Launch","Swipe","Feed"),home,{home=it},Modifier.padding(horizontal=20.dp,vertical=8.dp))
                         val destination=extra ?: "$tab:${if(tab==0)home else community.orEmpty()}"
@@ -144,8 +146,9 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                                     shown=="Algorithms"->AlgorithmsScreen(vm,{algorithm=it})
                                     shown=="Agents"->AgentsScreen(data)
                                     shown=="Activity"->ActivityScreen(vm)
+                                    shown=="Wallet"->PortfolioScreen(vm,::showAsset)
                                     shown=="0:Markets"->MarketsScreen(vm,{asset=it})
-                                    shown=="0:Launch"->MarketsScreen(vm,{asset=it},launch=true,create={openBrowser(Uri.parse(ORIGIN+"/native-wallet").buildUpon().appendQueryParameter("nativeAction","launch").appendQueryParameter("account",vm.me?.string("id")).build().toString())})
+                                    shown=="0:Launch"->MarketsScreen(vm,{asset=it},launch=true,create={if(vm.me==null)vm.showWallet() else launching=true})
                                     shown=="0:Swipe"->SwipeScreen(vm,{asset=it},{post=it})
                                     shown=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4},onAlgorithm={extra="Algorithms"})
                                     shown.startsWith("1:") && shown.substringAfter(':').isNotEmpty()->FeedScreen(vm,community=shown.substringAfter(':'),onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4})
@@ -163,6 +166,9 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
         asset?.let { selected -> AssetSheet(selected,vm,{asset=null},openBrowser) }
         post?.let { selected -> PostSheet(selected,vm,{post=null},::showAsset,openBrowser) }
         algorithm?.let { selected -> AlgorithmSheet(selected,vm,{algorithm=null},openBrowser) }
+        if(data.orderDetails)OrderDetailsSheet(vm,{vm.showOrderDetails(false)})
+        if(data.walletOpen)WalletLoginSheet(vm,{vm.showWallet(false)})
+        if(launching)LaunchSheet(vm,{launching=false})
         if(composing)ComposeSheet(vm,community,{composing=false})
     }
 }

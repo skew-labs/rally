@@ -47,12 +47,12 @@ fun Modifier.animatedHeight(height: State<Dp>)=layout { measurable,constraints->
     layout(child.width,pixels) { child.placeRelative(0,0) }
 }
 
-@Composable fun TradeAmount(value: String,onValue: (String)->Unit,label: String,unit: String,accent: Color,done: ()->Unit) {
+@Composable fun TradeAmount(value: String,onValue: (String)->Unit,label: String,unit: String,accent: Color,done: ()->Unit,enabled: Boolean=true) {
     Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.padding(horizontal=18.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Text(label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                androidx.compose.foundation.text.BasicTextField(value,onValue,Modifier.weight(1f).heightIn(min=48.dp).semantics { contentDescription=label },singleLine=true,
+                androidx.compose.foundation.text.BasicTextField(value,onValue,Modifier.weight(1f).heightIn(min=48.dp).semantics { contentDescription=label },singleLine=true,enabled=enabled,
                     textStyle=MaterialTheme.typography.headlineMedium.copy(fontSize=32.sp,color=MaterialTheme.colorScheme.onSurface),cursorBrush=SolidColor(accent),
                     keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(keyboardType=androidx.compose.ui.text.input.KeyboardType.Decimal,imeAction=androidx.compose.ui.text.input.ImeAction.Done),
                     keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={done()}),decorationBox={ input->
