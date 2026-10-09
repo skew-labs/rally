@@ -10,6 +10,7 @@
     "test": "python3 scripts/test.py",
     "test:contracts": "node tests/community.mjs && node tests/nad-revenue.mjs",
     "test:ui": "node tests/browser.mjs",
+    "test:wallet-actions": "node scripts/test-wallet-actions.mjs",
     "audit": "npm audit --audit-level=low && npm --prefix auth-client audit --audit-level=low",
     "test:auth-dependencies": "node auth-client/test-dependencies.mjs"
   },

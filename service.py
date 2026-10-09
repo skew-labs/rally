@@ -452,44 +452,8 @@ class Gateway:
         self.protocols=json.loads((ROOT/'config/protocols.json').read_text())
         assert self.protocols['kuru']['addresses']['KuruFlowEntryPoint'].lower()==FLOW
     def portfolio(self,wallet):
-        from eth_abi import encode,decode
-        from eth_utils import keccak
-        with self.balance_lock:
-            cached=self.balance_cache.get(wallet)
-            if cached and now()-cached['fetchedAt']<15:return cached
-            block=rpc('eth_blockNumber',[])
-            native=int(rpc('eth_getBalance',[wallet,block]),16)
-            holdings=[{'asset':'MON','amount':units(native,18),'amountRaw':str(native)}];unavailable=[]
-            # Include recent launches and tokens referenced by this wallet's activity.
-            launched=rows('SELECT info FROM nad_tokens ORDER BY observed DESC LIMIT 150')
-            owned=rows('''SELECT info FROM nad_tokens WHERE address IN (
-                SELECT asset FROM watches WHERE user_id IN (SELECT id FROM accounts WHERE wallet=?)
-                UNION SELECT json_extract(p.payload,'$.summary.token') FROM execution_plans p JOIN execution_records r ON r.plan=p.id WHERE p.wallet=?
-                ) ORDER BY observed DESC LIMIT 200''',(wallet,wallet))
-            referenced=rows('''SELECT asset FROM watches WHERE user_id IN (SELECT id FROM accounts WHERE wallet=?)
-                UNION SELECT q.input FROM quotes q JOIN orders o ON o.quote_id=q.id WHERE q.wallet=?
-                UNION SELECT q.output FROM quotes q JOIN orders o ON o.quote_id=q.id WHERE q.wallet=? LIMIT 200''',(wallet,wallet,wallet))
-            discovered=[self.token_map[x['asset']] for x in referenced if x['asset'] in self.token_map and x['asset']!='MON']
-            tokens=list({t['id']:t for t in self.tokens[1:]+discovered+[json.loads(x['info']) for x in launched+owned]}.values())
-            tokens=[dict(t,price=None) if t.get('nadfun') and now()-t.get('referenceAt',0)>180 else t for t in tokens]
-            self.token_map.update({t['id']:t for t in tokens})
-            for i in range(0,len(tokens),60):
-                part=tokens[i:i+60]
-                calls=[(t['address'],True,bytes.fromhex('70a08231'+wallet[2:].rjust(64,'0'))) for t in part]
-                data='0x'+keccak(text='aggregate3((address,bool,bytes)[])').hex()[:8]+encode(['(address,bool,bytes)[]'],[calls]).hex()
-                result=rpc('eth_call',[{'to':MULTICALL,'data':data,'gas':hex(3_000_000)},block])
-                try:
-                    values=decode(['(bool,bytes)[]'],bytes.fromhex(result[2:]))[0]
-                    if len(values)!=len(part):raise ValueError('Result length')
-                except Exception:raise Problem('Could not read token balances. Try again shortly.',503)
-                for t,(success,value) in zip(part,values):
-                    if not success or len(value)!=32:unavailable.append(t['id']);continue
-                    amount=int.from_bytes(value,'big')
-                    if amount:holdings.append({'asset':t['id'],'amount':units(amount,t['decimals']),'amountRaw':str(amount),'token':t})
-            result={'wallet':wallet,'holdings':holdings,'unavailable':unavailable,'fetchedAt':now(),'chainId':143,'blockNumber':int(block,16)}
-            self.balance_cache={k:v for k,v in self.balance_cache.items() if now()-v['fetchedAt']<15}
-            self.balance_cache[wallet]=result
-            return result
+        import wallet_assets
+        return wallet_assets.portfolio(self,wallet)
     def warm(self):
         import market_universe
         return market_universe.prices([t['address'] for t in self.tokens if t['id']!='MON'])
@@ -500,7 +464,7 @@ class Gateway:
         with LOCK:
             tokens=[{**t,**launch_map.get(t['id'],{}),**self.prices.get(t['id'],{}),'stale':now()-self.prices.get(t['id'],{}).get('fetchedAt',0)>120} for t in self.tokens]
             known={t['id'] for t in tokens}
-            extra=sorted((dict(self.token_map[a],**v,stale=now()-v.get('fetchedAt',0)>120) for a,v in self.prices.items() if a not in known and a in self.token_map),key=lambda t:-(t.get('volume') or 0))[:200]
+            extra=sorted(({**self.token_map[a],**v,'stale':now()-v.get('fetchedAt',0)>120} for a,v in self.prices.items() if a not in known and a in self.token_map),key=lambda t:-(t.get('volume') or 0))[:200]
             tokens.extend(extra);known.update(t['id'] for t in extra)
             tokens += [dict(t,price=None if now()-t['referenceAt']>180 else t.get('price'),stale=now()-t['referenceAt']>180) for t in launches if t['id'] not in known]
             for t in tokens:

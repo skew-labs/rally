@@ -3,3 +3,4 @@ Pillow==12.3.0
 eth-abi==6.0.0
 PyJWT[crypto]==2.15.1
 cryptography==50.0.2
+qrcode==8.2

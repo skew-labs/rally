@@ -84,24 +84,23 @@ import org.json.JSONObject
 }
 @Composable fun PortfolioScreen(vm: RallyViewModel,onAsset: (String)->Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
-    var portfolio by remember { mutableStateOf<JSONObject?>(null) }
+    val portfolio=state.portfolio
+    val error=state.portfolioError
     var perpl by remember { mutableStateOf<JSONObject?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
     var funding by rememberSaveable { mutableStateOf("") }
     var refreshing by remember { mutableIntStateOf(0) }
-    LaunchedEffect(state.boot?.string("wallet"),refreshing,state.order.stage) {
-        error=null
-        try { portfolio=vm.api.get("/api/portfolio",true) } catch(e:CancellationException){throw e} catch(e:Exception){error=e.message}
+    LaunchedEffect(state.boot?.string("wallet"),refreshing) { vm.loadPortfolio(refreshing>0) }
+    LaunchedEffect(state.boot?.string("wallet"),refreshing,state.order.completed) {
         try { perpl=vm.api.get("/api/perpl/account",true) } catch(e:CancellationException){throw e} catch(_:Exception){perpl=null}
     }
     LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item { Row(verticalAlignment=Alignment.CenterVertically) { Text("Wallet",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium);TextButton(onClick={vm.showWallet()}){Text("Manage")};IconButton(onClick={refreshing++}){Icon(Icons.Outlined.Refresh,"Refresh balances")} } }
-        item { state.boot?.string("wallet")?.takeIf { it.isNotBlank() }?.let { SelectionContainer { Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) } } ?: Button(onClick={vm.showWallet()}){Text("Connect wallet")} }
+        item { if(!state.boot?.string("wallet").isNullOrBlank())WalletBalanceHero(vm) else Button(onClick={vm.showWallet()}) { Text("Connect wallet") } }
         item { OrderStatus(vm) }
         error?.let { item { Text(it,color=MaterialTheme.colorScheme.error) } }
         portfolio?.let { value->
             if((value.optJSONArray("unavailable")?.length() ?: 0)>0)item { Text("Some balances are unavailable",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall) }
-            items(value.objects("holdings"),key={it.string("asset")}) { h->val token=h.optJSONObject("token") ?: JSONObject();Row(Modifier.fillMaxWidth().clickable { onAsset(token.string("id",h.string("asset"))) }.padding(vertical=10.dp),verticalAlignment=Alignment.CenterVertically) { Artwork(safeImage(token.string("logoURI",if(h.string("asset")=="MON")"/assets/MON.png" else "")),token.string("symbol",h.string("asset")),40.dp);Column(Modifier.weight(1f).padding(start=12.dp)) { Text(token.string("symbol",h.string("asset")),fontWeight=FontWeight.Medium);Text(token.string("name"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text(displayAmount(h.string("amount")),maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.widthIn(max=140.dp)) } }
+            items(value.objects("holdings").filter { (it.number("amount") ?: 0.0)>0 },key={it.string("asset")}) { h-> WalletHolding(h,{onAsset(h.string("asset"))}) }
             if(value.objects("holdings").isEmpty())item { Text("No balances to display",color=MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         perpl?.let { value->item {

@@ -101,6 +101,7 @@ export function financeUI(c) {
         const prep=await api(spot?'/api/orders/prepare':payment?'/api/payments/prepare':'/api/execution/prepare',spot?{quote:plan.id}:payment?{invoice:plan.id}:{plan:plan.id});check();
         if(plan.expires<=Date.now()/1000||Number.isFinite(prep.expires)&&prep.expires<=Date.now()/1000){if(refreshes++>=1)throw new Error('Price unavailable. Try again.');await fresh();continue;}
         const tx=prep.approval||prep.transaction;if(!tx)throw new Error('Trade unavailable. Try again.');
+        ui.validateTransaction?.(tx,prep);
         if(prep.approval&&approvals)throw new Error('Token approval is not ready. Try again.');
         if(!await walletReady())return;check();
         if(plan.expires<=Date.now()/1000||Number.isFinite(prep.expires)&&prep.expires<=Date.now()/1000){if(refreshes++>=1)throw new Error('Price unavailable. Try again.');await fresh();continue;}

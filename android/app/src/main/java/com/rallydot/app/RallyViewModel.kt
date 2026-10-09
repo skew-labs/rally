@@ -13,12 +13,13 @@ import org.json.JSONObject
 import java.security.MessageDigest
 import java.security.SecureRandom
 
-data class AppState(val boot: JSONObject?=null, val pages: Map<String,Page> = emptyMap(), val message: String?=null, val connecting: Boolean=false, val connectionCode: String?=null, val busy: Boolean=false, val bootError: String?=null,val walletOpen: Boolean=false,val orderDetails: Boolean=false,val order: OrderProgress=OrderProgress())
+data class AppState(val boot: JSONObject?=null, val portfolio: JSONObject?=null,val portfolioError: String?=null,val walletPanel: String?=null, val pages: Map<String,Page> = emptyMap(), val message: String?=null, val connecting: Boolean=false, val connectionCode: String?=null, val busy: Boolean=false, val bootError: String?=null,val walletOpen: Boolean=false,val orderDetails: Boolean=false,val order: OrderProgress=OrderProgress())
 class RallyViewModel(application: Application): AndroidViewModel(application) {
     val api=RallyApi(application)
     private val mutable=MutableStateFlow(AppState())
     val state=mutable.asStateFlow()
     private val jobs=mutableMapOf<String,Job>()
+    private var portfolioJob: Job?=null
     private var connection: Job?=null
     private val chartReads=linkedMapOf<String,Pair<Long,Deferred<JSONObject>>>()
     private val assetReads=linkedMapOf<String,Pair<Long,Deferred<Asset?>>>()
@@ -77,11 +78,30 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
     fun message(value: String?) { mutable.update { it.copy(message=value) } }
     private suspend fun refreshBoot(): JSONObject {
         val data=api.get("/api/bootstrap?markets=0",true)
-        val changed=me?.string("id")!=data.optJSONObject("me")?.string("id")
-        if(changed) { jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear() }
-        mutable.update { it.copy(boot=data,bootError=null,pages=if(changed)emptyMap() else it.pages) };return data
+        val changed=me?.string("id")!=data.optJSONObject("me")?.string("id") || mutable.value.boot?.string("wallet")!=data.string("wallet")
+        if(changed) { portfolioJob?.cancel();jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear() }
+        mutable.update { it.copy(boot=data,bootError=null,portfolio=if(changed)null else it.portfolio,portfolioError=if(changed)null else it.portfolioError,walletPanel=if(changed)null else it.walletPanel,pages=if(changed)emptyMap() else it.pages) };return data
     }
     fun bootstrap() { viewModelScope.launch { try { refreshBoot();val pending=pendingOrders.read();if(pending!=null && pending.string("account")==me?.string("id") && orderJob?.isActive!=true)mutable.update { it.copy(order=OrderProgress(if(pending.has("tx"))"pending" else "unknown",if(pending.has("tx"))"Check transaction" else "Check your wallet",pending.string("tx").takeIf { h->h.isNotBlank() })) } } catch(e:CancellationException) { throw e } catch (_: Exception) { mutable.update { it.copy(bootError="Account connection unavailable") } } } }
+    fun showWalletPanel(panel: String?) { if(panel!=null && mutable.value.boot?.string("wallet").isNullOrBlank()) { showWallet();return };mutable.update { it.copy(walletPanel=panel) };if(panel=="send")loadPortfolio() }
+    fun loadPortfolio(force: Boolean=false) {
+        val wallet=mutable.value.boot?.string("wallet").orEmpty();val account=me?.string("id").orEmpty()
+        if(wallet.isBlank() || account.isBlank())return
+        if(portfolioJob?.isActive==true)return
+        if(!force && mutable.value.portfolio?.let { !it.optBoolean("refreshing") && System.currentTimeMillis()/1000-it.optLong("attemptAt")<30 }==true)return
+        portfolioJob=viewModelScope.launch {
+            repeat(16) { attempt->
+                try {
+                    val p=api.get("/api/portfolio",true)
+                    if(me?.string("id")!=account || mutable.value.boot?.string("wallet")!=wallet)return@launch
+                    require(p.string("wallet").equals(wallet,true)) { "Wallet changed" }
+                    mutable.update { it.copy(portfolio=p,portfolioError=null) }
+                    if(!p.optBoolean("refreshing"))return@launch
+                } catch(e:CancellationException) { throw e } catch(_:Exception) { mutable.update { it.copy(portfolioError="Balances are temporarily unavailable. Your last snapshot is kept.") };return@launch }
+                delay(if(attempt==0)350 else 1500)
+            }
+        }
+    }
     fun showOrderDetails(open: Boolean=true) { mutable.update { it.copy(orderDetails=open) } }
     fun showWallet(open: Boolean=true) { mutable.update { it.copy(walletOpen=open) } }
     fun walletAction(action: suspend NativeWallet.()->Unit) { viewModelScope.launch { try { wallet.action();refreshBoot() } catch(e:Exception) { message(e.message) } } }
@@ -89,11 +109,15 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
         if(me==null || !wallet.state.value.ready || wallet.state.value.address?.lowercase()!=mutable.value.boot?.string("wallet")?.lowercase()) { showWallet();return }
         if(orderJob?.isActive==true || mutable.value.order.blocksOrder) { message("Check your pending transaction first");return }
         orderJob=viewModelScope.launch {
-            try { val expected=me?.string("id");wallet.renewSession();require(me?.string("id")==expected) { "Account changed" };orderEngine.execute(kind,create);api.clearCache();refreshBoot() } catch(e:Exception) { message(e.message) }
+            try { val expected=me?.string("id");wallet.renewSession();require(me?.string("id")==expected) { "Account changed" };orderEngine.execute(kind,create);api.clearCache();refreshBoot();loadPortfolio(true) } catch(e:Exception) { message(e.message) }
         }
     }
     fun trade(value: NativeTrade)=nativeAction(if(value.asset.kind=="spot" && !value.asset.raw.optBoolean("nadfun"))"spot" else "execution") { createNativeTrade(api,value) }
     fun execute(args: JSONObject)=nativeAction("execution") { api.post("/api/execution/plan",args) }
+    fun sendAsset(holding: JSONObject,recipient: String,amount: String)=nativeAction("execution") {
+        val args=JSONObject().put("venue","wallet").put("kind","send").put("asset",holding.string("asset")).put("recipient",recipient).put("amount",amount)
+        checkedNativeTransfer(api.post("/api/execution/plan",args),holding,recipient,amount)
+    }
     fun subscribe(feed: JSONObject)=nativeAction("payment") { checkedNativeSubscription(api.post("/api/payments/checkout",JSONObject().put("feed",feed.string("id"))),feed) }
     fun launchToken(data: JSONObject,key: String,fee: String)=nativeAction("execution") {
         val draft=api.post("/api/nadfun/draft",data,key)
@@ -170,6 +194,6 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
         }
     }
     fun cancelConnect() { connection?.cancel() }
-    fun signOut() { if(mutable.value.busy || orderJob?.isActive==true) { message("Finish the current request first");return };mutable.value=AppState(busy=true);jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear();viewModelScope.launch { try { wallet.signOut();api.post("/api/auth/logout",JSONObject()) } catch (_: Exception) { } finally { api.signOut(); mutable.value=AppState();bootstrap() } } }
+    fun signOut() { portfolioJob?.cancel();if(mutable.value.busy || orderJob?.isActive==true) { message("Finish the current request first");return };mutable.value=AppState(busy=true);jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear();viewModelScope.launch { try { wallet.signOut();api.post("/api/auth/logout",JSONObject()) } catch (_: Exception) { } finally { api.signOut(); mutable.value=AppState();bootstrap() } } }
     fun walletURL(asset: Asset,side: String,amount: String): String = Uri.parse(ORIGIN+"/native-wallet").buildUpon().appendQueryParameter("nativeAction","trade").appendQueryParameter("asset",asset.id).appendQueryParameter("kind",asset.kind).appendQueryParameter("side",side).appendQueryParameter("amount",amount).appendQueryParameter("venue",if(asset.raw.optBoolean("nadfun"))"nadfun" else asset.venue).appendQueryParameter("account",me?.string("id")).build().toString()
 }

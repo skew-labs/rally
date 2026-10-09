@@ -40,7 +40,7 @@ export function chart(a,state) {
 // TradingView Lightweight Charts™ Copyright (c) 2025 TradingView, Inc.
 // https://www.tradingview.com/ — official library, not a custom chart renderer.
 let chartLibrary;
-const loadTradingView = () => chartLibrary ||= import('https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.mjs').catch(error=>{chartLibrary=null;throw error;});
+const loadTradingView = () => chartLibrary ||= import(location.origin+'/assets/lightweight-charts-5.2.1.mjs').catch(error=>{chartLibrary=null;throw error;});
 let activeChart;
 export function disposeChart() {
   if(!activeChart)return;

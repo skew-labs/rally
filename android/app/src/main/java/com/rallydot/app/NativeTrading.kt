@@ -49,3 +49,31 @@ fun defaultProtection(asset: Asset,side: String): String {
     return BigDecimal.valueOf(mark).multiply(if(side=="buy")BigDecimal("1.005") else BigDecimal("0.995"))
         .setScale(precision,if(side=="buy")java.math.RoundingMode.UP else java.math.RoundingMode.DOWN).stripTrailingZeros().toPlainString()
 }
+
+/** The device verifies the concrete recipient and amount before the SDK sees a send. */
+fun checkedNativeTransfer(plan: JSONObject,holding: JSONObject,recipient: String,amount: String): JSONObject {
+    val asset=holding.string("asset");val native=asset=="MON"
+    val token=holding.optJSONObject("token") ?: JSONObject()
+    val decimals=if(native)18 else token.optInt("decimals",-1)
+    require(decimals in 0..36) { "Token precision unavailable" }
+    val raw=java.math.BigDecimal(amount).movePointRight(decimals).toBigIntegerExact()
+    require(raw>java.math.BigInteger.ZERO && raw.bitLength()<=256) { "Invalid amount" }
+    val s=plan.getJSONObject("summary");val tx=plan.getJSONObject("transaction")
+    require(s.string("action")=="send") { "Transfer action changed" }
+    require(s.string("recipient").equals(recipient,true) && s.string("token").equals(asset,true) && s.string("amountRaw")==raw.toString()) { "Transfer changed. Try again." }
+    require(tx.string("to").equals(if(native)recipient else token.string("address",asset),true)) { "Recipient changed" }
+    require(tx.string("value","0x0").removePrefix("0x").toBigInteger(16)==if(native)raw else java.math.BigInteger.ZERO) { "Transfer value changed" }
+    val data=if(native)"0x" else "0xa9059cbb"+recipient.lowercase().removePrefix("0x").padStart(64,'0')+raw.toString(16).padStart(64,'0')
+    require(tx.string("data").equals(data,true) && (!plan.has("approval") || plan.isNull("approval"))) { "Transfer data changed" }
+    return plan
+}
+
+/** Gas may change during preparation; the verified send's destination and amount may not. */
+fun checkedPreparedTransfer(plan: JSONObject,prepared: JSONObject) {
+    if(plan.optJSONObject("summary")?.string("action")!="send")return
+    require(prepared.optJSONObject("approval")==null) { "A send cannot request a token allowance" }
+    val expected=plan.getJSONObject("transaction");val actual=prepared.getJSONObject("transaction")
+    require(listOf("to","data").all { actual.string(it).equals(expected.string(it),true) }) { "Transfer changed during preparation" }
+    fun value(tx: JSONObject)=tx.string("value","0x0").removePrefix("0x").toBigInteger(16)
+    require(value(expected)==value(actual)) { "Transfer amount changed during preparation" }
+}

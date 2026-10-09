@@ -258,7 +258,14 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/api/orders':
             user=s.require(who,human=True)
             return self.response({'orders':s.rows('SELECT id,quote_id,tx,state,receipt,created FROM orders WHERE user_id=? ORDER BY created DESC LIMIT 50',(user,))})
+        if path=='/api/token-holders':return self.response(__import__('token_holders').holders(params.get('asset')))
         if path=='/api/portfolio':return self.response(self.portfolio(who))
+        if path=='/api/portfolio/deposit':
+            import base64, io, qrcode, qrcode.image.svg
+            user=s.require(who,human=True);wallet=s.one('SELECT wallet FROM accounts WHERE id=?',(user,))['wallet']
+            if not wallet:raise s.Problem('Connect your wallet first',409)
+            data=io.BytesIO();qrcode.make(wallet,image_factory=qrcode.image.svg.SvgPathImage,border=4).save(data)
+            return self.response({'wallet':wallet,'chainId':143,'qr':'data:image/svg+xml;base64,'+base64.b64encode(data.getvalue()).decode()})
         if path=='/api/payments':return self.response(settlement.history(who))
         if path=='/api/payment':
             row=settlement.owned(who,params.get('id'))
@@ -295,7 +302,7 @@ class Handler(BaseHTTPRequestHandler):
             if not target:raise s.Problem('Artwork not found',404)
             return self.file(target,'image/webp')
         # Do not expose database, secrets, source Python, logs or research directories.
-        if not path.startswith('/assets/') and path not in {'/landing.js','/landing.css','/live-app.js','/finance.js','/flow.js','/charts.js','/nadfun.js','/community.js','/community.css','/social.css','/ui.css','/checkout.js','/checkout.css','/feed-ui.js','/feed.css','/market-ui.js','/market-logos.js','/market.css','/theme.js','/live.css','/flow.css','/nadfun.css','/favicon.ico','/swipe.js','/swipe-trade.js','/swipe.css','/swipe-motion.js','/auth-ui.js','/auth.css','/community-token.js','/community-token.css','/creator-ui.js','/launchpad.js','/launch-activity.js','/launch-income.js','/launchpad.css','/experience.js','/experience.css','/motion.js','/design.css'}:raise s.Problem('File not found',404)
+        if not path.startswith('/assets/') and path not in {'/wallet-ui.js','/wallet.css','/landing.js','/landing.css','/live-app.js','/finance.js','/flow.js','/charts.js','/nadfun.js','/community.js','/community.css','/social.css','/ui.css','/checkout.js','/checkout.css','/feed-ui.js','/feed.css','/market-ui.js','/market-logos.js','/market.css','/theme.js','/live.css','/flow.css','/nadfun.css','/favicon.ico','/swipe.js','/swipe-trade.js','/swipe.css','/swipe-motion.js','/auth-ui.js','/auth.css','/community-token.js','/community-token.css','/creator-ui.js','/launchpad.js','/launch-activity.js','/launch-income.js','/launchpad.css','/experience.js','/experience.css','/motion.js','/design.css'}:raise s.Problem('File not found',404)
         if not re.fullmatch(r'/(?:assets/(?:(?:tokens|venues|auth)/)?[A-Za-z0-9_.-]+|[A-Za-z0-9_-]+\.(?:js|css)|favicon\.ico)',path):raise s.Problem('Page not found',404)
         target=(s.ROOT/path.lstrip('/')).resolve()
         if not target.is_relative_to(s.ROOT) or not target.is_file():raise s.Problem('File not found',404)
@@ -305,7 +312,7 @@ class Handler(BaseHTTPRequestHandler):
         # Private media stays uncached and retains permission checks on every read.
         artwork=token_images.public(path)
         public=artwork or path.is_relative_to(s.ROOT) and not path.is_relative_to(s.STATE)
-        text=public and (path.suffix in {'.html','.css','.js','.svg'})
+        text=public and (path.suffix in {'.html','.css','.js','.mjs','.svg'})
         if text and not self.headers.get('Range'):
             stat=path.stat();compressed=bool(re.search(r'(?:^|,)\s*gzip\s*(?:,|$)',self.headers.get('Accept-Encoding','')))
             bundle=app_assets.current(s.ROOT) if path.name=='index.html' else None
@@ -561,7 +568,7 @@ class Handler(BaseHTTPRequestHandler):
         return self.response({'jsonrpc':'2.0','id':ident,'result':result})
     def portfolio(self,who):
         user=s.require(who,human=True);wallet=s.one('SELECT wallet FROM accounts WHERE id=?',(user,))['wallet']
-        if not wallet:return {'wallet':None,'holdings':[]}
+        if not wallet:return {'wallet':None,'holdings':[],'unavailable':[],'complete':True,'refreshing':False,'fetchedAt':None,'valuation':{'valueUSD':None,'change24hPercent':None,'partial':False}}
         return s.GATEWAY.portfolio(wallet)
 
 

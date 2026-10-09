@@ -107,6 +107,7 @@ def perpl_status(who):
     return {'wallet':address,'exchange':PERPL,'collateral':AUSD,'collateralSymbol':'AUSD','minimumDeposit':s.units(minimum,6),'account':account,'balance':s.units(account['balanceCNS'],6) if account else '0','locked':s.units(account['lockedBalanceCNS'],6) if account else '0','available':s.units(account['balanceCNS']-account['lockedBalanceCNS'],6) if account else '0','chainId':143,'execution':'wallet_transactions'}
 
 def plan(who,data):
+    if data.get('venue')=='wallet':return __import__('wallet_transfer').plan(who,data)
     if data.get('venue') in {'nadfees','nadrevenue'}:
         return __import__('launch_fees' if data['venue']=='nadfees' else 'nad_revenue').plan(who,data)
     if data.get('venue') in {'drake','pingu'}:
@@ -181,7 +182,8 @@ def prepare(who,data):
     row,p=owned(who,data.get('plan'))
     if row['expires']<=s.now():raise s.Problem('Review expired. Get a fresh plan.',409)
     if s.one('SELECT 1 FROM execution_records WHERE plan=?',(row['id'],)):raise s.Problem('This plan already has a submitted transaction',409)
-    if row['venue']=='nadfun':
+    if row['venue']=='wallet':__import__('wallet_transfer').prepare(row,p)
+    elif row['venue']=='nadfun':
         import nadfun
         nadfun.prepare(row,p)
     elif row['venue'] in {'nadfees','nadrevenue'}:
@@ -309,6 +311,12 @@ def reconcile(ident):
     else:
         final=s.rpc('eth_getBlockByNumber',['finalized',False]);state='finalized' if final and int(final['number'],16)>=int(receipt['blockNumber'],16) else 'confirmed'
     outcome={'receipt':receipt,'businessState':'check_venue_result','events':[],'reviewExpiredAtInclusion':int(block['timestamp'],16)>payload['expires']}
+    if row['venue']=='wallet':
+        outcome.update(__import__('wallet_transfer').outcome(payload,receipt))
+        if state=='finalized' and outcome.get('businessState')=='sent':
+            __import__('wallet_assets').invalidate(row['wallet'],int(receipt['blockNumber'],16))
+        s.write('UPDATE execution_records SET state=?,outcome=? WHERE id=?',(state,s.dump(outcome),ident))
+        return
     address=PERPL if row['venue']=='perpl' else CASTORA
     for log in receipt.get('logs',[]):
         if log.get('removed') or (log.get('address') or '').lower()!=address or not log.get('topics'):continue

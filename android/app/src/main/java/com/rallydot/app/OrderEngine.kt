@@ -51,7 +51,7 @@ fun orderOutcome(entry: JSONObject): OrderProgress {
     if(chain=="failed" || business=="reverted")return OrderProgress("failed","Transaction failed",hash,completed=true)
     if(chain !in setOf("confirmed","finalized","settled","paid"))return OrderProgress("pending","Submitted",hash)
     val label=when(business) {
-        "filled"->"Order filled";"partial_fill"->"Partially filled";"unfilled"->"No fill"
+        "sent"->"Transfer complete";"transfer_unverified"->"Checking token transfer";"filled"->"Order filled";"partial_fill"->"Partially filled";"unfilled"->"No fill"
         "swap_delivered"->"Swap complete";"prediction_entered"->"Prediction entered";"winnings_claimed"->"Winnings received"
         "collateral_deposit"->"Deposit complete";"collateral_withdraw"->"Withdrawal complete"
         "token_created"->"Token launched";"position_opened"->"Position opened";"position_closed","closed"->"Position closed"
@@ -59,7 +59,7 @@ fun orderOutcome(entry: JSONObject): OrderProgress {
         "refunded"->"Order refunded";"cancelled"->"Order cancelled"
         else->if(entry.string("kind")=="payment" && chain=="paid" && entry.optLong("accessExpires")>System.currentTimeMillis()/1000)"Subscription active" else if(entry.string("kind")=="spot" && chain=="finalized")"Swap confirmed" else "Waiting for venue result"
     }
-    val finished=label!="Waiting for venue result" && chain in setOf("finalized","paid","settled") && (outcome?.string("settlementState").orEmpty() in setOf("","finalized"))
+    val finished=business!="transfer_unverified" && label!="Waiting for venue result" && chain in setOf("finalized","paid","settled") && (outcome?.string("settlementState").orEmpty() in setOf("","finalized"))
     return OrderProgress(if(finished)"complete" else "pending",if(!finished && label!="Waiting for venue result")"$label · finalizing" else label,hash,completed=finished)
 }
 
@@ -84,6 +84,7 @@ class OrderEngine(private val backend: OrderBackend,private val signer: NativeSi
                 guard(account,wallet)
                 require(plan.optLong("expires")>System.currentTimeMillis()/1000 && (!prep.has("expires") || prep.optLong("expires")>System.currentTimeMillis()/1000)) { "Price expired. Try again." }
                 val approval=prep.optJSONObject("approval")!=null
+                checkedPreparedTransfer(plan,prep)
                 require(!approval || approvals==0) { "Token approval has not completed" }
                 val tx=checkedNativeTransaction(prep.optJSONObject("approval") ?: prep.getJSONObject("transaction"),wallet)
                 require(signer.address().equals(wallet,true)) { "Wallet changed" };guard(account,wallet)

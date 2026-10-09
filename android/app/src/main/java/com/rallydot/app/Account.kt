@@ -22,7 +22,9 @@ import org.json.JSONObject
 
 @Composable fun ProfileScreen(vm: RallyViewModel,openBrowser: (String)->Unit,onExtra: (String)->Unit) {
     val state by vm.state.collectAsStateWithLifecycle();val me=state.boot?.optJSONObject("me")
+    LaunchedEffect(state.boot?.string("wallet")) { vm.loadPortfolio() }
     LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+        if(me!=null && !state.boot?.string("wallet").isNullOrBlank())item { WalletBalanceHero(vm) }
         item {
             if(me==null)Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxWidth().padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -43,7 +45,7 @@ import org.json.JSONObject
             } else {
                 val person=Person.parse(me)
                 Column(Modifier.fillMaxWidth().padding(vertical=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Artwork(person.image,person.name,72.dp);Text(person.name,style=MaterialTheme.typography.headlineSmall);Text("@${person.handle}",color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Artwork(person.image,person.name,48.dp);Text(person.name,style=MaterialTheme.typography.titleLarge);Text("@${person.handle}",color=MaterialTheme.colorScheme.onSurfaceVariant)
                     if(me.string("bio").isNotBlank())Text(me.string("bio"),style=MaterialTheme.typography.bodyMedium)
                     Text("${me.optInt("followers")} followers",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
                 }

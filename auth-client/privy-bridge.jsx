@@ -1,6 +1,6 @@
 import React, {useEffect} from 'react';
 import {createRoot} from 'react-dom/client';
-import {PrivyProvider, usePrivy, useLogin, useWallets, useCreateWallet, useConnectWallet, getIdentityToken} from '@privy-io/react-auth';
+import {PrivyProvider, usePrivy, useLogin, useWallets, useCreateWallet, useConnectWallet, useSendTransaction, getIdentityToken} from '@privy-io/react-auth';
 import {defineChain} from 'viem';
 
 const monad = defineChain({id:143, name:'Monad', nativeCurrency:{name:'MON',symbol:'MON',decimals:18},
@@ -12,6 +12,7 @@ function Bridge({onReady}) {
   const privy = usePrivy();
   const connected = useWallets();
   const {createWallet} = useCreateWallet();
+  const {sendTransaction} = useSendTransaction();
   const finish = async () => {
     const request = pending;
     if (!request) return;
@@ -34,7 +35,7 @@ function Bridge({onReady}) {
     onError:()=>{if(walletPending){const request=walletPending;walletPending=null;request.reject(new Error('Wallet connection cancelled.'));}}
   });
   useEffect(() => {
-    controller = {privy,connected,createWallet,login,finish,connectWallet};
+    controller = {privy,connected,createWallet,login,finish,connectWallet,sendTransaction};
     if(privy.ready) onReady();
   });
   return null;
@@ -75,7 +76,24 @@ export async function walletProvider(address=null, create=false) {
   for(let attempt=0;attempt<40;attempt++) {
     const wallets=controller.connected.wallets;
     const wallet=address?wallets.find(w=>w.address.toLowerCase()===address.toLowerCase()):wallets.find(w=>w.walletClientType==='privy')||wallets[0];
-    if(wallet)return wallet.getEthereumProvider();
+    if(wallet){
+      const provider=await wallet.getEthereumProvider();
+      if(wallet.walletClientType!=='privy')return provider;
+      // Each transaction is still signed by the SDK for this authenticated wallet.
+      // Suppress the duplicate app confirmation, never the SDK's required authentication.
+      return new Proxy(provider,{get(target,key){if(key!=='request'){const value=Reflect.get(target,key);return typeof value==='function'?value.bind(target):value;}return async request=>{
+        if(request.method!=='eth_sendTransaction')return target.request(request);
+        if(!controller.privy.authenticated)throw new Error('Sign in again to trade.');
+        const tx=request.params?.[0];
+        if(tx?.from?.toLowerCase()!==wallet.address.toLowerCase()||Number(tx.chainId)!==143)throw new Error('Wallet or network changed.');
+        const {from,...transaction}=tx;
+        transaction.chainId=143;
+        for(const key of ['value','gas','gasPrice','maxFeePerGas','maxPriorityFeePerGas'])if(transaction[key]!=null)transaction[key]=BigInt(transaction[key]);
+        if(transaction.nonce!=null)transaction.nonce=Number(transaction.nonce);
+        const result=await controller.sendTransaction(transaction,{address:wallet.address,uiOptions:{showWalletUIs:false}});
+        return result.hash;
+      };}});
+    }
     if(!create && controller.connected.ready) return null;
     await sleep(100);
   }

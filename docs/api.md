@@ -66,3 +66,10 @@ can move when reference prices change; clients deduplicate by exact address.
 `GET /api/nadfun/references?assets=<comma-separated-addresses>` returns at most
 60 cached exact identities and schedules visible-token refresh, without provider
 reads in the HTTP worker. These public read endpoints do not authorize trades.
+
+### Wallet assets
+
+- `GET /api/portfolio` (human session): wallet-scoped holdings, `valueUSD` per holding, `unavailable`, `refreshing`, `complete`, exact observation block, and a `valuation` object. `valuation.valueUSD` is the sum of currently priced wallet tokens; missing prices are not zero. `change24hPercent` is available only with complete price-change coverage. Poll while `refreshing` is true.
+- `GET /api/portfolio/deposit` (human session): linked wallet, Monad chain ID and an SVG QR data URL. This makes no transaction.
+- `GET /api/token-holders?asset=0x…` (public): indexed holder rows, total, source, timestamp and refresh state. An unavailable index returns `indexed: false`.
+- `POST /api/execution/plan` with `{ "venue": "wallet", "kind": "send", "asset": "MON or token address", "recipient": "0x…", "amount": "decimal string" }`: prepares an unsigned exact-amount send. Preparation, record and receipt reconciliation use the same endpoints as venue executions.

@@ -7,8 +7,8 @@ android {
         applicationId 'com.rallydot.app'
         minSdk 28
         targetSdk 36
-        versionCode 9
-        versionName '0.3.0'
+        versionCode 10
+        versionName '0.3.1'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     signingConfigs {
@@ -39,6 +39,7 @@ android {
 }
 
 dependencies {
+ implementation 'com.google.zxing:core:3.5.3'
  implementation 'io.privy:privy-core:0.16.0'
  implementation platform('androidx.compose:compose-bom:2025.08.01')
  implementation 'androidx.activity:activity-compose:1.12.1'

@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.3.0.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.3.1.apk)
 
 ## Interaction and data
 
@@ -61,7 +61,7 @@ cd android
 ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.3.0 (code 9) uses the existing release certificate, allowing upgrades from the earlier APKs.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.3.1 (code 10) uses the existing release certificate, allowing upgrades from the earlier APKs.
 
 `/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
@@ -85,3 +85,7 @@ Version 0.2.4 passed 25 model tests, both baseline-profile journeys and release 
 Version 0.3.0 adds the Privy Android wallet integration, native order submission, token creation, subscription payment, wallet balances and Perpl funding controls. AndroidX DataStore modules are aligned on 1.1.7 to resolve a first-start file-read race in the SDK's transitive storage dependency. Fresh baseline profiles cover startup and browsing/order-sheet journeys.
 
 The signed release passed 40 native unit tests, 34 backend authentication tests and release lint with zero errors. Unit tests cover transaction identity and chain validation, quote expiry, approval sequencing, interrupted submission, duplicate prevention, account changes, venue outcomes and changed subscription terms. Emulator checks passed three fresh-data starts, small-phone, 1.5× text, landscape and tablet purchase/login layouts, keyboard-visible actions, native Perpl size/protection fields and both login themes. No user completed authentication, signed a real wallet request or submitted a financial transaction in these checks.
+
+Version 0.3.1 adds a shared progressive wallet snapshot across Profile and Wallet, a balance-first profile, explicit 24-hour current-holdings price change, native Send and Deposit sheets, offline address QR generation, and indexed nad.fun holders beneath token charts. Send uses the durable execution engine with an additional device-side recipient/calldata/amount check. Pending or ambiguous sends cannot be repeated automatically. Embedded-wallet transactions use the SDK's authenticated session; any required SDK authentication and external-wallet confirmations remain in force.
+
+Validation for 0.3.1 passed 48 native unit tests, 179 isolated backend tests and release lint with zero errors. Wallet sheets passed 16 layout checks across small phones, 1.5× text, landscape and tablets, including keyboard-visible Send controls and QR/address copy controls. Those layout checks use explicit fixture balances in the production composables. The signed APK passed three fresh-data starts, and the deployed web chart rendered real provider data at mobile and desktop sizes. Authentication by a real user, wallet signatures and funded execution were not performed in these checks.
