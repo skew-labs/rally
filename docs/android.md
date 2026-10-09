@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.3.1.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.3.2.apk)
 
 ## Interaction and data
 
@@ -61,7 +61,7 @@ cd android
 ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.3.1 (code 10) uses the existing release certificate, allowing upgrades from the earlier APKs.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.3.2 (code 11) uses the existing release certificate, allowing upgrades from the earlier APKs.
 
 `/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
@@ -89,3 +89,10 @@ The signed release passed 40 native unit tests, 34 backend authentication tests 
 Version 0.3.1 adds a shared progressive wallet snapshot across Profile and Wallet, a balance-first profile, explicit 24-hour current-holdings price change, native Send and Deposit sheets, offline address QR generation, and indexed nad.fun holders beneath token charts. Send uses the durable execution engine with an additional device-side recipient/calldata/amount check. Pending or ambiguous sends cannot be repeated automatically. Embedded-wallet transactions use the SDK's authenticated session; any required SDK authentication and external-wallet confirmations remain in force.
 
 Validation for 0.3.1 passed 48 native unit tests, 179 isolated backend tests and release lint with zero errors. Wallet sheets passed 16 layout checks across small phones, 1.5× text, landscape and tablets, including keyboard-visible Send controls and QR/address copy controls. Those layout checks use explicit fixture balances in the production composables. The signed APK passed three fresh-data starts, and the deployed web chart rendered real provider data at mobile and desktop sizes. Authentication by a real user, wallet signatures and funded execution were not performed in these checks.
+
+
+Version 0.3.2 refines wallet sheets with stable QR space, smaller content-specific sheet heights, neutral asset controls, the shared trading amount input, USD reference values and exact 25/50% amount shortcuts. Balance changes use a short crossfade; copy confirmation includes native haptic feedback. The action footer stays separate from scrolling content and follows the keyboard. Asset balances and current transaction checks remain independent.
+
+The shared backend batches independent gas and wallet checks while retaining the same funding and simulation rules. In three alternating read-only trials against the configured Monad mainnet provider, median common preflight time decreased from 753 ms to 256 ms with identical gas padding. This measures preflight reads only, excluding device signing, broadcast and finality. [Hyperliquid's latency documentation](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/optimizing-latency) distinguishes these phases; its chain and execution engine have separate performance characteristics. [Meta's Facebook.com engineering report](https://engineering.fb.com/2020/05/08/web/facebook-redesign/) informs preserving controls while loading data and resources independently.
+
+Validation for 0.3.2 passed 188 isolated backend tests, 48 Android unit tests and release lint with zero errors. Web checks covered 102 layout and interaction assertions, including stable QR loading, preserved focus and double-submit protection. Android wallet sheets passed 16 layout checks across phones, 1.5× text, landscape and tablets, plus a final token-image check. The signed release passed three fresh-data starts. Public mobile/light and desktop/dark token charts rendered real provider data without JavaScript errors. No wallet signatures or financial submissions were made by these checks.

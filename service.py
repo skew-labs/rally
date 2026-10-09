@@ -415,6 +415,29 @@ def rpc(method,params):
     if result.get('error'):raise Problem('Network could not complete the request',502)
     return result.get('result')
 
+def rpc_read_batch(calls):
+    """One bounded transport for independent preflight reads; never submissions."""
+    global RPC_REQUEST_AT
+    allowed={'eth_getBalance','eth_gasPrice','eth_estimateGas','eth_getCode','eth_call'}
+    if not 1<=len(calls)<=8 or any(method not in allowed or not isinstance(params,list) for method,params in calls):
+        raise Problem('Invalid read batch')
+    verify_rpc_network()
+    payload=[{'jsonrpc':'2.0','id':i+1,'method':method,'params':params} for i,(method,params) in enumerate(calls)]
+    with RPC_REQUEST_LOCK:
+        delay=.25-(time.monotonic()-RPC_REQUEST_AT)
+        if delay>0:time.sleep(delay)
+        RPC_REQUEST_AT=time.monotonic()
+    for attempt in range(3):
+        try:
+            raw=http_json(RPC_URL,payload)
+            break
+        except Problem as error:
+            if error.code!='provider_429' or attempt==2:raise
+            time.sleep(1+attempt)
+    if not isinstance(raw,list) or len(raw)!=len(calls) or any(not isinstance(item,dict) or type(item.get('id')) is not int for item in raw) or {item['id'] for item in raw}!=set(range(1,len(calls)+1)):
+        raise Problem('Read batch identity changed',502,'rpc_identity')
+    return sorted(raw,key=lambda item:item['id'])
+
 def rpc_call_batch(calls,block):
     """Read-only quotes with a gas bound per path; one failure cannot drain peers."""
     global RPC_REQUEST_AT

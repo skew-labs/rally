@@ -92,12 +92,12 @@ class Transfer(unittest.TestCase):
     def test_success_receipt_without_transfer_is_not_complete(self):self.assertEqual(t.outcome(self.payload,{'status':'0x1','logs':[]})['businessState'],'transfer_unverified')
     def test_reverted_receipt_is_not_sent(self):self.assertEqual(t.outcome(self.payload,{'status':'0x0','logs':[self.log]})['businessState'],'reverted')
     def test_prepare_rejects_changed_contract_and_insufficient_balance(self):
-        with patch.object(s,'rpc',return_value='0xbeef'):
+        with patch.object(s,'rpc_read_batch',return_value=[{'result':'0xbeef'},{'result':hex(10000)},{'result':'0x'}]):
             with self.assertRaises(s.Problem):t.prepare({'wallet':W},self.payload)
-        with patch.object(s,'rpc',side_effect=['0x1234','0x1']):
+        with patch.object(s,'rpc_read_batch',return_value=[{'result':'0x1234'},{'result':'0x1'},{'result':'0x'}]):
             with self.assertRaises(s.Problem):t.prepare({'wallet':W},self.payload)
     def test_prepare_rejects_false_erc20_return(self):
-        with patch.object(s,'rpc',side_effect=['0x1234',hex(10000),'0x'+'0'*64]):
+        with patch.object(s,'rpc_read_batch',return_value=[{'result':'0x1234'},{'result':hex(10000)},{'result':'0x'+'0'*64}]):
             with self.assertRaises(s.Problem):t.prepare({'wallet':W},self.payload)
 
 

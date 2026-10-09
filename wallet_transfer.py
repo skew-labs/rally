@@ -49,13 +49,19 @@ def prepare(row, payload):
     summary = payload['summary']
     if summary['token'] == 'MON':
         return
-    code = s.rpc('eth_getCode', [payload['transaction']['to'], 'latest'])
+    results=s.rpc_read_batch([
+        ('eth_getCode',[payload['transaction']['to'],'latest']),
+        ('eth_call',[{'to':payload['transaction']['to'],'data':'0x70a08231'+row['wallet'][2:].rjust(64,'0')},'latest']),
+        ('eth_call',[{k:v for k,v in payload['transaction'].items() if k!='chainId'},'latest'])])
+    if any(item.get('error') for item in results):
+        raise s.Problem('Token transfer checks failed. Refresh and try again.',409)
+    code = results[0].get('result')
     if not code or s.digest(code.lower()) != payload['pin']:
         raise s.Problem('Token contract changed. Refresh your wallet.', 409)
-    balance = int(s.rpc('eth_call', [{'to': payload['transaction']['to'], 'data': '0x70a08231'+row['wallet'][2:].rjust(64, '0')}, 'latest']), 16)
+    balance = int(results[1]['result'],16)
     if balance < int(summary['amountRaw']):
         raise s.Problem('Not enough '+summary['asset'], 409, 'insufficient_balance')
-    simulated = s.rpc('eth_call', [{k: v for k, v in payload['transaction'].items() if k != 'chainId'}, 'latest'])
+    simulated = results[2].get('result')
     if simulated not in {'0x', '0x'+'0'*63+'1'}:
         raise s.Problem('Token transfer was rejected', 409)
 
