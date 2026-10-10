@@ -30,7 +30,7 @@ html .r-checkout-spot .r-route-panel>.r-btn{background:transparent;min-height:44
 html .r-checkout-contract{font-size:12px;min-height:52px}
 html .r-checkout-contract button{min-height:44px;font-size:12px}
 html .r-checkout-footer{padding:16px 20px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--paper);flex-shrink:0}
-html .r-checkout-footer>.r-btn{min-height:52px;font-size:15px;border-radius:14px}
+html .r-checkout-footer>.r-btn{min-height:52px;font-size:15px;border-radius:100px}
 html .r-checkout-footer>.r-form-error:not(:empty){margin:0 0 12px;font-size:13px}
 html .r-checkout-clock{font-size:12px;color:var(--muted);margin-top:10px;text-align:center;font-variant-numeric:tabular-nums}
 html .r-checkout-footer .r-trade-disclosure{font-size:11px;margin-top:10px}
@@ -160,8 +160,17 @@ html .r-perp-estimate>div{display:flex;align-items:baseline;justify-content:spac
 html .r-perp-estimate dt{color:var(--muted)}
 html .r-perp-estimate dd{margin:0;font-weight:550;overflow-wrap:anywhere}
 html .r-perp-estimate-note{display:block;margin-bottom:16px;color:var(--muted);font-size:11px;line-height:1.5}
+html .r-perp-shortcuts{display:flex;gap:8px;margin-top:10px}
+html .r-perp-shortcuts button{flex:1;min-height:44px;min-width:0;padding:8px;border-radius:100px;background:var(--soft);color:var(--text);font-size:13px;font-weight:500;transition:background-color 120ms ease,transform 120ms ease}
+html .r-perp-shortcuts button[aria-pressed=true]{background:var(--order-soft);color:var(--order-ink)}
+html .r-perp-shortcuts button:active:not(:disabled){transform:scale(.975)}
+html .nad-table .r-market-buy{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;width:100%;min-height:48px;padding:6px 10px;border-radius:100px;background:var(--trade-buy-soft);color:var(--trade-buy-ink)}
+html .nad-table .r-market-buy b{font-size:13px;font-weight:600}
+html .nad-table .r-market-buy small{font-size:10px;line-height:1.3;color:var(--muted)}
+html .nad-table .r-market-buy:active:not(:disabled){transform:scale(.975)}
 html .r-checkout-dialog .r-perp-amount:focus-within{border-color:var(--order-color);box-shadow:0 0 0 1px var(--order-color)}
 @media(prefers-reduced-motion:reduce){html .r-perp-unit-switch button{transition:none}html .r-perp-unit-switch button:active:not(:disabled){transform:none}}
+@media(prefers-reduced-motion:reduce){html .r-perp-shortcuts button{transition:none;transform:none}html .nad-table .r-market-buy:active:not(:disabled){transform:none}}
 
 /* A single action leads directly to the wallet. Status stays in the ticket. */
 .r-direct-status{min-width:0;font-size:13px;line-height:1.45;color:var(--muted);overflow-wrap:anywhere}

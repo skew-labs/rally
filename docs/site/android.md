@@ -4,7 +4,7 @@ Rally's Android app renders markets, charts, Swipe, feeds and profiles natively,
 
 ## Install Rally
 
-Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.1.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.1**. Android 9 or later is required.
+Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.2.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.2**. Android 9 or later is required.
 
 When installing a downloaded APK, Android may ask you to allow installation from the app used to download it. Use the official file rather than a re-signed copy from an unknown source.
 

@@ -30,7 +30,7 @@ val RallyTypography=Typography().let { t->t.copy(
     titleSmall=t.titleSmall.copy(fontFamily=RallyFont,fontSize=14.sp,fontWeight=FontWeight.Medium),
     bodyLarge=t.bodyLarge.copy(fontFamily=RallyFont,fontSize=15.sp,lineHeight=24.sp,letterSpacing=(-.18).sp),
     bodyMedium=t.bodyMedium.copy(fontFamily=RallyFont,fontSize=14.sp,lineHeight=21.sp,letterSpacing=(-.1).sp),
-    bodySmall=t.bodySmall.copy(fontFamily=RallyFont,fontSize=11.sp,lineHeight=16.sp),
+    bodySmall=t.bodySmall.copy(fontFamily=RallyFont,fontSize=12.sp,lineHeight=18.sp),
     labelLarge=t.labelLarge.copy(fontFamily=RallyFont,fontSize=13.sp,fontWeight=FontWeight.Medium),
     labelMedium=t.labelMedium.copy(fontFamily=RallyFont,fontSize=11.sp,fontWeight=FontWeight.Medium),
     labelSmall=t.labelSmall.copy(fontFamily=RallyFont,fontSize=10.sp,fontWeight=FontWeight.Medium)
@@ -47,10 +47,13 @@ fun Modifier.animatedHeight(height: State<Dp>)=layout { measurable,constraints->
     layout(child.width,pixels) { child.placeRelative(0,0) }
 }
 
-@Composable fun TradeAmount(value: String,onValue: (String)->Unit,label: String,unit: String,accent: Color,done: ()->Unit,enabled: Boolean=true) {
+@Composable fun TradeAmount(value: String,onValue: (String)->Unit,label: String,unit: String,accent: Color,done: ()->Unit,enabled: Boolean=true,unitControl: (@Composable ()->Unit)?=null) {
     Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.padding(horizontal=18.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            Text(label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Text(label,Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                unitControl?.invoke()
+            }
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 androidx.compose.foundation.text.BasicTextField(value,onValue,Modifier.weight(1f).heightIn(min=48.dp).semantics { contentDescription=label },singleLine=true,enabled=enabled,
                     textStyle=MaterialTheme.typography.headlineMedium.copy(fontSize=32.sp,color=MaterialTheme.colorScheme.onSurface),cursorBrush=SolidColor(accent),

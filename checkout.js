@@ -44,7 +44,7 @@ export function checkoutUI(c){
  function presets(root,input,unit){
   const name=unit();const previous=root.querySelector('.r-checkout-presets');if(previous?.dataset.unit===name)return;previous?.remove();const values=name==='MON'?[1,5,10]:['USDC','AUSD'].includes(name)?[5,10,25]:[];if(!values.length)return;
   const row=document.createElement('div');row.className='r-checkout-presets';row.dataset.unit=name;row.setAttribute('role','group');row.setAttribute('aria-label','Amount shortcuts');
-  for(const n of values){const b=document.createElement('button');b.type='button';b.textContent=n+' '+name;b.onclick=()=>{if(input.readOnly||input.disabled)return;input.value=String(n);input.dispatchEvent(new Event('input',{bubbles:true}));input.focus({preventScroll:true});};row.append(b);}
+  for(const n of values){const b=document.createElement('button');b.type='button';b.textContent=n+' '+name;b.onclick=()=>{if(input.readOnly||input.disabled)return;input.value=String(n);input.dispatchEvent(new Event('input',{bubbles:true}));b.focus({preventScroll:true});};row.append(b);}
   input.closest('.r-swap-input,.nad-amount')?.after(row);
  }
  function amount(root,input,button,{unit,label,busy=()=>false,available=()=>true}){

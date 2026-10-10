@@ -39,8 +39,13 @@ try {
   await page.locator('.r-order-directions label').filter({hasText:'Sell / Short'}).click();assert.match(await buy.innerText(),/Sell \/ Short/);assert.equal(await input.inputValue(),'10');checks+=2;
   await input.fill('0.001');assert(await buy.isDisabled());checks++;
   await input.fill('10');assert(await buy.isEnabled());checks++;
+  const shortcut=page.locator('[data-position-preset="25"]');await shortcut.click();assert.equal(await input.inputValue(),'25');assert.equal(await page.locator('input[name=quantity]').inputValue(),'0.00041');assert.equal(await shortcut.getAttribute('aria-pressed'),'true');assert(await shortcut.evaluate(e=>document.activeElement===e));checks+=4;
+  await page.locator('[data-position-preset="10"]').click();
+  await page.locator('#perpl-order-form').evaluate(f=>f.dataset.pending='true');await page.waitForTimeout(30);assert(await shortcut.isDisabled());await shortcut.evaluate(e=>e.click());assert.equal(await input.inputValue(),'10');checks+=2;
+  await page.locator('#perpl-order-form').evaluate(f=>f.dataset.pending='false');await page.waitForTimeout(30);assert(await buy.isEnabled());checks++;
   const fit=await page.locator('.r-modal').evaluate(el=>{const r=el.getBoundingClientRect();const b=el.querySelector('[type=submit]').getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1&&b.top>=0&&b.bottom<=innerHeight+1&&document.documentElement.scrollWidth<=innerWidth+1;});assert(fit,`${width} ${theme} overflow`);assert.deepEqual(errors,[]);checks+=2;
   if(width===390&&process.env.RALLY_EVIDENCE_DIR){await page.waitForTimeout(250);await fs.writeFile(path.join(process.env.RALLY_EVIDENCE_DIR,'perp-input-'+theme+'.json'),JSON.stringify(await input.evaluate(e=>{const s=getComputedStyle(e);return {value:e.value,type:e.type,color:s.color,font:s.font,fontSize:s.fontSize,lineHeight:s.lineHeight,fontFamily:s.fontFamily,textIndent:s.textIndent,textFill:s.webkitTextFillColor,clipPath:s.clipPath,transform:s.transform,opacity:s.opacity,visibility:s.visibility,scroll:e.scrollLeft,rect:e.getBoundingClientRect().toJSON()};})));await page.screenshot({path:path.join(process.env.RALLY_EVIDENCE_DIR,'perp-web-'+theme+'.png')});}
+  if(width<=390){await input.focus();await page.setViewportSize({width,height:430});await page.waitForTimeout(100);assert(await buy.evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight+1;}));checks++;}
   await context.close();
  }
  console.log(JSON.stringify({checks,viewports:4,themes:2,accountBridge:true,sessionRecovery:true,providerCalls:0,walletSignatures:0,financialTransactions:0}));

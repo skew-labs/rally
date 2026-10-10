@@ -27,7 +27,7 @@ class PerpLayoutTest {
    assertTrue(device.wait(Until.hasObject(By.text("≈ $18,000.00")),15000))
    device.findObject(By.text("USD")).click()
    assertTrue(device.wait(Until.hasObject(By.text("≈ 0.3 BTC")),5000))
-   val input=device.findObject(By.clazz("android.widget.EditText"));assertNotNull(input);input.click();input.text="10"
+   val input=device.findObject(By.desc("Position size"));assertNotNull(input);input.click();device.pressKeyCode(android.view.KeyEvent.KEYCODE_A,android.view.KeyEvent.META_CTRL_ON);device.executeShellCommand("input text 10")
    assertTrue(device.wait(Until.hasObject(By.text("≈ 0.00016 BTC · Rounded down")),5000))
    Thread.sleep(500)
    val buy=device.findObject(By.text("Buy / Long"));assertNotNull(buy);val b=buy.visibleBounds

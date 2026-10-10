@@ -190,11 +190,12 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
     BoxWithConstraints(modifier.fillMaxWidth().clip(RoundedCornerShape(100.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(4.dp)) {
         val cell=maxWidth/options.size
         val offset=animateDpAsState(cell*active,animationSpec=spring(dampingRatio=1f,stiffness=700f),label="selected tab")
-        Box(Modifier.matchParentSize().padding(end=(maxWidth-cell).coerceAtLeast(0.dp)).graphicsLayer { translationX=offset.value.toPx() }.clip(RoundedCornerShape(100.dp)).background(MaterialTheme.colorScheme.surface).highRefresh())
+        val activeColor by animateColorAsState(accent ?: MaterialTheme.colorScheme.surface,tween(120),label="tab color")
+        Box(Modifier.matchParentSize().padding(end=(maxWidth-cell).coerceAtLeast(0.dp)).graphicsLayer { translationX=offset.value.toPx() }.clip(RoundedCornerShape(100.dp)).background(activeColor).highRefresh())
         Row(Modifier.fillMaxWidth()) {
             options.forEach { option -> val chosen=option==selected
                 Box(Modifier.weight(1f).heightIn(min=44.dp).clip(RoundedCornerShape(100.dp)).clickable(role=Role.Tab,onClick={if(!chosen) { haptic.performHapticFeedback(HapticFeedbackType.SegmentTick);onSelect(option) } }).semantics { this.selected=chosen;contentDescription=option }.padding(horizontal=4.dp,vertical=12.dp),contentAlignment=Alignment.Center) {
-                    Text(if(largeText && option=="Prediction")"Predict" else option,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=13.sp,fontWeight=if(chosen)FontWeight.Medium else FontWeight.Normal,color=if(chosen)accent ?: MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if(largeText && option=="Prediction")"Predict" else option,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=13.sp,fontWeight=if(chosen)FontWeight.Medium else FontWeight.Normal,color=if(chosen)if(accent!=null)Color.White else MaterialTheme.colorScheme.onSurface else when { option.startsWith("Buy")->Buy;option.startsWith("Sell")->Sell;else->MaterialTheme.colorScheme.onSurfaceVariant })
                 }
             }
         }

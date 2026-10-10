@@ -4,6 +4,10 @@
 @media(max-width:760px){
  html{scroll-padding-top:72px}
  html :is(.r-icon-button,.r-theme-button,.r-header-create,.r-search-launch){min-width:48px;min-height:48px}
+ html .r-header :is(.r-brand,#account-button){min-height:44px;display:flex;align-items:center}
+ html :is(.r-market-scope button,.nad-filters button){min-height:44px;min-width:44px}
+ html .r-market-table .r-market-identity b{font-size:13px}
+ html .r-market-table :is(.r-market-identity small,[data-meme-price]){font-size:11px}
  html :is(.r-field,.lp-field) :is(input,select,textarea),html .rx-search input{font-size:16px}
  html :is(.r-field,.lp-field) :is(input,select){min-height:48px}
  html :is(button,a){-webkit-tap-highlight-color:transparent;touch-action:manipulation}

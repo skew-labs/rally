@@ -31,13 +31,21 @@ fun perpDollars(value: String): String = runCatching {
 }.getOrDefault("—")
 
 @Composable fun PerpPositionInput(value: String,mode: String,symbol: String,estimate: PerpEstimate,accent: Color,
-    enabled: Boolean,onValue: (String)->Unit,onMode: (String)->Unit,done: ()->Unit,margin: Boolean=true,collateral: String="AUSD") {
+    enabled: Boolean,onValue: (String)->Unit,onMode: (String)->Unit,done: ()->Unit,margin: Boolean=true,collateral: String="AUSD",showEquivalent: Boolean=true) {
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Segmented(listOf(symbol,"USD"),if(mode=="usd")"USD" else symbol,{onMode(if(it=="USD")"usd" else "quantity")},accent=accent)
-        TradeAmount(value,onValue,"Position size",if(mode=="usd")"USD" else symbol,accent,done,enabled)
-        Text(if(estimate.valid) (if(mode=="quantity")"≈ ${perpDollars(estimate.notional)}" else "≈ ${estimate.quantity} $symbol")+(if(estimate.rounded)" · Rounded down" else "") else if(value.isBlank())"Enter an amount" else estimate.error.orEmpty(),style=MaterialTheme.typography.bodySmall,color=if(value.isNotBlank() && !estimate.valid)MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+        TradeAmount(value,onValue,"Position size",if(mode=="usd")"USD" else symbol,accent,done,enabled) {
+            Segmented(listOf(symbol,"USD"),if(mode=="usd")"USD" else symbol,{if(enabled)onMode(if(it=="USD")"usd" else "quantity")},Modifier.width(148.dp))
+        }
+        if(showEquivalent)Text(perpEquivalent(value,mode,symbol,estimate),style=MaterialTheme.typography.bodySmall,color=if(value.isNotBlank() && !estimate.valid)MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            listOf("10","25","50").forEach { preset ->
+                TextButton(onClick={onMode("usd");onValue(preset);done()},enabled=enabled,modifier=Modifier.weight(1f).heightIn(min=48.dp),shape=androidx.compose.foundation.shape.RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceContainer,contentColor=accent)) { Text("$$preset") }
+            }
+        }
         Fact("Position value",if(estimate.valid)perpDollars(estimate.notional) else "—")
         if(margin)Fact("Est. margin · $collateral",if(estimate.valid)"${estimate.margin} $collateral" else "—")
-        Text(if(margin)"Margin excludes fees. USD sets position size." else "Collateral is entered separately.",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(if(margin)"Margin excludes fees." else "The venue checks available margin.",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+fun perpEquivalent(value: String,mode: String,symbol: String,estimate: PerpEstimate): String =
+    if(estimate.valid)(if(mode=="quantity")"≈ ${perpDollars(estimate.notional)}" else "≈ ${estimate.quantity} $symbol")+(if(estimate.rounded)" · Rounded down" else "") else if(value.isBlank())"Enter an amount" else estimate.error.orEmpty()

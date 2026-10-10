@@ -30,15 +30,18 @@ export function bindPerpAmount(form,market,{collateral='AUSD',margin=true}={}){
  const head=document.createElement('div');head.className='r-perp-input-head';head.append(label,modes);
  const equivalent=document.createElement('output');equivalent.className='r-perp-equivalent';equivalent.setAttribute('aria-live','off');
  const meta=document.createElement('dl');meta.className='r-perp-estimate';meta.innerHTML='<div><dt>Position value</dt><dd data-notional>—</dd></div>'+(margin?'<div><dt>Est. margin · '+collateral+'</dt><dd data-margin>—</dd></div>':'');
- const foot=document.createElement('small');foot.className='r-perp-estimate-note';foot.textContent=margin?'Margin excludes fees. USD sets position size.':'USD sets position size. Collateral is entered separately.';
- field.replaceChildren(head,input,equivalent);field.classList.add('r-perp-amount');field.after(meta,foot);quantity.type='hidden';quantity.required=false;form.append(quantity);
+ const foot=document.createElement('small');foot.className='r-perp-estimate-note';foot.textContent=margin?'Margin excludes fees.':'Collateral is entered separately.';
+ const shortcuts=document.createElement('div');shortcuts.className='r-perp-shortcuts';shortcuts.setAttribute('role','group');shortcuts.setAttribute('aria-label','USD position shortcuts');
+ field.replaceChildren(head,input,equivalent);field.classList.add('r-perp-amount');field.after(shortcuts,meta,foot);quantity.type='hidden';quantity.required=false;form.append(quantity);
  let mode='quantity';form.perpAmountInput=input;
  const buttons=['quantity','usd'].map(unit=>{const b=document.createElement('button');b.type='button';b.textContent=unit==='quantity'?symbol:'USD';b.dataset.amountMode=unit;
-  b.onclick=()=>{if(input.readOnly||form.dataset.pending==='true'||mode===unit)return;const r=read();if(r.valid)input.value=unit==='usd'?r.notional:r.quantity;mode=unit;update();input.dispatchEvent(new Event('input',{bubbles:true}));input.focus({preventScroll:true});};modes.append(b);return b;});
+  b.onclick=()=>{if(input.readOnly||form.dataset.pending==='true'||mode===unit)return;const r=read();if(r.valid)input.value=unit==='usd'?r.notional:r.quantity;mode=unit;update();input.dispatchEvent(new Event('input',{bubbles:true}));b.focus({preventScroll:true});};modes.append(b);return b;});
+ const presets=['10','25','50'].map(value=>{const b=document.createElement('button');b.type='button';b.textContent='$'+value;b.dataset.positionPreset=value;b.onclick=()=>{if(input.readOnly||form.dataset.pending==='true')return;mode='usd';input.value=value;update();input.dispatchEvent(new Event('input',{bubbles:true}));b.focus({preventScroll:true});};shortcuts.append(b);return b;});
  function read(){return perpAmount(input.value,mode,form.elements.limit?.value||market.mark,precision,form.elements.leverage?.value||1);}
  function update(){
   const r=read();quantity.value=r.valid?r.quantity:'';form.dataset.amountValid=String(r.valid);form.dataset.amountMode=mode;
   buttons.forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.amountMode===mode));b.disabled=input.readOnly;});
+  presets.forEach(b=>{b.disabled=input.readOnly;b.setAttribute('aria-pressed',String(mode==='usd'&&input.value===b.dataset.positionPreset));});
   input.setAttribute('aria-invalid',String(Boolean(input.value)&&!r.valid));equivalent.textContent=r.valid?(mode==='quantity'?'≈ '+moneyAmount(r.notional):'≈ '+r.quantity+' '+symbol)+(r.rounded?' · Rounded down':''):input.value?r.error:'Enter '+(mode==='quantity'?symbol:'USD')+' amount';
   meta.querySelector('[data-notional]').textContent=r.valid?moneyAmount(r.notional):'—';if(margin)meta.querySelector('[data-margin]').textContent=r.valid?r.margin+' '+collateral:'—';
  }
