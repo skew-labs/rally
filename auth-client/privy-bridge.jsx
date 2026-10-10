@@ -1,11 +1,11 @@
 import React, {useEffect} from 'react';
 import {createRoot} from 'react-dom/client';
-import {PrivyProvider, usePrivy, useLogin, useWallets, useCreateWallet, useConnectWallet, useSendTransaction, getIdentityToken} from '@privy-io/react-auth';
+import {PrivyProvider, usePrivy, useLogin, useLoginWithOAuth, useWallets, useCreateWallet, useConnectWallet, useSendTransaction, getIdentityToken} from '@privy-io/react-auth';
 import {defineChain} from 'viem';
 
 const monad = defineChain({id:143, name:'Monad', nativeCurrency:{name:'MON',symbol:'MON',decimals:18},
   rpcUrls:{default:{http:['https://rpc.monad.xyz']}}, blockExplorers:{default:{name:'MonadVision',url:'https://monadvision.com'}}});
-let pending, walletPending, controller, ready, root;
+let pending, walletPending, controller, ready, root, oauthError;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function Bridge({onReady}) {
@@ -27,6 +27,10 @@ function Bridge({onReady}) {
   const {login} = useLogin({onComplete:finish,onError:() => {
     if(pending){const request=pending;pending=null;request.reject(new Error('Login cancelled.'));}
   }});
+  const {initOAuth}=useLoginWithOAuth({onComplete:finish,onError:()=>{
+    oauthError=new Error('Google login cancelled. Try again.');
+    if(pending){const request=pending;pending=null;request.reject(new Error('Google login cancelled. Try again.'));}
+  }});
   const {connectWallet}=useConnectWallet({
     onSuccess:({wallet})=>{
       if(!walletPending)return;
@@ -35,7 +39,7 @@ function Bridge({onReady}) {
     onError:()=>{if(walletPending){const request=walletPending;walletPending=null;request.reject(new Error('Wallet connection cancelled.'));}}
   });
   useEffect(() => {
-    controller = {privy,connected,createWallet,login,finish,connectWallet,sendTransaction};
+    controller = {privy,connected,createWallet,login,initOAuth,finish,connectWallet,sendTransaction};
     if(privy.ready) onReady();
   });
   return null;
@@ -58,7 +62,12 @@ export function signIn(method=null) {
   if(pending) return Promise.reject(new Error('A login is already in progress.'));
   return new Promise((resolve,reject) => {
     pending={resolve,reject};
-    if(controller.privy.authenticated) controller.finish(); else controller.login(method?{loginMethods:[method],walletChainType:'ethereum-only'}:undefined);
+    if(controller.privy.authenticated) controller.finish();
+    else if(method==='google'){oauthError=null;Promise.resolve(controller.initOAuth({provider:'google'})).catch(()=>{
+      oauthError=new Error('Google login could not start. Try again.');
+      if(pending){const request=pending;pending=null;request.reject(new Error('Google login could not start. Try again.'));}
+    });}
+    else controller.login(method?{loginMethods:[method],walletChainType:'ethereum-only'}:undefined);
   });
 }
 
@@ -68,6 +77,14 @@ export function cancel() {
 }
 
 export function authenticated() {return Boolean(controller?.privy.authenticated);}
+export async function waitForAuthentication() {
+  for(let attempt=0;attempt<200;attempt++) {
+    if(authenticated())return true;
+    if(oauthError)throw oauthError;
+    await sleep(100);
+  }
+  throw new Error('Google login did not finish. Try again.');
+}
 
 export async function walletProvider(address=null, create=false) {
   if(!controller)throw new Error('Wallet connection is still loading.');

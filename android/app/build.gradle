@@ -7,8 +7,8 @@ android {
         applicationId 'com.rallydot.app'
         minSdk 28
         targetSdk 36
-        versionCode 11
-        versionName '0.3.2'
+        versionCode 12
+        versionName '0.3.3'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     signingConfigs {
@@ -25,7 +25,7 @@ android {
         release {
             minifyEnabled true
             shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
         }
     }
@@ -39,6 +39,10 @@ android {
 }
 
 dependencies {
+ // Last Reown release compatible with the app's Android 36 toolchain.
+ implementation platform('com.reown:android-bom:1.6.13')
+ implementation 'com.reown:android-core'
+ implementation 'com.reown:sign'
  implementation 'com.google.zxing:core:3.5.3'
  implementation 'io.privy:privy-core:0.16.0'
  implementation platform('androidx.compose:compose-bom:2025.08.01')

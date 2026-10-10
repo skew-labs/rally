@@ -4,15 +4,17 @@ Rally's Android app renders markets, charts, Swipe, feeds and profiles natively,
 
 ## Install Rally
 
-Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.3.2.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.3.2**. Android 9 or later is required.
+Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.3.3.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.3.3**. Android 9 or later is required.
 
 When installing a downloaded APK, Android may ask you to allow installation from the app used to download it. Use the official file rather than a re-signed copy from an unknown source.
 
 ## Log in and connect a wallet
 
-Use the available native email or Google login, or choose a supported external-wallet connection. Verify the resulting linked address before funding it.
+Choose Google, email or a wallet from Profile. Google opens its secure authorization page and returns to Rally. The login sheet closes after a successful connection.
 
-Embedded-wallet signing happens through Privy's native SDK. External-wallet pairing can hand off through the first-party browser flow and return to the app; it does not give Rally the wallet's keys.
+If you leave Google before finishing, return to Rally and cancel the pending attempt to choose a method again. Repeated taps do not start additional login requests.
+
+When direct wallet connections are enabled, select an installed MetaMask, Rainbow or Trust Wallet, then approve its connection and Rally sign-in request. Your wallet controls its approval screens. Other connections can use the first-party browser pairing flow. Embedded-wallet signing happens through Privy's native SDK. Rally does not receive either wallet's keys. Verify the linked address before funding it.
 
 ## Trade inside the app
 

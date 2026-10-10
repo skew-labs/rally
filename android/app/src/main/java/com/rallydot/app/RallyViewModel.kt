@@ -21,6 +21,7 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
     private val jobs=mutableMapOf<String,Job>()
     private var portfolioJob: Job?=null
     private var connection: Job?=null
+    private var walletJob: Job?=null
     private val chartReads=linkedMapOf<String,Pair<Long,Deferred<JSONObject>>>()
     private val assetReads=linkedMapOf<String,Pair<Long,Deferred<Asset?>>>()
     val wallet=NativeWallet(application,api) { refreshBoot() }
@@ -104,7 +105,12 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
     }
     fun showOrderDetails(open: Boolean=true) { mutable.update { it.copy(orderDetails=open) } }
     fun showWallet(open: Boolean=true) { mutable.update { it.copy(walletOpen=open) } }
-    fun walletAction(action: suspend NativeWallet.()->Unit) { viewModelScope.launch { try { wallet.action();refreshBoot() } catch(e:Exception) { message(e.message) } } }
+    fun walletAction(action: suspend NativeWallet.()->Unit) {
+        if(walletJob?.isActive==true)return
+        walletJob=viewModelScope.launch { try { wallet.action();refreshBoot() } catch(e:CancellationException){throw e} catch(e:Exception) { message(e.message) } }
+    }
+    fun cancelWalletLogin() { walletJob?.cancel() }
+    fun resumeAccount() { bootstrap();viewModelScope.launch { wallet.restore() } }
     private fun nativeAction(kind: String,create: suspend ()->JSONObject) {
         if(me==null || !wallet.state.value.ready || wallet.state.value.address?.lowercase()!=mutable.value.boot?.string("wallet")?.lowercase()) { showWallet();return }
         if(orderJob?.isActive==true || mutable.value.order.blocksOrder) { message("Check your pending transaction first");return }

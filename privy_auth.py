@@ -17,6 +17,7 @@ def config():
     app = os.environ.get('RALLY_PRIVY_APP_ID', '').strip()
     client = os.environ.get('RALLY_PRIVY_CLIENT_ID', '').strip()
     android_client = os.environ.get('RALLY_PRIVY_ANDROID_CLIENT_ID', '').strip()
+    walletconnect = os.environ.get('RALLY_WALLETCONNECT_PROJECT_ID', '').strip()
     valid = bool(re.fullmatch(r'[a-zA-Z0-9_-]{8,128}', app))
     bridge='/assets/auth/privy-bridge.js'
     try:
@@ -26,6 +27,8 @@ def config():
     return {'enabled': valid, 'appId': app if valid else None, 'bridgeURL':bridge,
             'clientId': client if re.fullmatch(r'[a-zA-Z0-9_-]{8,128}', client) else None,
             'androidClientId': android_client if re.fullmatch(r'[a-zA-Z0-9_-]{8,128}', android_client) else None,
+            'androidAppIdentifier': 'com.rallydot.app', 'androidRedirectScheme': 'rallywallet',
+            'walletConnectProjectId': walletconnect if re.fullmatch(r'[a-fA-F0-9]{32}', walletconnect) else None,
             'loginMethods': ['email', 'google', 'wallet'], 'chainId': 143}
 
 

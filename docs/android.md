@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.3.2.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.3.3.apk)
 
 ## Interaction and data
 
@@ -50,7 +50,9 @@ Before calling the embedded wallet, the app checks the linked account/address, c
 
 A pending intent is committed to storage before the wallet request. Once returned, its transaction hash is committed before any network reconciliation. A timeout after submission blocks another order. Recovery checks the same owned reference and hash without signing again, including after a process restart. A manually entered incorrect hash can be corrected until the server verifies it. Confirmed inclusion, keeper pending, no fill, partial fill, finalized execution and active subscription entitlement have distinct results.
 
-External wallets retain the optional first-party browser pairing flow. A random S256 verifier, matching device code, authenticated human consent, ten-minute expiry and atomic one-use exchange create a regular Rally session. This is not an agent OAuth grant or native access to an external wallet's private key. External-wallet signing is handled by its existing browser/wallet flow; the native signing path described above uses Privy embedded wallets.
+Native external-wallet connections use Reown Sign with a public `RALLY_WALLETCONNECT_PROJECT_ID`. The login sheet offers installed MetaMask, Rainbow and Trust Wallet applications. It opens the selected package directly, requests the Rally identity signature after the session is approved, and closes after the server verifies the linked address. An existing, unexpired session is reused. Its encrypted session reference contains no wallet key. Signing requests bind the exact account, session topic, method, request ID and chain; Monad trades require chain 143. Cancelling a login or changing accounts prevents its result from authenticating Rally.
+
+Without the Reown project configuration, the optional first-party browser pairing flow remains available. A random S256 verifier, matching device code, authenticated human consent, ten-minute expiry and atomic one-use exchange create a regular Rally session. This is not an agent OAuth grant or native access to an external wallet's private key. Browser pairing authenticates the account; it does not enable the native external-wallet signer. Google uses a secure browser authorization page, as required by OAuth providers, and returns through the separate `rallywallet` callback. WalletConnect returns through `rallyconnect://wallet`.
 
 ## Build and release
 
@@ -61,7 +63,7 @@ cd android
 ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.3.2 (code 11) uses the existing release certificate, allowing upgrades from the earlier APKs.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.3.3 (code 12) uses the existing release certificate, allowing upgrades from the earlier APKs. Release shrinking removes SDK debug/info log calls so OAuth callback codes and relay URIs are not written to logcat.
 
 `/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
@@ -96,3 +98,7 @@ Version 0.3.2 refines wallet sheets with stable QR space, smaller content-specif
 The shared backend batches independent gas and wallet checks while retaining the same funding and simulation rules. In three alternating read-only trials against the configured Monad mainnet provider, median common preflight time decreased from 753 ms to 256 ms with identical gas padding. This measures preflight reads only, excluding device signing, broadcast and finality. [Hyperliquid's latency documentation](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/optimizing-latency) distinguishes these phases; its chain and execution engine have separate performance characteristics. [Meta's Facebook.com engineering report](https://engineering.fb.com/2020/05/08/web/facebook-redesign/) informs preserving controls while loading data and resources independently.
 
 Validation for 0.3.2 passed 188 isolated backend tests, 48 Android unit tests and release lint with zero errors. Web checks covered 102 layout and interaction assertions, including stable QR loading, preserved focus and double-submit protection. Android wallet sheets passed 16 layout checks across phones, 1.5× text, landscape and tablets, plus a final token-image check. The signed release passed three fresh-data starts. Public mobile/light and desktop/dark token charts rendered real provider data without JavaScript errors. No wallet signatures or financial submissions were made by these checks.
+
+Version 0.3.3 simplifies the branded login sheet, opens Google authorization directly, restores the account on return and cancels or ignores abandoned login attempts. Web OAuth callbacks wait for the SDK's authenticated state before exchanging the verified identity for a Rally session.
+
+Validation passed 50 Android unit tests, release lint with zero errors and eight login layouts covering light/dark small phones, 1.5× text, landscape and tablets. Seven disposable web-wallet scenarios verified successful login, duplicate clicks, rejection, account changes, expired or modified challenges and cancellation. Separate OAuth lifecycle checks covered delayed authentication, changed accounts, expiry, cancellation and replay. Both the signed APK and deployed web app opened the actual Google authorization page. These checks did not complete a real identity login or make a real wallet signature or financial submission. Native external-wallet relay execution remains unverified until a Rally Reown Project ID is configured; browser pairing remains available.

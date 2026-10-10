@@ -9,7 +9,7 @@ import { checkoutUI } from './checkout.js';
 import { feedUI } from './feed-ui.js';
 import { marketUI } from './market-ui.js';
 import { tokenArtwork, venueArtwork } from './market-logos.js';
-import { authUI, walletAccounts, ensureMonad } from './auth-ui.js';
+import { authUI, walletAccounts, ensureMonad, checkedWalletLoginProof } from './auth-ui.js';
 import { communityTokenUI } from './community-token.js';
 import { creatorUI } from './creator-ui.js';
 import { launchpadUI } from './launchpad.js';
@@ -366,17 +366,17 @@ async function connectWallet(provided=null,external=false,change=false){
   }
   phase('Confirm in your wallet');
   const addresses=await walletAccounts(provider,change),address=addresses[0];current();
-  await ensureMonad(provider,current);
+  // Login proves address ownership. Change networks only when trading.
   if(owner&&S.boot.wallet?.toLowerCase()===address.toLowerCase()){
    S.provider=provider;closeModal();notify('Wallet connected');return true;
   }
   const proof=await api(signingIn?'/api/auth/wallet/challenge':'/api/wallet/challenge',{address});current();
-  const validProof=()=>{current();if(!proof.id||typeof proof.message!=='string'||proof.chainId!==143||proof.purpose!==(signingIn?'sign_in':'link_wallet')||!Number.isFinite(proof.expires)||proof.expires<=Date.now()/1000)throw new Error('Login request expired. Connect again.');};
+  const validProof=()=>{current();checkedWalletLoginProof(proof,address,signingIn);};
   validProof();phase('Sign in your wallet');
   const hex='0x'+Array.from(new TextEncoder().encode(proof.message),b=>b.toString(16).padStart(2,'0')).join('');
   const signature=await provider.request({method:'personal_sign',params:[hex,address]});validProof();
-  const [accounts,chain]=await Promise.all([provider.request({method:'eth_accounts'}),provider.request({method:'eth_chainId'})]);validProof();
-  if(accounts?.[0]?.toLowerCase()!==address.toLowerCase()||Number(chain)!==143)throw new Error('Your wallet changed. Connect again.');
+  const accounts=await provider.request({method:'eth_accounts'});validProof();
+  if(accounts?.[0]?.toLowerCase()!==address.toLowerCase())throw new Error('Your wallet changed. Connect again.');
   if(!/^0x[0-9a-fA-F]{130}$/.test(signature||''))throw new Error('Could not read the wallet signature.');
   phase('Connecting…');
   await api(signingIn?'/api/auth/wallet/verify':'/api/wallet/verify',{id:proof.id,signature});

@@ -21,6 +21,7 @@ import coil.disk.DiskCache
 
 class RallyApplication: Application(), ImageLoaderFactory {
     private var walletSDK: io.privy.sdk.Privy?=null
+    val externalWallet: ExternalWallet by lazy { ExternalWallet(this) }
     fun privy(app: String,client: String): io.privy.sdk.Privy {
         check(android.os.Looper.myLooper()==android.os.Looper.getMainLooper())
         return walletSDK ?: io.privy.sdk.Privy.init(this,io.privy.sdk.PrivyConfig(app,client,io.privy.logging.PrivyLogLevel.NONE)).also { walletSDK=it }
@@ -52,6 +53,7 @@ class RallyActivity: ComponentActivity() {
         incomingLink=intent.data
         model.bootstrap()
     }
+    override fun onResume() { super.onResume();model.resumeAccount() }
     private fun openBrowser(url: String) {
         val uri=Uri.parse(url)
         if(uri.scheme!="https" || uri.host.isNullOrBlank() || uri.userInfo!=null) { model.message("Invalid link");return }

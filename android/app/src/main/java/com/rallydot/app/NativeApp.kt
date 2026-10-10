@@ -168,7 +168,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
         algorithm?.let { selected -> AlgorithmSheet(selected,vm,{algorithm=null},openBrowser) }
         if(data.orderDetails)OrderDetailsSheet(vm,{vm.showOrderDetails(false)})
         data.walletPanel?.let { WalletAssetsSheet(vm,it,{vm.showWalletPanel(null)}) }
-        if(data.walletOpen)WalletLoginSheet(vm,{vm.showWallet(false)})
+        if(data.walletOpen)WalletLoginSheet(vm,{vm.showWallet(false)},openBrowser)
         if(launching)LaunchSheet(vm,{launching=false})
         if(composing)ComposeSheet(vm,community,{composing=false})
     }

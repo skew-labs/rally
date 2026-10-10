@@ -23,16 +23,23 @@ import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun WalletLoginSheet(vm: RallyViewModel,close: ()->Unit) {
+@Composable fun WalletLoginSheet(vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit) {
     val wallet by vm.wallet.state.collectAsStateWithLifecycle()
     val app by vm.state.collectAsStateWithLifecycle()
     var email by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
+    var emailOpen by rememberSaveable { mutableStateOf(false) }
+    val completedAtOpen=remember { wallet.completed }
+    val accountAtOpen=remember { app.boot?.optJSONObject("me")?.string("id") }
     val linked=app.boot?.string("wallet").orEmpty()
     LaunchedEffect(Unit) { vm.wallet.restore() }
-    ModalBottomSheet(onDismissRequest=close,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
+    LaunchedEffect(wallet.completed,wallet.busy) { if(wallet.completed>completedAtOpen && !wallet.busy)close() }
+    LaunchedEffect(app.boot?.optJSONObject("me")?.string("id"),app.connecting) {
+        if(accountAtOpen==null && app.boot?.optJSONObject("me")!=null && !app.connecting && linked.isNotEmpty())close()
+    }
+    ModalBottomSheet(onDismissRequest={if(wallet.busy)vm.cancelWalletLogin();if(app.connecting)vm.cancelConnect();close()},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
         Column(Modifier.fillMaxWidth().heightIn(max=640.dp).imePadding().highRefresh().verticalScroll(rememberScrollState()).padding(horizontal=24.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            Artwork(safeImage("/assets/community-rally.png"),"Rally",56.dp)
+            Artwork(safeImage("/assets/community-rally.png"),"Rally",44.dp)
             Text(if(wallet.ready)"Your Rally wallet" else "Sign in to Rally",style=MaterialTheme.typography.headlineSmall)
             if(wallet.ready) {
                 SelectionContainer { Text(wallet.address.orEmpty(),style=MaterialTheme.typography.bodyMedium) }
@@ -44,18 +51,33 @@ import org.json.JSONObject
                 Button(onClick={vm.walletAction { google() }},enabled=!wallet.busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) {
                     Artwork(safeImage("/assets/auth-google.svg"),"Google",20.dp,false);Spacer(Modifier.width(10.dp));Text("Continue with Google")
                 }
-                if(!wallet.codeSent) {
+                if(wallet.externalConfigured)externalWalletBrands.forEach { brand->
+                    OutlinedButton(onClick={vm.walletAction { connectExternal(brand) }},enabled=!wallet.busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(16.dp)) {
+                        Artwork(safeImage("/assets/${brand.image}"),brand.name,24.dp,false);Spacer(Modifier.width(12.dp));Text(brand.name,Modifier.weight(1f),maxLines=1)
+                        if(vm.wallet.installed(brand))Text("Installed",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else OutlinedButton(onClick={vm.connect(openBrowser)},enabled=!wallet.busy && !app.connecting,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(16.dp)) {
+                    listOf("agent-metamask.svg","wallet-coinbase.svg","wallet-rainbow.svg").forEach { Artwork(safeImage("/assets/$it"),"",20.dp,false);Spacer(Modifier.width(5.dp)) };Spacer(Modifier.width(6.dp));Text("Connect wallet")
+                }
+                if(!emailOpen && !wallet.codeSent)TextButton(onClick={emailOpen=true},enabled=!wallet.busy,modifier=Modifier.fillMaxWidth()) { Text("Continue with email") }
+                if(emailOpen && !wallet.codeSent) {
                     OutlinedTextField(email,{email=it},Modifier.fillMaxWidth(),enabled=!wallet.busy,singleLine=true,label={Text("Email")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Email),shape=RoundedCornerShape(16.dp))
                     OutlinedButton(onClick={vm.walletAction { sendCode(email) }},enabled=!wallet.busy && email.isNotBlank(),modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(100.dp)) { Text("Continue with email") }
-                } else {
+                } else if(wallet.codeSent) {
                     Text("Enter the code sent to ${wallet.email}",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedTextField(code,{code=it.filter(Char::isDigit).take(6)},Modifier.fillMaxWidth(),enabled=!wallet.busy,singleLine=true,label={Text("6-digit code")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword),shape=RoundedCornerShape(16.dp))
                     Button(onClick={vm.walletAction { verifyCode(code) }},enabled=!wallet.busy && code.length==6,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) { Text("Sign in") }
                     TextButton(onClick={vm.walletAction { sendCode(wallet.email) }},enabled=!wallet.busy) { Text("Send a new code") }
                 }
-                Text("Your wallet stays with you. Sign and trade here.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(app.connecting) {
+                    Text("Finish signing in your wallet · ${app.connectionCode.orEmpty()}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick={vm.resumeConnect(openBrowser)}) { Text("Return to wallet") }
+                    TextButton(onClick={vm.cancelConnect()}) { Text("Cancel") }
+                }
             }
-            AnimatedVisibility(wallet.busy) { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            AnimatedVisibility(wallet.busy) { Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                CircularProgressIndicator(Modifier.size(20.dp),strokeWidth=2.dp);Text(wallet.phase ?: "Connecting…",Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium);TextButton(onClick={vm.cancelWalletLogin()}) { Text("Cancel") }
+            } }
             wallet.error?.let { Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error) }
             if(wallet.ready && linked.equals(wallet.address,true) && !wallet.busy)TextButton(onClick=close,modifier=Modifier.fillMaxWidth()) { Text("Done") }
         }

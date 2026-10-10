@@ -1,4 +1,13 @@
 import {walletBrands,detectedWallets,detectedProvider} from './wallet-providers.js';
+export function checkedWalletLoginProof(proof,address,signingIn,origin=location.origin,now=Date.now()/1000){
+  const invalid=()=>{throw new Error('Login request expired or changed. Connect again.');};
+  if(!proof.id||typeof proof.message!=='string'||proof.chainId!==143||proof.purpose!==(signingIn?'sign_in':'link_wallet')||!Number.isFinite(proof.expires)||proof.expires<=now)invalid();
+  const lines=proof.message.split('\n'),statement=(signingIn?'Sign in to Rally.':'Link this wallet to your Rally account.')+' No transaction or spending permission.';
+  if(lines.length!==11||lines[0]!==new URL(origin).host+' wants you to sign in with your Ethereum account:'||lines[1].toLowerCase()!==address.toLowerCase()||lines[2]!==''||lines[3]!==statement||lines[4]!==''||lines[5]!=='URI: '+origin||lines[6]!=='Version: 1'||lines[7]!=='Chain ID: 143'||!/^Nonce: [a-f0-9]{32}$/.test(lines[8])||!lines[9].startsWith('Issued At: ')||!lines[10].startsWith('Expiration Time: '))invalid();
+  const issued=Date.parse(lines[9].slice(11))/1000,expires=Date.parse(lines[10].slice(17))/1000;
+  if(!Number.isFinite(issued)||issued>now+30||Math.floor(expires)!==proof.expires||expires<=issued)invalid();
+  return proof.message;
+}
 // The auth SDK is loaded only after an explicit login or wallet action.
 export async function walletAccounts(provider,change=false){
   if(change){
@@ -258,11 +267,17 @@ export function authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,aft
     finally{loginBusy=false;}
   }
   async function resume(){
-    let intent;try{intent=JSON.parse(sessionStorage.getItem('rally:privy-intent')||'null');}catch{}
+    const raw=sessionStorage.getItem('rally:privy-intent');let intent;try{intent=JSON.parse(raw||'null');}catch{}
     if(!intent)return false;
-    sessionStorage.removeItem('rally:privy-intent');
-    if(!cfg()?.enabled||intent.path!==location.pathname||intent.owner!==(S.boot.me?.id||null)||Date.now()-intent.created>600000)return false;
-    try{const bridge=await sdk();if(!bridge.authenticated())return false;return await signIn(intent.link);}catch(error){notify(error.message);return false;}
+    const current=()=>sessionStorage.getItem('rally:privy-intent')===raw&&cfg()?.enabled&&intent.path===location.pathname&&intent.owner===(S.boot.me?.id||null)&&Number.isFinite(intent.created)&&Date.now()-intent.created>=0&&Date.now()-intent.created<=600000;
+    try{
+      if(!current())return false;
+      const bridge=await sdk();
+      if(!bridge.authenticated())await bridge.waitForAuthentication();
+      if(!current()||loginBusy)return false;
+      return await signIn(intent.link);
+    }catch(error){notify(error.message);return false;}
+    finally{if(sessionStorage.getItem('rally:privy-intent')===raw)sessionStorage.removeItem('rally:privy-intent');}
   }
   async function handle(action){if(action==='agent-wallet'){agentWallet();return true;}if(action==='privy-link'){await signIn(true);return true;}return false;}
   return {buttons,bind,agentCard,agentWallet,provider,chooseWallet,logout,handle,resume,walletChooser};

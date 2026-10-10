@@ -39,6 +39,12 @@ class Privy(unittest.TestCase):
         identity={**self.claims,'sub':'did:privy:other','linked_accounts':'[]'};identity.pop('sid')
         with patch.dict(os.environ,{'RALLY_PRIVY_APP_ID':self.app}),self.assertRaises(s.Problem) as error:p.login(None,{'accessToken':self.token(),'identityToken':self.token(identity)})
         self.assertEqual(error.exception.code,'privy_identity_mismatch')
+    def test_walletconnect_project_id_is_public_and_strictly_bounded(self):
+        for value in ['','https://attacker.example','a'*33,'../../private','q'*32]:
+            with patch.dict(os.environ,{'RALLY_WALLETCONNECT_PROJECT_ID':value}):self.assertIsNone(p.config()['walletConnectProjectId'])
+        with patch.dict(os.environ,{'RALLY_WALLETCONNECT_PROJECT_ID':'a'*32}):
+            self.assertEqual(p.config()['walletConnectProjectId'],'a'*32)
+            self.assertEqual(p.config()['androidAppIdentifier'],'com.rallydot.app')
     def test_bridge_manifest_cannot_escape_assets(self):
         with tempfile.TemporaryDirectory() as directory,patch.object(s,'ROOT',Path(directory)):
             auth=Path(directory)/'assets/auth';auth.mkdir(parents=True)

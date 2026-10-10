@@ -35,8 +35,7 @@ import org.json.JSONObject
                         listOf("agent-metamask.svg" to "MetaMask","wallet-coinbase.svg" to "Coinbase Wallet","wallet-rainbow.svg" to "Rainbow").forEach { (file,name)->Artwork(safeImage("/assets/$file"),name,32.dp,false) }
                     }
                     Button(onClick={vm.showWallet()},enabled=!state.connecting,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Text(if(state.connecting)"Waiting for approval…" else "Connect account") }
-                    Text("Google · Email · Embedded wallet",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton(onClick={vm.connect(openBrowser)},enabled=!state.connecting) { Text("Connect an external wallet") }
+                    Text("Google, email or your wallet",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     if(state.connecting) {
                         Text("Finish connecting in the secure browser",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Device code ${state.connectionCode.orEmpty()}",Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);TextButton(onClick={vm.resumeConnect(openBrowser)}) { Text("Open again") };TextButton(onClick={vm.cancelConnect()}) { Text("Cancel") } }
