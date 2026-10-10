@@ -19,7 +19,8 @@
     "test:auth-dependencies": "node auth-client/test-dependencies.mjs",
     "test:social-loop": "node tests/social-loop-browser.mjs",
     "test:order-input": "node tests/perp-amount.mjs && node tests/native-perp-browser.mjs",
-    "test:touch": "node tests/touch-browser.mjs"
+    "test:touch": "node tests/touch-browser.mjs",
+    "test:experience": "node tests/experience-browser.mjs"
   },
   "devDependencies": {
     "@openzeppelin/contracts": "5.4.0",

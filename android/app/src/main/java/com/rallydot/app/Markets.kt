@@ -135,7 +135,7 @@ import kotlin.math.abs
                         Row(Modifier.fillMaxSize().padding(20.dp),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
                             Column(Modifier.weight(1f).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                                 Row(verticalAlignment=Alignment.CenterVertically) { Artwork(a.image,a.symbol,48.dp);Column(Modifier.padding(start=12.dp)) { Text(a.symbol,fontSize=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1);Text(a.venue,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) } }
-                                Spacer(Modifier.weight(1f));Text(money(a.price),fontSize=24.sp);Text("${index+1} / ${assets.size}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.weight(1f));Text(money(a.price),fontSize=24.sp)
                             }
                             Column(Modifier.weight(1f).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                                 Text("$"+compact(a.cap),fontSize=30.sp);Text("Market cap",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.weight(1f))
@@ -143,7 +143,7 @@ import kotlin.math.abs
                             }
                         }
                     } else Column(Modifier.fillMaxSize().padding(if(short)16.dp else 24.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(a.venue,style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant);Text("${index+1} / ${assets.size}",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(a.venue,style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant) }
                         if(compactHeight)Spacer(Modifier.height(8.dp)) else Spacer(Modifier.weight(1f));Artwork(if(short)a.image else a.heroImage,a.symbol,if(short)44.dp else 112.dp)
                         Spacer(Modifier.height(if(short)6.dp else 20.dp));Text(a.symbol,fontSize=if(short)20.sp else 30.sp,fontWeight=FontWeight.SemiBold,maxLines=1);Text(a.name,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1)
                         Spacer(Modifier.height(if(short)6.dp else 28.dp));Text("$"+compact(a.cap),fontSize=if(short)24.sp else 36.sp,fontWeight=FontWeight.Medium);Text("Market cap",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)

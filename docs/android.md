@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.2.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.3.apk)
 
 ## Interaction and data
 
@@ -63,7 +63,7 @@ cd android
 ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.4.2 (code 15) uses the existing release certificate, allowing upgrades from the earlier APKs. Release shrinking removes SDK debug/info log calls so OAuth callback codes and relay URIs are not written to logcat.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.4.3 (code 16) uses the existing release certificate, allowing upgrades from the earlier APKs. Release shrinking removes SDK debug/info log calls so OAuth callback codes and relay URIs are not written to logcat.
 
 `/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
@@ -113,3 +113,5 @@ Version 0.4.1 preserves browser pairing across process recreation in encrypted d
 Perpl and Drake position size supports base quantity or USD notional. Dollar input rounds down to the venue quantity precision. Perpl shows estimated AUSD margin separately from position value; this estimate excludes fees and is not a fill. The existing Buy / Long and Sell / Short action opens the configured wallet signing flow directly.
 
 Version 0.4.2 adds direct Buy/Long entry from market and launch rows, USD position shortcuts, compact amount-unit controls and expandable protection-price settings. Direction selection and the order action remain visible while the fields scroll. Shortcuts only prepare an amount; the Buy/Sell action still requests the configured wallet signature. Theme and typography are shared across native screens, with interruption-safe tab movement and press feedback.
+
+Version 0.4.3 adds an in-place algorithm picker, immediate reaction feedback with duplicate-request protection and rollback, and previous/next controls for swipe cards. Selecting a paid algorithm opens its existing subscription sheet. Profile community tokens open their market details directly. Guest actions open the existing sign-in sheet in place. Reactions keep the feed and media mounted; horizontal swipes move the next card in from the opposite edge and do not place trades.

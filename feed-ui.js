@@ -28,5 +28,14 @@ export function feedUI({S,$,esc,icon,safeURL,scope}){
   for(const el of [article.previousElementSibling,article,article.nextElementSibling])if(el?.matches('.r-post')){el.style.contentVisibility='visible';visible.add(el);measured.delete(el);}
   measure();
  }
- return {sync,dispose,isExpanded,expand,text,link,anchor,prepareRestore};
+ function feedback(post,kind,pending=false){
+  const selected=Boolean(kind==='like'?post.liked:post.saved);
+  for(const button of document.querySelectorAll(`[data-action="${kind}"][data-id="${CSS.escape(post.id)}"]`)){
+   button.classList.toggle(kind==='like'?'liked':'saved',selected);
+   button.setAttribute('aria-pressed',String(selected));button.setAttribute('aria-busy',String(pending));button.disabled=pending;
+   button.setAttribute('aria-label',(kind==='like'?(selected?'Unlike':'Like'):(selected?'Unsave':'Save'))+' post');
+   if(kind==='like'){const count=button.querySelector('span');if(count)count.textContent=post.likes||'';}
+  }
+ }
+ return {sync,dispose,isExpanded,expand,text,link,anchor,prepareRestore,feedback};
 }

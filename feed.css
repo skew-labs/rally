@@ -22,6 +22,10 @@ html #timeline .r-link-card .icon{width:15px;height:15px}
 html #timeline .r-post-asset{min-height:64px;padding:12px;margin-block:12px 4px;background:var(--canvas);border-color:var(--line)}
 html #timeline .r-post-asset .r-token,html #timeline .r-post-asset .r-token-fallback{width:32px;height:32px}
 html #timeline .r-post-actions{padding-top:4px}
+html .r-post-actions>button{min-height:44px;min-width:44px;border-radius:100px;transition:color 120ms ease,background-color 120ms ease}
+html .r-post-actions>button[aria-busy=true]{opacity:1;cursor:progress}
+html .r-post-actions>button:active:not(:disabled)>.icon{transform:scale(.88)}
+html .r-post-actions .icon{transition:transform 100ms ease}
 html #timeline .r-new-posts{position:sticky;top:112px;z-index:21;min-height:44px;background:var(--paper);border-bottom:1px solid var(--line)}
 @media(max-width:760px){html body[data-view=home] .r-feed-toolbar{top:64px}html body[data-view=home] .r-composer-launch{display:flex}html .r-feed-toolbar .r-page-head{min-height:60px}html .r-feed-toolbar .r-feed-select{max-width:116px;font-size:11px}html .r-feed-toolbar .r-tabs{gap:22px}html #timeline>.r-post{padding-block:20px 12px}html #timeline .r-new-posts{top:172px}}
 @media(max-width:380px){html .r-feed-toolbar .r-feed-select{max-width:98px}html .r-feed-toolbar .r-swipe-entry{padding:10px;font-size:11px}html .r-feed-toolbar .r-page-head{gap:4px}html .r-feed-heading{gap:4px}}
@@ -96,3 +100,11 @@ html .r-algorithm-option button:hover,html .r-home-algorithm:hover{background:va
  html .r-algorithm-market-tabs button{padding-inline:12px}
 }
 @media(prefers-reduced-motion:reduce){html .r-algorithm-shortcut{transition:none}}
+@media(max-width:760px){
+ html body[data-view=home] .r-market-strip{display:none}
+ html .r-home-algorithms{padding-block:4px 10px}
+ html .r-home-algorithms-head{min-height:36px}
+ html .r-algorithm-shortcut{min-height:52px;padding-block:8px}
+ html body[data-view=home] .r-composer-launch{min-height:56px;padding-block:8px}
+}
+@media(prefers-reduced-motion:reduce){html .r-post-actions>button,html .r-post-actions .icon{transition:none;transform:none}}

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.graphicsLayer
@@ -47,7 +49,8 @@ fun swipeTargetPage(current: Int,count: Int,distance: Float,width: Float,velocit
             previous=index;pageCallback(index)
         }
     }
-    VerticalPager(pager,modifier.fillMaxWidth().highRefresh(),beyondViewportPageCount=1,
+    Column(modifier.fillMaxWidth()) {
+    VerticalPager(pager,Modifier.weight(1f).fillMaxWidth().highRefresh(),beyondViewportPageCount=1,
         contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),pageSpacing=12.dp,key={keys[it]}) { index->
         Surface(Modifier.fillMaxSize().highRefresh().semantics { if(index!=pager.currentPage)hideFromAccessibility() }.graphicsLayer {
             // Drag and spring values are read in the render phase, not in card composition.
@@ -70,10 +73,10 @@ fun swipeTargetPage(current: Int,count: Int,distance: Float,width: Float,velocit
                         horizontal.snapTo(distance)
                         if(next!=pager.currentPage) {
                             val direction=if(next>pager.currentPage)-1f else 1f
-                            horizontal.animateTo(direction*width,tween(100,easing=FastOutLinearInEasing))
+                            horizontal.animateTo(direction*width,tween(120,easing=FastOutLinearInEasing))
                             pager.scrollToPage(next)
-                            horizontal.snapTo(-direction*width*.12f)
-                            horizontal.animateTo(0f,spring(dampingRatio=1f,stiffness=1000f))
+                            horizontal.snapTo(-direction*width)
+                            horizontal.animateTo(0f,tween(180,easing=FastOutSlowInEasing))
                         } else horizontal.animateTo(0f,spring(dampingRatio=1f,stiffness=800f))
                     } finally { horizontal.snapTo(0f);drag.floatValue=0f;settling=false }
                 }
@@ -93,5 +96,11 @@ fun swipeTargetPage(current: Int,count: Int,distance: Float,width: Float,velocit
         },shape=RoundedCornerShape(24.dp),border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),color=MaterialTheme.colorScheme.surface) {
             content(index)
         }
+    }
+    Row(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
+        IconButton(onClick={scope.launch { pager.animateScrollToPage((pager.currentPage-1).coerceAtLeast(0)) }},enabled=pager.currentPage>0 && !settling && !pager.isScrollInProgress){Icon(Icons.Outlined.ArrowBack,"Previous card")}
+        Text("${pager.currentPage+1} / ${keys.size}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        IconButton(onClick={scope.launch { pager.animateScrollToPage((pager.currentPage+1).coerceAtMost(keys.lastIndex)) }},enabled=pager.currentPage<keys.lastIndex && !settling && !pager.isScrollInProgress){Icon(Icons.Outlined.ArrowForward,"Next card")}
+    }
     }
 }

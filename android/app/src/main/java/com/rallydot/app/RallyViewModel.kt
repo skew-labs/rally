@@ -16,7 +16,7 @@ import org.json.JSONObject
 import java.security.MessageDigest
 import java.security.SecureRandom
 
-data class AppState(val boot: JSONObject?=null, val portfolio: JSONObject?=null,val portfolioError: String?=null,val walletPanel: String?=null, val pages: Map<String,Page> = emptyMap(), val message: String?=null, val connecting: Boolean=false, val connectionCode: String?=null, val busy: Boolean=false, val bootError: String?=null,val walletOpen: Boolean=false,val orderDetails: Boolean=false,val order: OrderProgress=OrderProgress())
+data class AppState(val boot: JSONObject?=null, val portfolio: JSONObject?=null,val portfolioError: String?=null,val walletPanel: String?=null, val pages: Map<String,Page> = emptyMap(), val reactions: Map<String,PostReaction> = emptyMap(),val message: String?=null, val connecting: Boolean=false, val connectionCode: String?=null, val busy: Boolean=false, val bootError: String?=null,val walletOpen: Boolean=false,val orderDetails: Boolean=false,val order: OrderProgress=OrderProgress())
 class RallyViewModel @JvmOverloads constructor(application: Application,val api: RallyApi=RallyApi(application),private val pendingPairing: DurablePairing=DurablePairing(application)): AndroidViewModel(application) {
     private val mutable=MutableStateFlow(AppState())
     val state=mutable.asStateFlow()
@@ -86,7 +86,7 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         if(version!=api.sessionVersion)throw CancellationException("Account changed")
         val changed=me?.string("id")!=data.optJSONObject("me")?.string("id") || mutable.value.boot?.string("wallet")!=data.string("wallet")
         if(changed) { portfolioJob?.cancel();jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear() }
-        mutable.update { it.copy(boot=data,bootError=null,portfolio=if(changed)null else it.portfolio,portfolioError=if(changed)null else it.portfolioError,walletPanel=if(changed)null else it.walletPanel,pages=if(changed)emptyMap() else it.pages) };return data
+        mutable.update { it.copy(boot=data,bootError=null,portfolio=if(changed)null else it.portfolio,portfolioError=if(changed)null else it.portfolioError,walletPanel=if(changed)null else it.walletPanel,pages=if(changed)emptyMap() else it.pages,reactions=if(changed)emptyMap() else it.reactions) };return data
     }
     fun bootstrap() { viewModelScope.launch { try { refreshBoot();val pending=pendingOrders.read();if(pending!=null && pending.string("account")==me?.string("id") && orderJob?.isActive!=true)mutable.update { it.copy(order=OrderProgress(if(pending.has("tx"))"pending" else "unknown",if(pending.has("tx"))"Check transaction" else "Check your wallet",pending.string("tx").takeIf { h->h.isNotBlank() })) } } catch(e:CancellationException) { throw e } catch (_: Exception) { mutable.update { it.copy(bootError="Account connection unavailable") } } } }
     fun showWalletPanel(panel: String?) { if(panel!=null && mutable.value.boot?.string("wallet").isNullOrBlank()) { showWallet();return };mutable.update { it.copy(walletPanel=panel) };if(panel=="send")loadPortfolio() }
@@ -154,7 +154,8 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
                 val preserving=retain && previous.items.isNotEmpty()
                 val merged=mergePageItems(previous.items,incoming,append || preserving)
                 val cursor=if(preserving)previous.cursor else data.string("nextCursor",data.string("cursor")).ifBlank { if(!data.isNull("nextOffset"))data.optInt("nextOffset").toString() else "" }.takeIf { it.isNotBlank() }
-                mutable.update { it.copy(pages=bounded(it.pages+(key to Page(merged,cursor,data.optInt("total",data.optInt("totalPools",merged.size)),false,null,System.currentTimeMillis())))) }
+                val refreshed=if(field=="posts")incoming.map { it.string("id") }.toSet() else emptySet()
+                mutable.update { it.copy(pages=bounded(it.pages+(key to Page(merged,cursor,data.optInt("total",data.optInt("totalPools",merged.size)),false,null,System.currentTimeMillis()))),reactions=it.reactions.filter { (id,value)->id !in refreshed || value.pending }) }
             } catch(e: CancellationException) { throw e } catch(e: Exception) {
                 mutable.update { it.copy(pages=it.pages+(key to previous.copy(loading=false,error=if(e is ApiFailure)e.message else "Can't connect. Check your connection and retry."))) }
             }
@@ -166,10 +167,35 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         else api.post("/api/routes", JSONObject().put("input",if(side=="buy")"MON" else asset.id).put("output",if(side=="buy")asset.id else "MON").put("amount",amount))
     }
     fun action(path: String,body: JSONObject,key: String?=null,done: (JSONObject)->Unit = {}) {
-        if(me==null) { message("Sign in from Profile to continue");return }
+        if(me==null) { showWallet();return }
         if(mutable.value.busy)return
         mutable.update { it.copy(busy=true) }
         viewModelScope.launch { try { val data=api.post(path,body,key);api.clearCache();done(data);bootstrap() } catch(e:Exception) { message(e.message ?: "Could not complete this action") } finally { mutable.update { it.copy(busy=false) } } }
+    }
+    fun react(post: Post) {
+        val account=me?.string("id") ?: run { showWallet();return }
+        if(mutable.value.reactions[post.id]?.pending==true)return
+        val version=api.sessionVersion;val current=post.withReaction(mutable.value.reactions[post.id])
+        val before=PostReaction(current.liked,current.likes);val next=PostReaction(!current.liked,(current.likes+if(current.liked)-1 else 1).coerceAtLeast(0),true)
+        fun patch(value: PostReaction) { mutable.update { state->
+            val values=LinkedHashMap(state.reactions);values.remove(post.id);values[post.id]=value
+            while(values.size>128) { val old=values.entries.firstOrNull { !it.value.pending } ?: break;values.remove(old.key) }
+            state.copy(reactions=values)
+        } }
+        patch(next)
+        viewModelScope.launch {
+            try {
+                val result=api.post("/api/reaction",JSONObject().put("post",post.id).put("kind","like").put("active",next.liked))
+                if(version!=api.sessionVersion || me?.string("id")!=account)return@launch
+                require(result.has("liked") && result.has("likes")) { "Reaction confirmation unavailable" }
+                patch(PostReaction(result.optBoolean("liked"),result.optInt("likes").coerceAtLeast(0)));api.clearCache()
+            }catch(e:CancellationException){
+                if(me?.string("id")==account && mutable.value.reactions[post.id]==next)patch(before)
+                throw e
+            }catch(e:Exception){
+                if(version==api.sessionVersion && me?.string("id")==account){patch(before);message(e.message ?: "Couldn't save reaction. Try again.")}
+            }
+        }
     }
     fun refreshSocial() { mutable.update { it.copy(pages=it.pages.filterKeys { key->!key.startsWith("feed:") }) } }
     private var connectionURL: String?=null

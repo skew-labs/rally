@@ -160,12 +160,12 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                                     shown=="0:Markets"->MarketsScreen(vm,{asset=it})
                                     shown=="0:Launch"->MarketsScreen(vm,{asset=it},launch=true,create={if(vm.me==null)vm.showWallet() else launching=true})
                                     shown=="0:Swipe"->SwipeScreen(vm,{asset=it},{post=it})
-                                    shown=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4},onAlgorithm={extra="Algorithms"})
-                                    shown.startsWith("1:") && shown.substringAfter(':').isNotEmpty()->FeedScreen(vm,community=shown.substringAfter(':'),onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4})
+                                    shown=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={extra="Algorithms"},onFeedPreview={algorithm=it})
+                                    shown.startsWith("1:") && shown.substringAfter(':').isNotEmpty()->FeedScreen(vm,community=shown.substringAfter(':'),onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={extra="Algorithms"},onFeedPreview={algorithm=it})
                                     shown.startsWith("1:")->CommunitiesScreen(vm,{community=it},{extra="Benefits:$it"})
                                     shown.startsWith("2:")->DiscoverScreen(vm,onPost={post=it},onAlgorithm={algorithm=it})
                                     shown.startsWith("3:")->LeaderboardScreen(vm,{algorithm=it},{extra="Weekly league"})
-                                    else->ProfileScreen(vm,openBrowser,{extra=it})
+                                    else->ProfileScreen(vm,openBrowser,{extra=it},::showAsset)
                                 }
                             }
                         }

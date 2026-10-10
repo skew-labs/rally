@@ -64,7 +64,6 @@ import kotlin.math.abs
                 Column(Modifier.weight(1f).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     Text(post?.author?.name ?: fixed?.symbol.orEmpty(),fontWeight=FontWeight.Medium,maxLines=1)
                     Text(post?.text ?: if(mode=="Prediction")"Price prediction · Pool #${item.string("id")}" else "${fixed?.venue} · Perpetual",Modifier.weight(1f).then(if(post!=null)Modifier.clickable { onPost(post) } else Modifier),maxLines=3,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodyMedium)
-                    Text("${index+1} / $total",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(Modifier.weight(1f).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     asset?.let { a->
@@ -97,7 +96,6 @@ import kotlin.math.abs
                 if(mode=="Prediction")Button(onClick={onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","buy")))},enabled=a.executable,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=Buy,contentColor=Color.White)) { Text(if(a.executable)"Predict price" else item.string("state").replace('_',' ')) }
                 else TradeButtons(if(mode=="Perps")"Buy / Long" else "Buy",if(mode=="Perps")"Sell / Short" else "Sell",{onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","buy")))},{onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","sell")))},a.executable)
             } else if(post!=null)Button(onClick={onPost(post)},Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(100.dp)) { Text("Discuss") }
-            Text("${index+1} / $total",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         }
     }

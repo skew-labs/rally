@@ -20,7 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-@Composable fun ProfileScreen(vm: RallyViewModel,openBrowser: (String)->Unit,onExtra: (String)->Unit) {
+@Composable fun ProfileScreen(vm: RallyViewModel,openBrowser: (String)->Unit,onExtra: (String)->Unit,onAsset: (String)->Unit={}) {
     val state by vm.state.collectAsStateWithLifecycle();val me=state.boot?.optJSONObject("me")
     LaunchedEffect(state.boot?.string("wallet")) { vm.loadPortfolio() }
     LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
@@ -48,7 +48,7 @@ import org.json.JSONObject
                     if(me.string("bio").isNotBlank())Text(me.string("bio"),style=MaterialTheme.typography.bodyMedium)
                     Text("${me.optInt("followers")} followers",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
                 }
-                me.optJSONObject("communityToken")?.let { token->Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surface) { Row(Modifier.fillMaxWidth().padding(18.dp),verticalAlignment=Alignment.CenterVertically) { Artwork(safeImage(token.string("logoURI")),token.string("symbol"),44.dp);Spacer(Modifier.width(12.dp));Column { Text(token.string("name"),fontWeight=FontWeight.Medium);Text("${token.optInt("buybackBps")/100}% buyback",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) } } } }
+                me.optJSONObject("communityToken")?.let { token->Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surface) { Row(Modifier.fillMaxWidth().clickable { onAsset(token.string("tokenAddress",token.string("address"))) }.padding(18.dp),verticalAlignment=Alignment.CenterVertically) { Artwork(safeImage(token.string("logoURI")),token.string("symbol"),44.dp);Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)) { Text(token.string("name"),fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis);Text("${token.optInt("buybackBps")/100}% buyback",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Icon(Icons.Outlined.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant) } } }
             }
         }
         item { Surface(shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface) { Column {

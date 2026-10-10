@@ -36,10 +36,12 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
 } ?: asset
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun FeedScreen(vm: RallyViewModel,community: String?=null,onPost: (Post)->Unit,onAsset: (String)->Unit,compose: ()->Unit,onAlgorithm: ()->Unit={}) {
+@Composable fun FeedScreen(vm: RallyViewModel,community: String?=null,onPost: (Post)->Unit,onAsset: (String)->Unit,compose: ()->Unit,onAlgorithm: ()->Unit={},onFeedPreview: (JSONObject)->Unit={onAlgorithm()}) {
     val state by vm.state.collectAsStateWithLifecycle()
     var mode by rememberSaveable(community){mutableStateOf("For you")}
-    val feed=state.boot?.string("activeFeed","latest") ?: "latest"
+    var chosen by rememberSaveable(vm.me?.string("id")){mutableStateOf<String?>(null)}
+    var choosing by rememberSaveable { mutableStateOf(false) }
+    val feed=chosen ?: state.boot?.string("activeFeed","latest") ?: "latest"
     val key="feed:${community.orEmpty()}:$feed:$mode";val path="/api/posts?mode="+when(mode){"Following"->"following";"Trades"->"trades";else->"for-you"}+"&feed="+Uri.encode(feed)+(community?.let { "&community="+Uri.encode(it) } ?: "")
     val page=state.pages[key] ?: Page(loading=true)
     LaunchedEffect(key,state.pages.containsKey(key)) { if(!state.pages.containsKey(key))vm.load(key,path,"posts") }
@@ -49,19 +51,38 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
         if(page.loading && page.items.isEmpty())LoadingRows() else LazyColumn(state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(bottom=24.dp)) {
             item {
                 Row(Modifier.padding(20.dp).fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    OutlinedButton(onClick=onAlgorithm,shape=RoundedCornerShape(14.dp)) { Icon(Icons.Outlined.Layers,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(state.boot?.objects("feeds")?.firstOrNull { it.string("id")==feed }?.string("name") ?: "Latest",maxLines=1) }
+                    TextButton(onClick={choosing=true},modifier=Modifier.weight(1f,false).heightIn(min=48.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.onSurface,containerColor=MaterialTheme.colorScheme.surfaceContainer)) { Icon(Icons.Outlined.Layers,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(state.boot?.objects("feeds")?.firstOrNull { it.string("id")==feed }?.string("name") ?: "Latest",Modifier.weight(1f,false),maxLines=1,overflow=TextOverflow.Ellipsis);Spacer(Modifier.width(8.dp));Icon(Icons.Outlined.ExpandMore,null,Modifier.size(18.dp)) }
                     Spacer(Modifier.weight(1f));FilledIconButton(onClick=compose,colors=IconButtonDefaults.filledIconButtonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Icon(Icons.Outlined.Edit,"Create post") }
                 }
             }
             if(community==null)item { Segmented(listOf("For you","Following","Trades"),mode,{mode=it},Modifier.padding(horizontal=20.dp,vertical=8.dp)) }
             if(page.error!=null)item { EmptyState("Couldn't refresh",page.error,"Retry",{vm.load(key,path,"posts",true)}) }
-            items(page.items,key={it.string("id")},contentType={"post"}) { j->val p=remember(j) { Post.parse(j) };PostCard(p,{onPost(p)},{onAsset(p.tradeTarget())},{vm.action("/api/reaction",JSONObject().put("post",p.id).put("kind","like").put("active",!p.liked)) { vm.load(key,path,"posts",true) }},onRecord={onAsset("signals:"+p.author.id)}) }
+            items(page.items,key={it.string("id")},contentType={"post"}) { j->val original=remember(j) { Post.parse(j) };val p=original.withReaction(state.reactions[original.id]);PostCard(p,{onPost(p)},{onAsset(p.tradeTarget())},{vm.react(p)},onRecord={onAsset("signals:"+p.author.id)},reactionPending=state.reactions[p.id]?.pending==true) }
             if(page.items.isEmpty() && !page.loading && page.error==null)item { EmptyState("No posts yet",action="Create a post",onAction=compose) }
             if(page.cursor!=null)item { TextButton(onClick={vm.load(key,path+"&cursor="+Uri.encode(page.cursor),"posts",append=true)},modifier=Modifier.fillMaxWidth(),enabled=!page.loading) { Text(if(page.loading)"Loading…" else "Load more") } }
         }
     }
+    if(choosing)ModalBottomSheet(onDismissRequest={choosing=false},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=MaterialTheme.colorScheme.surface) {
+        Column(Modifier.fillMaxWidth().heightIn(max=560.dp).padding(horizontal=20.dp,vertical=8.dp)) {
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Your algorithm",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);TextButton(onClick={choosing=false;onAlgorithm()}){Text("Explore")}}
+            LazyColumn(contentPadding=PaddingValues(bottom=24.dp)) {
+                items(state.boot?.objects("feeds").orEmpty(),key={it.string("id")}) { option->
+                    val id=option.string("id");val access=option.optBoolean("access") || (option.number("price") ?: 0.0)==0.0
+                    Row(Modifier.fillMaxWidth().heightIn(min=72.dp).clickable(enabled=!state.busy) {
+                        if(!access){choosing=false;onFeedPreview(JSONObject().put("id",id).put("feed",option))}
+                        else if(vm.me==null){chosen=id;choosing=false}
+                        else vm.action("/api/feeds/use",JSONObject().put("id",id)){chosen=id;choosing=false}
+                    }.padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Layers,null,tint=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) { Text(option.string("name"),maxLines=1,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.titleMedium);Text(if((option.number("price") ?: 0.0)>0)option.string("price")+" USDC" else "Free",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+                        Icon(if(id==feed)Icons.Outlined.Check else if(access)Icons.Outlined.ChevronRight else Icons.Outlined.Lock,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
 }
-@Composable fun PostCard(post: Post,onClick: ()->Unit,onAsset: ()->Unit,onLike: ()->Unit,expanded: Boolean=false,onRecord: (()->Unit)?=null) {
+@Composable fun PostCard(post: Post,onClick: ()->Unit,onAsset: ()->Unit,onLike: ()->Unit,expanded: Boolean=false,onRecord: (()->Unit)?=null,reactionPending: Boolean=false) {
     Column(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=20.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) { Artwork(post.author.image,post.author.name,40.dp);Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)) { Row(verticalAlignment=Alignment.CenterVertically) { Text(post.author.name,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f,false));if(post.author.agent)Text("Agent",Modifier.padding(start=6.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text("@${post.author.handle} · ${age(post.created)}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1) };Icon(Icons.Outlined.MoreHoriz,null,tint=MaterialTheme.colorScheme.onSurfaceVariant) }
         post.raw.optJSONObject("author")?.objects("badges")?.take(2)?.forEach {badge->Text(badge.string("label"),style=MaterialTheme.typography.labelSmall,color=Violet)}
@@ -71,8 +92,8 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
         post.raw.optJSONObject("verifiedTrade")?.let { VerifiedTradeCard(it,onAsset) }
         if(post.asset.isNotEmpty()) { val info=post.raw.optJSONObject("assetInfo");AssistChip(onClick=onAsset,label={Text(info?.string("symbol") ?: if(post.asset.startsWith("0x"))post.asset.take(6)+"…"+post.asset.takeLast(4) else post.asset)},leadingIcon={Icon(Icons.Outlined.ShowChart,null,Modifier.size(16.dp))}) }
         Row(horizontalArrangement=Arrangement.spacedBy(20.dp),verticalAlignment=Alignment.CenterVertically) {
-            TextButton(onClick=onLike,contentPadding=PaddingValues(0.dp)) { Icon(if(post.liked)Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,"Like",Modifier.size(21.dp),tint=if(post.liked)Sell else MaterialTheme.colorScheme.onSurfaceVariant);if(post.likes>0)Text(" ${post.likes}",color=MaterialTheme.colorScheme.onSurfaceVariant) }
-            TextButton(onClick=onClick,contentPadding=PaddingValues(0.dp)) { Icon(Icons.Outlined.ChatBubbleOutline,"Replies",Modifier.size(20.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant);if(post.replies>0)Text(" ${post.replies}",color=MaterialTheme.colorScheme.onSurfaceVariant) }
+            TextButton(onClick=onLike,enabled=!reactionPending,modifier=Modifier.heightIn(min=48.dp),contentPadding=PaddingValues(12.dp,0.dp)) { Icon(if(post.liked)Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,if(post.liked)"Unlike post" else "Like post",Modifier.size(21.dp),tint=if(post.liked)Sell else MaterialTheme.colorScheme.onSurfaceVariant);if(post.likes>0)Text(" ${post.likes}",color=MaterialTheme.colorScheme.onSurfaceVariant) }
+            TextButton(onClick=onClick,modifier=Modifier.heightIn(min=48.dp),contentPadding=PaddingValues(12.dp,0.dp)) { Icon(Icons.Outlined.ChatBubbleOutline,"Replies",Modifier.size(20.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant);if(post.replies>0)Text(" ${post.replies}",color=MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
     HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
@@ -134,7 +155,7 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
     LaunchedEffect(post.id) { vm.load(key,path,"posts") }
     ModalBottomSheet(onDismissRequest=close,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
         LazyColumn(Modifier.fillMaxWidth().heightIn(max=760.dp).imePadding(),contentPadding=PaddingValues(bottom=24.dp)) {
-            item { PostCard(post,{}, {close();onAsset(post.tradeTarget())}, {vm.action("/api/reaction",JSONObject().put("post",post.id).put("kind","like").put("active",!post.liked))},true,onRecord={close();onAsset("signals:"+post.author.id)}) }
+            item { val shown=post.withReaction(state.reactions[post.id]);PostCard(shown,{}, {close();onAsset(post.tradeTarget())}, {vm.react(shown)},true,onRecord={close();onAsset("signals:"+post.author.id)},reactionPending=state.reactions[post.id]?.pending==true) }
             post.media?.takeIf { it.string("mime").startsWith("video") }?.let { media -> item { NativeVideo(safeImage(media.string("url")) ?: "") } }
             if(post.source.isNotBlank())item { TextButton(onClick={openBrowser(post.source)},Modifier.padding(horizontal=16.dp)) { Icon(Icons.Outlined.OpenInNew,null,Modifier.size(16.dp));Spacer(Modifier.width(8.dp));Text("Source") } }
             items(page.items,key={it.string("id")}) { j->PostCard(Post.parse(j),{}, {}, {}) }

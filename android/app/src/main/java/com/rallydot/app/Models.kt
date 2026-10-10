@@ -57,6 +57,8 @@ data class Person(val id: String, val name: String, val handle: String, val imag
 data class Post(val id: String, val author: Person, val text: String, val asset: String, val created: Long, val likes: Int, val replies: Int, val liked: Boolean, val media: JSONObject?, val source: String, val raw: JSONObject) {
     companion object { fun parse(j: JSONObject) = Post(j.string("id"), Person.parse(j.optJSONObject("author") ?: JSONObject()), j.string("text"), j.string("asset"), j.optLong("created"), j.optInt("likes"), j.optInt("replies"), j.optBoolean("liked"), j.optJSONObject("media"), j.string("source"), j) }
 }
+data class PostReaction(val liked: Boolean,val likes: Int,val pending: Boolean=false)
+fun Post.withReaction(value: PostReaction?)=if(value==null)this else copy(liked=value.liked,likes=value.likes)
 data class Page(val items: List<JSONObject> = emptyList(), val cursor: String? = null, val total: Int = 0, val loading: Boolean = false, val error: String? = null, val at: Long = 0)
 data class ChartPoint(val time: Long, val value: Float)
 fun chartPoints(j: JSONObject) = j.objects("points").mapNotNull { val v=it.number("value"); val t=it.optLong("time"); if(v != null && v > 0 && v.toFloat().isFinite() && t > 0 && t<=System.currentTimeMillis()/1000+300) ChartPoint(t,v.toFloat()) else null }.distinctBy { it.time }.sortedBy { it.time }.takeLast(600)

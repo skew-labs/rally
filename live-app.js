@@ -65,6 +65,7 @@ const brandPicker=selected=>`<div class="r-agent-client-picker" role="group" ari
 const params = new URLSearchParams(location.search);
 const marketTabs=['memes','spot','perps','prediction','stocks','rwa','venues'];
 const S = {view:params.get('view')||'home',mode:'for-you',marketTab:params.get('tab')||'memes',nadMode:params.get('phase')==='dex'?'dex':params.get('sort')==='latest'?'new':'cap',filter:'',boot:null,tokens:[],posts:[],cursor:null,chart:{theme:document.documentElement.dataset.theme||'light',chartProvider:'tradingview',chartInterval:'60'},trade:null,modal:null,provider:null,busy:false};
+const reactionRequests=new Map();
 const Mobile=mobileUI({state:S,closeModal,closeTrade});
 S.homeSection=params.get('section')==='feed'?'feed':'markets';
 if(!marketTabs.includes(S.marketTab))S.marketTab='memes';
@@ -497,7 +498,21 @@ async function handle(action,id,el){
   else if(action==='community-section'||action==='profile-section'){if(action==='community-section')S.communityTab=id;else S.profileTab=id;document.querySelectorAll(action==='community-section'?'.r-community-tabs button':'.r-profile-tabs button').forEach(b=>{b.classList.toggle('active',b.dataset.id===id);b.setAttribute('aria-pressed',String(b.dataset.id===id));});paintSocialTimeline();rememberUI();}
   else if(action==='follow')needAccount(async()=>{const p=S.boot.people.find(p=>p.id===id)||await api('/api/profile?id='+encodeURIComponent(id));await api('/api/follow',{id,active:!p.following});await boot();render();});
   else if(action==='join')needAccount(async()=>{await api('/api/join',{id,active:!S.boot.communities.find(c=>c.id===id)?.joined});await boot();render();});
-  else if(action==='like'||action==='save')needAccount(async()=>{let p=S.posts.find(p=>p.id===id);if(!p){p=await api('/api/post?id='+encodeURIComponent(id));S.posts.push(p);}const r=await api('/api/reaction',{post:id,kind:action==='like'?'like':'save',active:!(action==='like'?p.liked:p.saved)});Object.assign(p,r);if(action==='like'?r.liked:r.saved)C.track(action,id);document.querySelectorAll('[data-post]').forEach(host=>{if(host.dataset.post===id)host.outerHTML=postCard(p);});if(action==='save'&&S.view==='saved')render();});
+  else if(action==='like'||action==='save')needAccount(async()=>{
+   const owner=S.boot.me.id,key=owner+'|'+id+'|'+action;if(reactionRequests.has(key))return;
+   const request={};reactionRequests.set(key,request);let p,before;
+   try{
+    p=S.posts.find(p=>p.id===id);if(!p){p=await api('/api/post?id='+encodeURIComponent(id));if(S.boot.me?.id!==owner)return;S.posts.push(p);}
+    const field=action==='like'?'liked':'saved';before={[field]:Boolean(p[field]),...(action==='like'?{likes:p.likes||0}:{})};
+    p[field]=!before[field];if(action==='like')p.likes=Math.max(0,before.likes+(p.liked?1:-1));P.feedback(p,action,true);
+    const result=await api('/api/reaction',{post:id,kind:action,active:p[field]});
+    if(S.boot.me?.id!==owner)return;
+    // Patch only this reaction: media, reading state, focus and other reactions stay mounted.
+    p[field]=Boolean(result[field]);if(action==='like')p.likes=result.likes;P.feedback(p,action);invalidateSocial();
+    if(p[field])C.track(action,id);if(action==='save'&&S.view==='saved'&&!p.saved)await render();
+   }catch(error){if(before&&S.boot.me?.id===owner){Object.assign(p,before);P.feedback(p,action);}throw error;}
+   finally{if(reactionRequests.get(key)===request)reactionRequests.delete(key);}
+  });
   else if(action==='reply')await replies(id);
   else if(action==='compose-reply')composer(id);
   else if(action==='share'){await navigator.clipboard.writeText(location.origin+'/?view=post&id='+encodeURIComponent(id));notify('Link copied');}
