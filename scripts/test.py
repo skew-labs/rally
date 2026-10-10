@@ -6,11 +6,11 @@ import tempfile
 from pathlib import Path
 
 root=Path(__file__).resolve().parents[1]
-tests=['test_algorithms.py','test_auth.py','test_discovery.py','test_launch_activity.py','test_loading.py','test_token_images.py','test_launch_ingestion.py','test_execution.py','test_privy.py','test_native_auth.py','test_wallet_assets.py','test_preflight.py']
+tests=['test_social_loop.py','test_algorithms.py','test_auth.py','test_discovery.py','test_launch_activity.py','test_loading.py','test_token_images.py','test_launch_ingestion.py','test_execution.py','test_privy.py','test_native_auth.py','test_wallet_assets.py','test_preflight.py']
 for name in tests:
     with tempfile.TemporaryDirectory(prefix='rally-tests-') as directory:
         env={**os.environ,'RALLY_TESTING':'1','RALLY_STATE_DIR':directory,
-             'PYTHONPATH':str(root),
+             'PYTHONPATH':os.pathsep.join(filter(None,[str(root),os.environ.get('PYTHONPATH','')])),
              'RALLY_RPC_URL':'https://rpc.invalid','RALLY_COMMUNITY_FACTORY':'',
              'RALLY_COMMUNITY_DEPLOYER':'','RALLY_PRIVY_APP_ID':'',
              'RALLY_AGENT_BRIDGE_CONFIG':str(Path(directory)/'unpaired.json')}

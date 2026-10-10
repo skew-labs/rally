@@ -95,7 +95,7 @@ def realized(rows, stable, cutoff=0):
             'basis':'Recorded USDC spot trades linked to this algorithm. Network fees excluded.'}
 
 
-def performance(feed,days=30):
+def performance(feed,days=30,cutoff=None,until=None):
     empty={'roi':None,'pnl':None,'closedTrades':0,'proofs':[],'state':'unverified',
         'currency':'USDC','windowDays':days,'basis':'No verified closed trades'}
     if feed['owner']=='rally':return empty
@@ -106,10 +106,11 @@ def performance(feed,days=30):
         AND c.reference=q.id AND c.user_id=o.user_id
         WHERE o.user_id=? AND c.feed=? ORDER BY o.created,o.id LIMIT 1001''',(feed['owner'],feed['id']))
     if len(history)>1000:return {**empty,'basis':'Recorded history exceeds the calculation limit'}
+    if until is not None:history=[r for r in history if r['created']<until]
     for row in history:
         row['inputAddress']=(s.GATEWAY.token_map.get(row['input']) or {}).get('address',row['input'])
         row['outputAddress']=(s.GATEWAY.token_map.get(row['output']) or {}).get('address',row['output'])
-    return {**realized(history,s.USDC.lower(),s.now()-days*86400),'windowDays':days}
+    return {**realized(history,s.USDC.lower(),cutoff if cutoff is not None else s.now()-days*86400),'windowDays':days}
 
 
 def cover(post):
@@ -247,7 +248,7 @@ def share_performance(who,data):
 
 
 def alerts_tick():
-    # These are opted-in in-app alerts, not email, push or delegated trades.
+    # Opted-in in-app notices also enter the permission-checked push queue.
     global ALERT_CURSOR
     batch=s.rows('SELECT * FROM feed_alerts WHERE enabled=1 AND (owner,feed)>(?,?) ORDER BY owner,feed LIMIT 100',ALERT_CURSOR)
     if not batch:batch=s.rows('SELECT * FROM feed_alerts WHERE enabled=1 ORDER BY owner,feed LIMIT 100')
@@ -262,6 +263,6 @@ def alerts_tick():
         if not p:continue
         key='algorithm:'+a['owner']+':'+f['id']+':'+p['id']
         with s.connection() as db:
-            db.execute('INSERT OR IGNORE INTO notifications(id,owner,actor,kind,post,created,dedupe) VALUES(?,?,?,?,?,?,?)',
-                (s.uid(),a['owner'],p['author'],'algorithm',p['id'],s.now(),key))
+            db.execute('INSERT OR IGNORE INTO notifications(id,owner,actor,kind,post,created,dedupe,feed) VALUES(?,?,?,?,?,?,?,?)',
+                (s.uid(),a['owner'],p['author'],'algorithm',p['id'],s.now(),key,f['id']))
             db.execute('UPDATE feed_alerts SET after_created=?,after_post_row=? WHERE owner=? AND feed=?',(p['created'],p['postRow'],a['owner'],f['id']))

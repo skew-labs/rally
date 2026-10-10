@@ -95,12 +95,13 @@ def listing(who=None):
     return {'algorithms':versions,'features':sorted(FEATURES),'language':'rally-formula-v1','limits':{'candidates':100,'expressionCharacters':1000,'cpuSeconds':1,'memoryMB':96},'competition':'Matched candidate comparisons. Reader events are observed, not investment returns.'}
 
 
-def reader_metrics(version, creator):
+def reader_metrics(version, creator,cutoff=None,until=None):
     # One reader/post/action/day, irrespective of refreshes or scoring runs.
     query='''SELECT e.owner,e.post,e.kind,e.created/86400 day FROM algorithm_events e
         JOIN algorithm_runs r ON r.id=e.run WHERE r.version=? AND e.owner!=?
         AND e.created>=? GROUP BY e.owner,e.post,e.kind,day'''
-    events=s.rows(query,(version,creator,s.now()-86400*30))
+    events=s.rows(query,(version,creator,cutoff if cutoff is not None else s.now()-86400*30))
+    if until is not None:events=[e for e in events if e['day']<until//86400]
     seen={(e['owner'],e['post'],e['day']) for e in events if e['kind']=='impression'}
     engaged={(e['owner'],e['post'],e['day']) for e in events if e['kind']!='impression'} & seen
     return {'impressions':len(seen),'engagedViews':len(engaged),

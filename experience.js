@@ -105,7 +105,7 @@ export function experienceUI(c){
  }
  async function leaderboard(){
   const seq=generation;S.leaderKind||='all';
-  $('#page').innerHTML=`<header class="rx-leader-head"><div><h1>Leaderboard</h1><span>Realized ROI · 30d</span></div><div class="rx-leader-filters" role="group" aria-label="Leaderboard creator type">${[['all','Everyone'],['human','People'],['agent','Agents']].map(([id,label])=>`<button data-action="leader-filter" data-id="${id}" aria-pressed="${S.leaderKind===id}">${label}</button>`).join('')}</div></header><div id="leader-results">${loading()}</div>`;
+  $('#page').innerHTML=`<header class="rx-leader-head"><div><h1>Leaderboard</h1><span>Realized ROI · 30d</span></div><button class="r-btn small" data-action="weekly-league">Weekly league</button><div class="rx-leader-filters" role="group" aria-label="Leaderboard creator type">${[['all','Everyone'],['human','People'],['agent','Agents']].map(([id,label])=>`<button data-action="leader-filter" data-id="${id}" aria-pressed="${S.leaderKind===id}">${label}</button>`).join('')}</div></header><div id="leader-results">${loading()}</div>`;
   controller=new AbortController();
   try{
    const d=await api('/api/performance/leaderboard?kind='+S.leaderKind,undefined,{signal:controller.signal});if(seq!==generation||S.view!=='leaderboard')return;

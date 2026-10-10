@@ -7,8 +7,8 @@ android {
         applicationId 'com.rallydot.app'
         minSdk 28
         targetSdk 36
-        versionCode 12
-        versionName '0.3.3'
+        versionCode 13
+        versionName '0.4.0'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     signingConfigs {
@@ -39,6 +39,7 @@ android {
 }
 
 dependencies {
+ implementation 'com.google.firebase:firebase-messaging:25.0.1'
  // Last Reown release compatible with the app's Android 36 toolchain.
  implementation platform('com.reown:android-bom:1.6.13')
  implementation 'com.reown:android-core'

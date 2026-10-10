@@ -20,6 +20,7 @@ import coil.memory.MemoryCache
 import coil.disk.DiskCache
 
 class RallyApplication: Application(), ImageLoaderFactory {
+    override fun onCreate() { super.onCreate();RallyPush.restore(this) }
     private var walletSDK: io.privy.sdk.Privy?=null
     val externalWallet: ExternalWallet by lazy { ExternalWallet(this) }
     fun privy(app: String,client: String): io.privy.sdk.Privy {
@@ -39,7 +40,7 @@ class RallyActivity: ComponentActivity() {
         val splash=installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        incomingLink=intent?.data
+        incomingLink=RallyPush.incoming(intent) ?: intent?.data
         // Render immediately; network requests never extend the starting screen.
         splash.setOnExitAnimationListener { provider ->
             if(android.os.Build.VERSION.SDK_INT<26 || ValueAnimator.areAnimatorsEnabled()) {
@@ -50,7 +51,7 @@ class RallyActivity: ComponentActivity() {
     }
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent);setIntent(intent)
-        incomingLink=intent.data
+        incomingLink=RallyPush.incoming(intent) ?: intent.data
         model.bootstrap()
     }
     override fun onResume() { super.onResume();model.resumeAccount() }

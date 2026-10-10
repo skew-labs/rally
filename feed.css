@@ -23,7 +23,7 @@ html #timeline .r-post-asset{min-height:64px;padding:12px;margin-block:12px 4px;
 html #timeline .r-post-asset .r-token,html #timeline .r-post-asset .r-token-fallback{width:32px;height:32px}
 html #timeline .r-post-actions{padding-top:4px}
 html #timeline .r-new-posts{position:sticky;top:112px;z-index:21;min-height:44px;background:var(--paper);border-bottom:1px solid var(--line)}
-@media(max-width:760px){html body[data-view=home] .r-feed-toolbar{top:64px}html body[data-view=home] .r-composer-launch{display:none}html .r-feed-toolbar .r-page-head{min-height:60px}html .r-feed-toolbar .r-feed-select{max-width:116px;font-size:11px}html .r-feed-toolbar .r-tabs{gap:22px}html #timeline>.r-post{padding-block:20px 12px}html #timeline .r-new-posts{top:172px}}
+@media(max-width:760px){html body[data-view=home] .r-feed-toolbar{top:64px}html body[data-view=home] .r-composer-launch{display:flex}html .r-feed-toolbar .r-page-head{min-height:60px}html .r-feed-toolbar .r-feed-select{max-width:116px;font-size:11px}html .r-feed-toolbar .r-tabs{gap:22px}html #timeline>.r-post{padding-block:20px 12px}html #timeline .r-new-posts{top:172px}}
 @media(max-width:380px){html .r-feed-toolbar .r-feed-select{max-width:98px}html .r-feed-toolbar .r-swipe-entry{padding:10px;font-size:11px}html .r-feed-toolbar .r-page-head{gap:4px}html .r-feed-heading{gap:4px}}
 /* The ranking choice is the home title; the market grows out of the same feed. */
 html .r-feed-toolbar .r-page-head h1{min-width:0;flex:1}

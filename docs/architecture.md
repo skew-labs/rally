@@ -214,3 +214,10 @@ For Privy embedded wallets, the web client uses the SDK's `useSendTransaction` w
 
 
 The wallet interface paints a cached snapshot immediately and changes balance text without replacing action controls. Send refreshes its asset picker independently while preserving the selected token and amount. Deposit exposes the authenticated address before its QR arrives and reserves QR space, so loading does not move the copy control. Wallet sheets follow the visual viewport and keep their action footer outside the scrolling body. UI animation uses short opacity/transform changes with reduced-motion support; these optimizations do not change wallet authorization or venue settlement.
+
+
+## Social trading loop
+
+`social_loop.py` enriches real posts with immutable observed signals and opt-in receipt-backed fill cards. `token_benefits.py` verifies short-lived finalized holdings proofs and extends existing feed entitlement and checkout logic. `algorithm_league.py` persists common forward-only snapshots and runs entered versions through the existing isolated scorer. `push_delivery.py` maintains an account/device outbox and rechecks eligibility before provider delivery. Its independent worker keeps push latency outside market collection and financial reconciliation. Web and native Android use the same APIs and existing token trade sheets.
+
+[Data, authority and provider configuration](social-loop.md)

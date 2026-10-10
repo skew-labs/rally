@@ -149,6 +149,8 @@ def initialize():
     launchpad.initialize()
     import nad_revenue
     nad_revenue.initialize()
+    import token_benefits, social_loop, algorithm_league, push_delivery, discovery
+    discovery.initialize();token_benefits.initialize();social_loop.initialize();algorithm_league.initialize();push_delivery.initialize()
 
 
 def profile(ident, viewer=None):
@@ -161,6 +163,7 @@ def profile(ident, viewer=None):
     if p['owner']: p['operator'] = one('SELECT id,handle,name FROM accounts WHERE id=?',(p['owner'],))
     p['communityToken']=community_tokens.public(p['owner'] or p['id'])
     p['launchTokens']=launchpad.owned(p['id'])
+    p['badges']=__import__('token_benefits').badges(p['id'])
     return p
 
 
@@ -235,7 +238,7 @@ def post_view(p,viewer=None):
     if p['media']:
         import media_pipeline
         p['media'] = media_pipeline.describe(p['media']) if one('SELECT id FROM media WHERE id=?',(p['media'],)) else None
-    return social.extras(p,viewer)
+    return __import__('social_loop').enrich(social.extras(p,viewer))
 
 
 def get_feed(who,params):
@@ -255,6 +258,8 @@ def get_feed(who,params):
     if author:sql+=' AND (author=? OR id IN (SELECT post FROM reposts WHERE owner=?))';args.extend([author,author])
     if mode=='following':
         require(who);sql+=' AND (author IN (SELECT target FROM follows WHERE user_id=?) OR id IN (SELECT post FROM reposts WHERE owner IN (SELECT target FROM follows WHERE user_id=?)))';args.extend([viewer,viewer])
+    if mode=='trades':
+        require(who);sql+=' AND id IN (SELECT post FROM trade_shares WHERE withdrawn=0) AND author IN (SELECT target FROM follows WHERE user_id=?)';args.append(viewer)
     if mode=='saved':
         require(who,human=True);sql+=" AND id IN (SELECT post FROM reactions WHERE user_id=? AND kind='save')";args.append(viewer)
     if mode=='agents':sql+=" AND author IN (SELECT id FROM accounts WHERE kind='agent')"
@@ -311,11 +316,19 @@ def publish(who,data,key=''):
         GATEWAY.token_map[asset]=json.loads(row['info'])
     if one('SELECT count(*) n FROM posts WHERE author=? AND created>?',(who['actor'],now()-86400))['n']>=100:raise Problem('Daily posting limit reached',429)
     idem=who['actor']+':'+key if key and len(key)<=128 else None
+    import social_loop
+    terms=social_loop.signal_terms(data.get('signal'),asset)
+    if terms and parent:raise Problem('Signals belong on original posts')
     ident=uid()
-    try:write('INSERT INTO posts(id,author,text,media,asset,community,parent,created,idem) VALUES(?,?,?,?,?,?,?,?,?)',(ident,who['actor'],text,media,asset,community,parent,now(),idem))
+    try:
+        with connection() as db:
+            db.execute('INSERT INTO posts(id,author,text,media,asset,community,parent,created,idem) VALUES(?,?,?,?,?,?,?,?,?)',(ident,who['actor'],text,media,asset,community,parent,now(),idem))
+            social_loop.attach(db,ident,who,terms,asset)
     except sqlite3.IntegrityError:
         existing=one('SELECT * FROM posts WHERE idem=?',(idem,))
         if not existing or any(existing[k]!=(v or None) for k,v in [('media',media),('asset',asset),('community',community),('parent',parent)]) or existing['text']!=text:raise Problem('Request key already used for another post',409)
+        saved=one('SELECT terms FROM signals WHERE post=?',(existing['id'],))
+        if (json.loads(saved['terms']) if saved else None)!=terms:raise Problem('Request key already used for another signal',409)
         return post_view(existing,who['actor'])
     if parent:
         import social
@@ -589,7 +602,7 @@ def bootstrap(who,include_markets=True):
     privy=privy_auth.status(user)
     token_status=community_tokens.status(user)
     return {'communityToken':token_status,'auth':{'privy':privy},'loginMethods':['wallet','password']+(['privy'] if privy['enabled'] else []),'passwordAccount':bool(user and one('SELECT pw FROM accounts WHERE id=?',(user,))['pw']),'unread':social.notices(who)['unread'] if who else 0,'me':profile(user,user) if user else None,'wallet':one('SELECT wallet FROM accounts WHERE id=?',(user,))['wallet'] if user else None,
-        'communities':[{**c,'members':one('SELECT count(*) n FROM members WHERE community=?',(c['id'],))['n'],'joined':bool(user and one('SELECT 1 FROM members WHERE user_id=? AND community=?',(user,c['id'])))} for c in rows('SELECT * FROM communities')],
+        'communities':[{**c,'tokenOwner':(one("SELECT owner FROM creator_tokens WHERE community=? AND state='live'",(c['id'],)) or {}).get('owner'),'members':one('SELECT count(*) n FROM members WHERE community=?',(c['id'],))['n'],'joined':bool(user and one('SELECT 1 FROM members WHERE user_id=? AND community=?',(user,c['id'])))} for c in rows('SELECT * FROM communities')],
         'feeds':[settlement.view(f,user) for f in rows('SELECT * FROM feeds ORDER BY created') if social.visible(user,f['owner'])],
         'people':[profile(p['id'],user) for p in rows("SELECT id FROM accounts WHERE kind IN ('person','agent','service') ORDER BY created DESC LIMIT 50") if social.visible(user,p['id'])][:30],
         'watches':[x['asset'] for x in rows('SELECT asset FROM watches WHERE user_id=?',(user or '',))],

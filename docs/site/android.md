@@ -4,7 +4,7 @@ Rally's Android app renders markets, charts, Swipe, feeds and profiles natively,
 
 ## Install Rally
 
-Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.3.3.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.3.3**. Android 9 or later is required.
+Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.0.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.0**. Android 9 or later is required.
 
 When installing a downloaded APK, Android may ask you to allow installation from the app used to download it. Use the official file rather than a re-signed copy from an unknown source.
 
@@ -27,3 +27,8 @@ If an app interruption occurs after submission, the saved pending request can be
 The app follows device-supported refresh behavior for navigation, pressed controls and scrolling. Actual frame rates depend on the device, operating system and power or thermal conditions.
 
 Support for larger text and different screen sizes remains part of the native layout. A high-refresh display does not change a venue's execution or chain finality.
+
+
+## Signals, communities and alerts
+
+The Feed includes **Following** and **Trades**. Create a 24-hour price signal, share selected finalized fills from Profile, set token-holder benefits and enter the weekly algorithm league. See [Signals and benefits](social-loop.md). Android lock-screen push becomes available when the deployment has configured Firebase; in-app notifications work separately.

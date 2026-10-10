@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.3.3.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.0.apk)
 
 ## Interaction and data
 
@@ -63,7 +63,7 @@ cd android
 ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.3.3 (code 12) uses the existing release certificate, allowing upgrades from the earlier APKs. Release shrinking removes SDK debug/info log calls so OAuth callback codes and relay URIs are not written to logcat.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.4.0 (code 13) uses the existing release certificate, allowing upgrades from the earlier APKs. Release shrinking removes SDK debug/info log calls so OAuth callback codes and relay URIs are not written to logcat.
 
 `/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
@@ -102,3 +102,8 @@ Validation for 0.3.2 passed 188 isolated backend tests, 48 Android unit tests an
 Version 0.3.3 simplifies the branded login sheet, opens Google authorization directly, restores the account on return and cancels or ignores abandoned login attempts. Web OAuth callbacks wait for the SDK's authenticated state before exchanging the verified identity for a Rally session.
 
 Validation passed 50 Android unit tests, release lint with zero errors and eight login layouts covering light/dark small phones, 1.5× text, landscape and tablets. Seven disposable web-wallet scenarios verified successful login, duplicate clicks, rejection, account changes, expired or modified challenges and cancellation. Separate OAuth lifecycle checks covered delayed authentication, changed accounts, expiry, cancellation and replay. Both the signed APK and deployed web app opened the actual Google authorization page. These checks did not complete a real identity login or make a real wallet signature or financial submission. Native external-wallet relay execution remains unverified until a Rally Reown Project ID is configured; browser pairing remains available.
+
+
+## Social loop and notifications
+
+Version 0.4.0 adds native signal cards and publishing, opt-in finalized fill sharing, holder-tier configuration and access checks, weekly algorithm contests, and notification deep links. Android Firebase initialization is opt-in and reads public client configuration; the FCM service has no signing or trading authority. The app reports lock-screen push unavailable until the deployment configures Firebase. [Configuration and backend boundaries](social-loop.md)

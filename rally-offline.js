@@ -16,3 +16,15 @@ self.addEventListener('fetch',event=>{
  if(request.method!=='GET'||request.mode!=='navigate'||url.origin!==self.location.origin||!['/','/app','/app/'].includes(url.pathname))return;
  event.respondWith(navigation(request));
 });
+
+// Push contains navigation context only. It never signs or queues a trade.
+const notificationRoute=raw=>{try{const url=new URL(raw,self.location.origin);return url.origin===self.location.origin&&url.pathname==='/'?url.href:self.location.origin+'/?view=notifications';}catch{return self.location.origin+'/?view=notifications';}};
+self.addEventListener('push',event=>event.waitUntil((async()=>{
+ let data={};try{data=event.data?.json()||{};}catch{}
+ await self.registration.showNotification('Rally',{body:'New activity in Rally',icon:'/assets/rally-icon-192.png',badge:'/assets/rally-icon-192.png',tag:String(data.tag||'rally-activity').slice(0,100),data:{url:notificationRoute(data.url)},renotify:false});
+})()));
+self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil((async()=>{
+ const url=notificationRoute(event.notification.data?.url),windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+ const client=windows.find(w=>new URL(w.url).origin===self.location.origin);
+ if(client){await client.navigate(url);await client.focus();}else await self.clients.openWindow(url);
+})());});

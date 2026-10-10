@@ -126,3 +126,10 @@ A catalog entry is not a tradable market. A reference price is not an executable
 The contracts have fixture tests, not an independent security audit. See [Security](SECURITY.md) and [third-party notices](THIRD_PARTY.md). No return or token-price increase is guaranteed by an algorithm subscription or a buyback policy.
 
 MIT applies to Rally-owned source. Brand assets, venue metadata, fonts and third-party packages retain their respective rights and notices.
+
+
+## Discovery to participation
+
+Publish immutable price signals, choose which finalized token fills to share, and unlock creator feeds through community-token holdings. The weekly algorithm league scores common frozen candidates and separates observed price discovery, reader engagement and actual recorded Spot returns. Opt-in browser push and the Android FCM connection open the relevant post or token; notifications carry no execution authority.
+
+[User guide](docs/site/social-loop.md) · [Architecture and push configuration](docs/social-loop.md) · [API reference](docs/api.md)

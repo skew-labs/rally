@@ -73,3 +73,25 @@ reads in the HTTP worker. These public read endpoints do not authorize trades.
 - `GET /api/portfolio/deposit` (human session): linked wallet, Monad chain ID and an SVG QR data URL. This makes no transaction.
 - `GET /api/token-holders?asset=0x…` (public): indexed holder rows, total, source, timestamp and refresh state. An unavailable index returns `indexed: false`.
 - `POST /api/execution/plan` with `{ "venue": "wallet", "kind": "send", "asset": "MON or token address", "recipient": "0x…", "amount": "decimal string" }`: prepares an unsigned exact-amount send. Preparation, record and receipt reconciliation use the same endpoints as venue executions.
+
+
+## Social trading endpoints
+
+| Read | Authorization and result |
+| --- | --- |
+| `/api/signals?owner=...` | Visible creator signal record; active, target, invalidated and expired counts |
+| `/api/trades/shareable` | Human session; only its finalized eligible token fills |
+| `/api/posts?mode=trades` | Session or feed-read grant; followed authors' non-withdrawn shared fills |
+| `/api/benefits?owner=...` | Public policy and only the viewer's current qualification; never exposes holdings amount |
+| `/api/league?week=YYYY-MM-DD` | Public weekly contest and candidate digests; Monday UTC |
+| `/api/push/config` | Public VAPID key and Android configuration availability |
+| `/api/push/settings` | Human account preferences and sanitized device IDs |
+| `/api/market-alerts` | Human account's watched-token alert settings |
+
+`POST /api/posts` accepts optional `signal: {direction, target, invalidation, hours}`. Discovery price and time come from the server, not the request. Existing publishing scope applies.
+
+Human-account mutations: `/api/trades/share` (`trade`), `/api/trades/withdraw` (`post`), `/api/benefits/save` (`tiers`, `gatedFeeds`), `/api/benefits/refresh` (`owner`), `/api/benefits/badge` (`owner`, `enabled`), `/api/league/enroll` (`feed`), `/api/market-alerts` (`asset`, `enabled`, `thresholdBps`).
+
+Push mutations: `/api/push/settings` (`enabled`, optional `kinds`), `/api/push/register` (`kind: web`, `subscription`, or `kind: android`, `token`), `/api/push/remove` (`id`). Device credentials are never returned. These operations carry no trading or signing permission.
+
+See [Social trading loop](social-loop.md) for storage, freshness, authority and provider configuration.

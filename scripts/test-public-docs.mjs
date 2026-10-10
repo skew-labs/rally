@@ -9,7 +9,7 @@ const root=fileURLToPath(new URL('..',import.meta.url));
 const port=process.env.RALLY_DOCS_PORT||'4259';
 const origin=process.env.RALLY_DOCS_ORIGIN||'http://127.0.0.1:'+port;
 const evidence=process.env.RALLY_DOCS_EVIDENCE;
-const paths=['/docs','/docs/getting-started','/docs/wallets','/docs/android','/docs/spot','/docs/memes','/docs/perps','/docs/prediction-markets','/docs/trading','/docs/fees','/docs/social','/docs/algorithms','/docs/community-tokens','/docs/agents','/docs/faq','/docs/developers','/docs/architecture','/docs/api','/docs/agent-api','/docs/development','/docs/verification','/terms','/privacy'];
+const paths=['/docs','/docs/getting-started','/docs/wallets','/docs/android','/docs/spot','/docs/memes','/docs/perps','/docs/prediction-markets','/docs/trading','/docs/fees','/docs/social','/docs/social-loop','/docs/algorithms','/docs/community-tokens','/docs/agents','/docs/faq','/docs/developers','/docs/architecture','/docs/api','/docs/agent-api','/docs/development','/docs/verification','/terms','/privacy'];
 const report={origin,pages:paths.length,checks:0,layouts:[],errors:[],writes:0,documentApiRequests:0};
 let server,browser,diagnostics='';
 try{

@@ -74,6 +74,8 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
     val snack=remember { SnackbarHostState() }
     LaunchedEffect(data.message) { data.message?.let { snack.showSnackbar(it);vm.message(null) } }
     fun showAsset(id: String) {
+        if(id.startsWith("signals:")){extra="Signals:"+id.removePrefix("signals:");return}
+        if(id.startsWith("perpl:")){scope.launch {try{val m=vm.api.get("/api/perps",true).objects("markets").firstOrNull {it.string("id")==id.removePrefix("perpl:")&&it.string("venue")=="Perpl"};if(m!=null)asset=Asset.parse(m,"perps") else vm.message("Perpl market unavailable")}catch(e:Exception){vm.message(e.message)}};return}
         val rows=data.pages.values.flatMap { it.items }
         val known=rows.firstOrNull { it.string("id")==id || it.string("address")==id } ?: rows.mapNotNull { it.optJSONObject("assetInfo") }.firstOrNull { it.string("id",it.string("address"))==id }
         if(known!=null && known.has("symbol")) { asset=Asset.parse(known);return }
@@ -84,8 +86,9 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
     }
     LaunchedEffect(link) {
         if(link?.scheme=="https" && link.host=="rallydot.com") {
-            if(link.getQueryParameter("view")=="token")link.getQueryParameter("id")?.let(::showAsset)
-            when(link.getQueryParameter("view")) { "communities"->tab=1;"discover"->tab=2;"leaderboard"->tab=3;"account","agents","feeds","earnings"->tab=4;"launchpad"->{tab=0;home="Launch"};"swipe"->{tab=0;home="Swipe"};"home"->{tab=0;home=when(link.getQueryParameter("section")){"feed"->"Feed";"launchpad"->"Launch";"swipe"->"Swipe";else->"Markets"}} }
+            if(link.getQueryParameter("view")=="token")(link.getQueryParameter("id") ?: link.getQueryParameter("token"))?.let(::showAsset)
+            if(link.getQueryParameter("view")=="post")(link.getQueryParameter("id") ?: link.getQueryParameter("post"))?.let { id->scope.launch { try{post=Post.parse(vm.api.get("/api/post?id="+Uri.encode(id),true))}catch(e:Exception){vm.message(e.message)} } }
+            when(link.getQueryParameter("view")) { "notifications"->{tab=4;extra="Notifications"};"communities"->tab=1;"discover"->tab=2;"leaderboard"->tab=3;"account","agents","feeds","earnings"->tab=4;"launchpad"->{tab=0;home="Launch"};"swipe"->{tab=0;home="Swipe"};"home"->{tab=0;home=when(link.getQueryParameter("section")){"feed"->"Feed";"launchpad"->"Launch";"swipe"->"Swipe";else->"Markets"}} }
         }
     }
     BackHandler(asset==null && post==null && algorithm==null && !composing && (extra!=null || community!=null || tab!=0 || home!="Markets")) {
@@ -105,7 +108,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                 }
             }
         }
-        val title=extra ?: when { tab==0->"rally.";tab==1 && community!=null->data.boot?.objects("communities")?.firstOrNull { it.string("id")==community }?.string("name") ?: "Community";else->Tabs[tab].label }
+        val title=extra?.let {if(it.startsWith("Benefits:"))"Token benefits" else if(it.startsWith("Signals:"))"Signal record" else it} ?: when { tab==0->"rally.";tab==1 && community!=null->data.boot?.objects("communities")?.firstOrNull { it.string("id")==community }?.string("name") ?: "Community";else->Tabs[tab].label }
         BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             val wide=maxWidth>=600.dp
             val compactRail=maxHeight<600.dp
@@ -143,6 +146,13 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                         },label="screen") { shown ->
                             screenStates.SaveableStateProvider("$accountId/$shown") {
                                 when {
+                                    shown=="Notifications"->NotificationsScreen(vm,{post=it},::showAsset)
+                                    shown=="Share trades"->ShareTradesScreen(vm,{post=it})
+                                    shown=="Signal record"->SignalRecordScreen(vm,{post=it})
+                                    shown.startsWith("Signals:")->SignalRecordScreen(vm,{post=it},shown.substringAfter(":"))
+                                    shown=="Weekly league"->WeeklyLeagueScreen(vm)
+                                    shown.startsWith("Benefits:")->TokenBenefitsScreen(vm,shown.substringAfter(":"))
+                                    shown=="Token benefits"->TokenBenefitsScreen(vm,vm.me?.string("id").orEmpty())
                                     shown=="Algorithms"->AlgorithmsScreen(vm,{algorithm=it})
                                     shown=="Agents"->AgentsScreen(data)
                                     shown=="Activity"->ActivityScreen(vm)
@@ -152,9 +162,9 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                                     shown=="0:Swipe"->SwipeScreen(vm,{asset=it},{post=it})
                                     shown=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4},onAlgorithm={extra="Algorithms"})
                                     shown.startsWith("1:") && shown.substringAfter(':').isNotEmpty()->FeedScreen(vm,community=shown.substringAfter(':'),onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else tab=4})
-                                    shown.startsWith("1:")->CommunitiesScreen(vm,{community=it})
+                                    shown.startsWith("1:")->CommunitiesScreen(vm,{community=it},{extra="Benefits:$it"})
                                     shown.startsWith("2:")->DiscoverScreen(vm,onPost={post=it},onAlgorithm={algorithm=it})
-                                    shown.startsWith("3:")->LeaderboardScreen(vm,{algorithm=it})
+                                    shown.startsWith("3:")->LeaderboardScreen(vm,{algorithm=it},{extra="Weekly league"})
                                     else->ProfileScreen(vm,openBrowser,{extra=it})
                                 }
                             }

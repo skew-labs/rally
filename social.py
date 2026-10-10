@@ -55,10 +55,10 @@ def notices(who):
     user=s.require(who,human=True)
     result=[]
     for n in s.rows('SELECT * FROM notifications WHERE owner=? ORDER BY created DESC,id DESC LIMIT 100',(user,)):
-        if not visible(user,n['actor']):continue
+        if not visible(user,n['actor']) or not __import__('push_delivery').eligible(n):continue
         p=s.one('SELECT id,text,deleted FROM posts WHERE id=?',(n['post'],)) if n['post'] else None
         if n['post'] and (not p or p['deleted']):continue
-        result.append({**n,'actor':s.profile(n['actor'],user),'text':p['text'][:180] if p else ''})
+        result.append({**n,'actor':s.profile(n['actor'],user),'text':p['text'][:180] if p else '', 'detail':json.loads(n['detail']) if n.get('detail') else None})
     return {'notifications':result,'unread':sum(not n['seen'] for n in result)}
 
 

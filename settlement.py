@@ -24,14 +24,17 @@ def initialize():
             db.execute('ALTER TABLE invoices ADD COLUMN community_terms TEXT')
 
 def allowed(feed,user):
-    return not int(feed.get('price_raw') or '0') or feed['owner']==user or bool(user and s.one('SELECT 1 FROM entitlements WHERE buyer=? AND feed=? AND version=? AND expires>?',(user,feed['id'],feed['version'],s.now())))
+    if feed['owner']==user or bool(user and s.one('SELECT 1 FROM entitlements WHERE buyer=? AND feed=? AND version=? AND expires>?',(user,feed['id'],feed['version'],s.now()))):return True
+    benefit=__import__('token_benefits').access(feed,user)
+    return benefit if benefit is not None else not int(feed.get('price_raw') or '0')
 
 def view(feed,user):
     access=allowed(feed,user)
+    pricing=__import__('token_benefits').price(feed,user)
     ent=s.one('SELECT expires FROM entitlements WHERE buyer=? AND feed=? AND version=?',(user or '',feed['id'],feed['version']))
     owner=s.one('SELECT handle,name FROM accounts WHERE id=?',(feed['owner'],))
     token=__import__('nad_revenue').public(feed) or __import__('community_tokens').public(feed['owner'])
-    return {'algorithm_version':feed.get('algorithm_version'),'formula':(s.one('SELECT expression FROM algorithm_versions WHERE id=?',(feed.get('algorithm_version'),)) or {}).get('expression') if access else None,**{k:feed[k] for k in ['id','owner','name','created','version']},'creator':owner,'weights':json.loads(feed['weights']) if access else None,'assets':json.loads(feed['assets']) if access else [],'price':s.units(int(feed['price_raw']),6),'priceRaw':feed['price_raw'],'currency':'USDC','periodDays':30,'access':access,'accessExpires':ent['expires'] if ent and ent['expires']>s.now() else None,'recipient':feed['recipient'],'creatorShareBps':10000-(token['buybackBps'] if token else 0),'communityToken':token,'autoRenew':False}
+    return {'algorithm_version':feed.get('algorithm_version'),'formula':(s.one('SELECT expression FROM algorithm_versions WHERE id=?',(feed.get('algorithm_version'),)) or {}).get('expression') if access else None,**{k:feed[k] for k in ['id','owner','name','created','version']},'creator':owner,'weights':json.loads(feed['weights']) if access else None,'assets':json.loads(feed['assets']) if access else [],'price':s.units(int(pricing['amountRaw']),6),'priceRaw':pricing['amountRaw'],'holderDiscountBps':pricing['discountBps'],'originalPriceRaw':pricing['originalRaw'],'currency':'USDC','periodDays':30,'access':access,'accessExpires':ent['expires'] if ent and ent['expires']>s.now() else None,'recipient':feed['recipient'],'creatorShareBps':10000-(token['buybackBps'] if token else 0),'communityToken':token,'autoRenew':False}
 
 def price(value):
     try:
@@ -51,14 +54,15 @@ def checkout(who,data):
     if not f['recipient'] or f['recipient']==s.ZERO:raise s.Problem('Creator payment address unavailable',409)
     terms=__import__('nad_revenue').route(f) or __import__('community_tokens').route(f)
     recipient=terms['vault'] if terms else f['recipient']
+    amount=__import__('token_benefits').price(f,user)['amountRaw']
     ident=s.uid();created=s.now()
     with s.connection() as db:
         db.execute('BEGIN IMMEDIATE')
         existing=db.execute("SELECT * FROM invoices WHERE buyer=? AND feed=? AND version=? AND wallet=? AND (state IN ('submitted','confirmed') OR (state='awaiting_payment' AND expires>?)) ORDER BY created DESC LIMIT 1",(user,f['id'],f['version'],wallet,created)).fetchone()
-        if existing and not existing['tx'] and (existing['recipient']!=recipient or json.loads(existing['community_terms'] or 'null')!=terms):
+        if existing and not existing['tx'] and (existing['recipient']!=recipient or existing['amount_raw']!=amount or json.loads(existing['community_terms'] or 'null')!=terms):
             db.execute("UPDATE invoices SET state='expired' WHERE id=?",(existing['id'],));existing=None
         if existing:ident=existing['id']
-        else:db.execute('INSERT INTO invoices(id,buyer,feed,version,wallet,recipient,amount_raw,created,expires,state,community_terms) VALUES(?,?,?,?,?,?,?,?,?,?,?)',(ident,user,f['id'],f['version'],wallet,recipient,f['price_raw'],created,created+900,'awaiting_payment',s.dump(terms) if terms else None))
+        else:db.execute('INSERT INTO invoices(id,buyer,feed,version,wallet,recipient,amount_raw,created,expires,state,community_terms) VALUES(?,?,?,?,?,?,?,?,?,?,?)',(ident,user,f['id'],f['version'],wallet,recipient,amount,created,created+900,'awaiting_payment',s.dump(terms) if terms else None))
     s.audit('feed.checkout',who,ident)
     return invoice(who,ident)
 
@@ -93,6 +97,9 @@ def prepare(who,data):
     if row['wallet']!=current:raise s.Problem('The connected wallet changed. Start a new checkout.',409)
     if row['tx'] or row['state']!='awaiting_payment':raise s.Problem('This payment already has a transaction',409)
     if row['expires']<s.now():raise s.Problem('Checkout expired. Start a new checkout.',409)
+    feed=s.one('SELECT * FROM feeds WHERE id=?',(row['feed'],))
+    if not feed or feed['version']!=row['version'] or __import__('token_benefits').price(feed,row['buyer'])['amountRaw']!=row['amount_raw']:
+        raise s.Problem('The subscription price changed. Start a fresh checkout.',409,'price_changed')
     balance=s.rpc('eth_call',[{'to':s.USDC,'data':'0x70a08231'+row['wallet'][2:].rjust(64,'0')},'latest'])
     if int(balance,16)<int(row['amount_raw']):raise s.Problem('Not enough USDC in this wallet',409,'insufficient_balance')
     t=terms(row)

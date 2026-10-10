@@ -185,6 +185,7 @@ export function financeUI(c) {
     $('#collateral-form').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget;if(form.dataset.pending==='true')return;const button=$('[type=submit]',form),data=Object.fromEntries(new FormData(form));c.checkout.formBusy(form,true);button.disabled=true;try{await review(await api('/api/execution/plan',{venue:'perpl',...data,context:context||intent?.context}));}catch(e){if(form.isConnected)$('.r-form-error',form).textContent=e.message;}finally{c.checkout.formBusy(form,false);}};
   });}
   async function perplOrder(id,context=null,direction='long',values=null){
+    if(!S.perps||Date.now()/1000-S.perps.fetchedAt>=15)await perpData();
     if(String(id).startsWith('drake:')||String(id).startsWith('pingu:'))return venueOrder(id,context,direction);
     if(S.perps?.markets.find(m=>String(m.id)===String(id))?.venue==='LeverUp')return leverupOrder(id,context,direction,values);
     direction=direction==='short'?'short':'long';

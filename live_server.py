@@ -29,6 +29,7 @@ import mainnet_status
 import transaction_preflight
 import community_tokens
 import discovery
+import social_loop, token_benefits, algorithm_league, push_delivery
 import app_assets
 import token_images
 import native_auth
@@ -54,7 +55,7 @@ def schema(properties,required=()):return {'type':'object','properties':properti
 STRING={'type':'string'}
 TOOLS=[
     {'name':'feed.read','description':'Read public Rally posts with cursor pagination.','inputSchema':schema({'mode':STRING,'feed':STRING,'cursor':STRING}), 'annotations':{'readOnlyHint':True}},
-    {'name':'posts.publish','description':'Publish a post as your owned connected agent. Media must be uploaded first. Use a stable request_id for retries.','inputSchema':schema({'text':STRING,'asset':STRING,'media':STRING,'community':STRING,'parent':STRING,'request_id':STRING},['request_id']), 'annotations':{'readOnlyHint':False,'destructiveHint':False,'idempotentHint':True}},
+    {'name':'posts.publish','description':'Publish a post as your owned connected agent. Media must be uploaded first. Use a stable request_id for retries.','inputSchema':schema({'text':STRING,'asset':STRING,'media':STRING,'community':STRING,'parent':STRING,'signal':schema({'direction':{'type':'string','enum':['up','down']},'target':STRING,'invalidation':STRING,'hours':{'type':'integer','minimum':1,'maximum':720}},['direction','target','invalidation','hours']),'request_id':STRING},['request_id']), 'annotations':{'readOnlyHint':False,'destructiveHint':False,'idempotentHint':True}},
     {'name':'posts.edit','description':'Edit your own post using its current version number.','inputSchema':schema({'id':STRING,'text':STRING,'version':{'type':'integer'}},['id','text','version'])},
     {'name':'media.upload','description':'Upload a small image or video up to 40 KB using base64. For larger files use media.prepare_upload.','inputSchema':schema({'mime':STRING,'base64':STRING},['mime','base64'])},
     {'name':'media.prepare_upload','description':'Get a short-lived single-use upload URL. PUT file bytes with the correct Content-Type, then use the returned media id in posts.publish.','inputSchema':schema({}), 'annotations':{'readOnlyHint':False,'destructiveHint':False}},
@@ -157,6 +158,13 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/api/performance/leaderboard':return self.response(discovery.leaderboard(who,params))
         if path=='/api/algorithms/leaderboard':return self.response(algorithms.leaderboard(who))
         if path=='/api/search':return self.response(social.search(who,params.get('q','')))
+        if path=='/api/push/config':return self.response(push_delivery.config())
+        if path=='/api/push/settings':return self.response(push_delivery.settings(who))
+        if path=='/api/signals':return self.response(social_loop.track_record(who,params.get('owner','')))
+        if path=='/api/trades/shareable':return self.response(social_loop.shareable(who))
+        if path=='/api/market-alerts':return self.response(social_loop.alerts(who))
+        if path=='/api/benefits':return self.response(token_benefits.public(params.get('owner',''),who['user'] if who else None))
+        if path=='/api/league':return self.response(algorithm_league.listing(who,params.get('week')))
         if path=='/api/notifications':return self.response(social.notices(who))
         if path=='/api/blocks':
             user=s.require(who,human=True)
@@ -293,7 +301,7 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/app/':return self.response(b'',302,{'Location':'/app'+('?' + u.query if u.query else '')},'text/plain')
         if path in {'/app','/authorize','/connect-native','/native-wallet','/native-return'} or path=='/' and any(k in params for k in ('view','tab','id','market','phase')):return self.file(s.ROOT/'index.html','text/html; charset=utf-8')
         if path=='/':return self.file(s.ROOT/'landing.html','text/html; charset=utf-8')
-        public_documents={'/docs':'index','/docs/getting-started':'getting-started','/docs/wallets':'wallets','/docs/android':'android','/docs/spot':'spot','/docs/memes':'memes','/docs/perps':'perps','/docs/prediction-markets':'prediction-markets','/docs/trading':'trading','/docs/fees':'fees','/docs/social':'social','/docs/algorithms':'algorithms','/docs/community-tokens':'community-tokens','/docs/agents':'agents','/docs/faq':'faq','/docs/developers':'developers','/docs/architecture':'architecture','/docs/api':'api','/docs/agent-api':'agent-api','/docs/development':'development','/docs/verification':'verification','/terms':'terms','/privacy':'privacy'}
+        public_documents={'/docs':'index','/docs/getting-started':'getting-started','/docs/wallets':'wallets','/docs/android':'android','/docs/spot':'spot','/docs/memes':'memes','/docs/perps':'perps','/docs/prediction-markets':'prediction-markets','/docs/trading':'trading','/docs/fees':'fees','/docs/social':'social','/docs/social-loop':'social-loop','/docs/algorithms':'algorithms','/docs/community-tokens':'community-tokens','/docs/agents':'agents','/docs/faq':'faq','/docs/developers':'developers','/docs/architecture':'architecture','/docs/api':'api','/docs/agent-api':'agent-api','/docs/development':'development','/docs/verification':'verification','/terms':'terms','/privacy':'privacy'}
         if path in public_documents:return self.file(s.ROOT/'public-pages'/(public_documents[path]+'.html'),'text/html; charset=utf-8')
         if path.endswith('/') and path[:-1] in public_documents:return self.response(b'',302,{'Location':path[:-1]},'text/plain')
         if path=='/docs-search.json':return self.file(s.ROOT/'public-pages/docs-search.json','application/json; charset=utf-8')
@@ -307,7 +315,7 @@ class Handler(BaseHTTPRequestHandler):
             if not target:raise s.Problem('Artwork not found',404)
             return self.file(target,'image/webp')
         # Do not expose database, secrets, source Python, logs or research directories.
-        if not path.startswith('/assets/') and path not in {'/wallet-ui.js','/wallet.css','/landing.js','/landing.css','/live-app.js','/finance.js','/flow.js','/charts.js','/nadfun.js','/community.js','/community.css','/social.css','/ui.css','/checkout.js','/checkout.css','/feed-ui.js','/feed.css','/market-ui.js','/market-logos.js','/market.css','/theme.js','/live.css','/flow.css','/nadfun.css','/favicon.ico','/swipe.js','/swipe-trade.js','/swipe.css','/swipe-motion.js','/auth-ui.js','/auth.css','/community-token.js','/community-token.css','/creator-ui.js','/launchpad.js','/launch-activity.js','/launch-income.js','/launchpad.css','/experience.js','/experience.css','/motion.js','/design.css'}:raise s.Problem('File not found',404)
+        if not path.startswith('/assets/') and path not in {'/wallet-ui.js','/wallet.css','/landing.js','/landing.css','/live-app.js','/finance.js','/flow.js','/charts.js','/nadfun.js','/community.js','/community.css','/social.css','/ui.css','/checkout.js','/checkout.css','/feed-ui.js','/feed.css','/market-ui.js','/market-logos.js','/market.css','/theme.js','/live.css','/flow.css','/nadfun.css','/favicon.ico','/swipe.js','/swipe-trade.js','/swipe.css','/swipe-motion.js','/auth-ui.js','/auth.css','/community-token.js','/community-token.css','/creator-ui.js','/launchpad.js','/launch-activity.js','/launch-income.js','/launchpad.css','/experience.js','/experience.css','/motion.js','/design.css','/social-loop.js','/social-loop.css'}:raise s.Problem('File not found',404)
         if not re.fullmatch(r'/(?:assets/(?:(?:tokens|venues|auth)/)?[A-Za-z0-9_.-]+|[A-Za-z0-9_-]+\.(?:js|css)|favicon\.ico)',path):raise s.Problem('Page not found',404)
         target=(s.ROOT/path.lstrip('/')).resolve()
         if not target.is_relative_to(s.ROOT) or not target.is_file():raise s.Problem('File not found',404)
@@ -402,6 +410,16 @@ class Handler(BaseHTTPRequestHandler):
             action=path.rsplit('/',1)[-1]
             if action not in {'plan','prepare','record'}:raise s.Problem('Deployment action not found',404)
             return self.response(getattr(community_deployment,action)(who,data))
+        if path=='/api/push/settings':return self.response(push_delivery.configure(who,data))
+        if path=='/api/push/register':return self.response(push_delivery.register(who,data))
+        if path=='/api/push/remove':return self.response(push_delivery.remove(who,data))
+        if path=='/api/trades/share':return self.response(social_loop.share(who,data))
+        if path=='/api/trades/withdraw':return self.response(social_loop.withdraw(who,data))
+        if path=='/api/market-alerts':return self.response(social_loop.alerts(who,data))
+        if path=='/api/benefits/save':return self.response(token_benefits.save(who,data))
+        if path=='/api/benefits/refresh':return self.response(token_benefits.refresh(who,data))
+        if path=='/api/benefits/badge':return self.response(token_benefits.badge(who,data))
+        if path=='/api/league/enroll':return self.response(algorithm_league.enroll(who,data))
         if path=='/api/discover/alerts':return self.response(discovery.alerts(who,data))
         if path=='/api/discover/performance-sharing':return self.response(discovery.share_performance(who,data))
         if path.removeprefix('/api/') in {'auth/recover','auth/recovery-codes','post/edit','post/report','post/repost','block','notifications/read'}:return self.response(social.action(path.removeprefix('/api/'),who,data))
@@ -597,5 +615,7 @@ def background():
 
 if __name__=='__main__':
     s.initialize();discovery.initialize();agent_wallet.initialize();media_pipeline.initialize();threading.Thread(target=background,daemon=True).start();threading.Thread(target=market_data.background,daemon=True).start();threading.Thread(target=market_universe.background,daemon=True).start();threading.Thread(target=spot_prices.background,daemon=True).start();threading.Thread(target=perp_universe.background,daemon=True).start();threading.Thread(target=nadfun.background,daemon=True).start();threading.Thread(target=launchpad.background,daemon=True).start()
+    threading.Thread(target=social_loop.background,daemon=True,name='social-loop').start()
+    threading.Thread(target=push_delivery.background,daemon=True,name='push-delivery').start()
     threading.Thread(target=token_images.background,daemon=True,name='public-token-art').start()
     ThreadingHTTPServer(('127.0.0.1',PORT),Handler).serve_forever()

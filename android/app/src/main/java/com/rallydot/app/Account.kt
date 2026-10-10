@@ -53,6 +53,7 @@ import org.json.JSONObject
         }
         item { Surface(shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface) { Column {
             listOf(Triple("Wallet",Icons.Outlined.AccountBalanceWallet,"Wallet"),Triple("Algorithms",Icons.Outlined.Layers,"Algorithms"),Triple("Agents",Icons.Outlined.Hub,"Agents"),Triple("Activity",Icons.Outlined.History,"Activity")).forEach { (label,icon,destination)->OptionRow(label,icon,{onExtra(destination)}) }
+            if(me!=null){OptionRow("Notifications",Icons.Outlined.Notifications,{onExtra("Notifications")});OptionRow("Share trades",Icons.Outlined.Share,{onExtra("Share trades")});OptionRow("Signal record",Icons.Outlined.ShowChart,{onExtra("Signal record")});OptionRow("Token benefits",Icons.Outlined.Verified,{onExtra("Token benefits")});OptionRow("Weekly league",Icons.Outlined.EmojiEvents,{onExtra("Weekly league")})}
             if(me!=null)OptionRow("Sign out",Icons.Outlined.Logout,{vm.signOut()})
         } } }
         item { Text("Rally for Android · ${BuildConfig.VERSION_NAME}",Modifier.fillMaxWidth(),textAlign=androidx.compose.ui.text.style.TextAlign.Center,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -90,11 +91,11 @@ import org.json.JSONObject
         if(!page.loading && page.items.isEmpty() && page.error==null)item { EmptyState("No activity yet") }
     }
 }
-@Composable fun LeaderboardScreen(vm: RallyViewModel,onAlgorithm: (JSONObject)->Unit) {
+@Composable fun LeaderboardScreen(vm: RallyViewModel,onAlgorithm: (JSONObject)->Unit,onLeague: ()->Unit={}) {
     val state by vm.state.collectAsStateWithLifecycle();val key="leaderboard";val page=state.pages[key] ?: Page(loading=true)
     LaunchedEffect(Unit) { vm.load(key,"/api/performance/leaderboard","entries") }
     LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item { Text("Realized returns · 30 days",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { TextButton(onClick=onLeague){Text("Weekly league")};Text("Realized returns · 30 days",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant) }
         if(page.loading && page.items.isEmpty())item { LoadingRows() }
         if(page.error!=null)item { EmptyState("Rankings unavailable",page.error,"Retry",{vm.load(key,"/api/performance/leaderboard","entries",true)}) }
         itemsIndexed(page.items,key={_,item->item.string("id")}) { index,item->Row(Modifier.fillMaxWidth().clickable { onAlgorithm(item) }.padding(vertical=16.dp),verticalAlignment=Alignment.CenterVertically) { Text("${index+1}",Modifier.width(32.dp),color=MaterialTheme.colorScheme.onSurfaceVariant);val person=Person.parse(item.optJSONObject("author") ?: JSONObject());Artwork(person.image,person.name,42.dp);Column(Modifier.weight(1f).padding(start=12.dp)) { Text(item.string("name"),fontWeight=FontWeight.Medium);Text(person.handle,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text(item.optJSONObject("performance")?.number("roi")?.let { String.format(java.util.Locale.US,"%.2f%%",it) } ?: "—",color=Gain) } }
@@ -104,10 +105,12 @@ import org.json.JSONObject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun AlgorithmSheet(item: JSONObject,vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit) {
     val feed=item.optJSONObject("feed") ?: item;val id=feed.string("id",item.string("id")).removePrefix("feed:")
+    var benefitOwner by remember {mutableStateOf<String?>(null)}
     var preview by remember { mutableStateOf<JSONObject?>(null) };var error by remember { mutableStateOf<String?>(null) };val scope=rememberCoroutineScope()
     val app by vm.state.collectAsStateWithLifecycle()
     val sheet=rememberModalBottomSheetState(skipPartiallyExpanded=true)
     LaunchedEffect(id) { try { preview=vm.api.get("/api/discover/preview?id="+Uri.encode("feed:$id")) } catch(e:Exception){error=e.message} }
+    if(benefitOwner!=null){ModalBottomSheet(onDismissRequest={benefitOwner=null},containerColor=MaterialTheme.colorScheme.surface){Box(Modifier.fillMaxWidth().heightIn(max=650.dp)){TokenBenefitsScreen(vm,benefitOwner!!)}};return}
     ModalBottomSheet(onDismissRequest=close,sheetState=sheet,containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
         Column(Modifier.fillMaxWidth().heightIn(max=720.dp).verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
             Icon(Icons.Outlined.Layers,null,Modifier.size(40.dp),tint=Violet);Text(item.string("title",feed.string("name")),style=MaterialTheme.typography.headlineSmall)
@@ -117,6 +120,7 @@ import org.json.JSONObject
             val price=feed.number("price") ?: 0.0;Fact("Subscription",if(price>0)feed.string("price")+" USDC / ${feed.optInt("periodDays",30)} days" else "Free")
             preview?.let { p->p.objects("posts").take(1).forEach { Text(it.string("text"),style=MaterialTheme.typography.bodyLarge) };p.optJSONObject("post")?.let { Text(it.string("text"),style=MaterialTheme.typography.bodyLarge) } }
             error?.let { Text(it,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall) }
+            TextButton(onClick={benefitOwner=feed.string("owner")}){Text("Community token benefits")}
             OrderStatus(vm)
             Button(onClick={ if(price>0 && !feed.optBoolean("access"))vm.subscribe(JSONObject(feed.toString()).put("id",id)) else vm.action("/api/feeds/use",JSONObject().put("id",id)) { scope.launch { sheet.hide();close();vm.message("Feed selected") } } },enabled=!app.order.blocksOrder,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(price>0 && !feed.optBoolean("access"))"Subscribe" else "Use algorithm") }
         }

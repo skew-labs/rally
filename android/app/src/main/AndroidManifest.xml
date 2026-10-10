@@ -1,14 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
  <uses-permission android:name="android.permission.INTERNET" />
  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+ <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
  <queries>
   <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent>
   <intent><action android:name="android.support.customtabs.action.CustomTabsService" /></intent>
   <package android:name="io.metamask" /><package android:name="me.rainbow" /><package android:name="com.coinbase.wallet" /><package android:name="com.wallet.crypto.trustapp" />
  </queries>
  <application android:name=".RallyApplication" android:label="Rally" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:allowBackup="false" android:usesCleartextTraffic="false" android:supportsRtl="true" android:theme="@style/RallyTheme">
+  <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false" />
+  <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+  <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_notification" />
+  <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="rally_activity" />
+  <service android:name=".RallyMessagingService" android:exported="false"><intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter></service>
   <activity android:name=".RallyActivity" android:exported="true" android:launchMode="singleTop" android:windowSoftInputMode="adjustResize" android:theme="@style/RallyStartingTheme">
    <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+   <intent-filter><action android:name="com.rallydot.OPEN_NOTIFICATION" /><category android:name="android.intent.category.DEFAULT" /></intent-filter>
    <intent-filter android:autoVerify="true">
     <action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" />
     <data android:scheme="https" /><data android:host="rallydot.com" /><data android:path="/" /><data android:path="/app" /><data android:path="/app/" /><data android:path="/native-return" />

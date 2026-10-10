@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": {"node": ">=22"},
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node scripts/build-contracts.mjs && node scripts/build-app.mjs && python3 scripts/build-public-docs.py",
     "build:docs": "python3 scripts/build-public-docs.py",
@@ -14,7 +16,8 @@
     "test:docs": "python3 scripts/build-public-docs.py && node scripts/test-public-docs.mjs",
     "test:wallet-actions": "node scripts/test-wallet-actions.mjs",
     "audit": "npm audit --audit-level=low && npm --prefix auth-client audit --audit-level=low",
-    "test:auth-dependencies": "node auth-client/test-dependencies.mjs"
+    "test:auth-dependencies": "node auth-client/test-dependencies.mjs",
+    "test:social-loop": "node tests/social-loop-browser.mjs"
   },
   "devDependencies": {
     "@openzeppelin/contracts": "5.4.0",
@@ -24,5 +27,12 @@
     "playwright": "1.56.1",
     "solc": "0.8.28"
   },
-  "overrides": {"solc": {"tmp": "0.2.7"}, "ethers": {"ws": "8.21.3"}}
+  "overrides": {
+    "solc": {
+      "tmp": "0.2.7"
+    },
+    "ethers": {
+      "ws": "8.21.3"
+    }
+  }
 }

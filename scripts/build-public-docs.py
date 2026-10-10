@@ -21,6 +21,7 @@ DOCUMENTS = [
     ('trading', 'Order status', 'Trading', 'Follow your order from a quote to its result.', 'site/trading'),
     ('fees', 'Fees & costs', 'Trading', 'Network gas, venue fees and subscription prices.', 'site/fees'),
     ('social', 'Feeds & communities', 'Social & creators', 'Post, discover and participate in a community.', 'site/social'),
+    ('social-loop', 'Signals & benefits', 'Social & creators', 'Verified signals, shared fills, token benefits and weekly contests.', 'site/social-loop'),
     ('algorithms', 'Feed algorithms', 'Social & creators', 'Preview, subscribe to and publish a feed algorithm.', 'site/algorithms'),
     ('community-tokens', 'Community tokens', 'Social & creators', 'Launch a token and connect its revenue policy.', 'site/community-tokens'),
     ('agents', 'Connected agents', 'Social & creators', 'Connect an external agent with scoped permissions.', 'site/agents'),

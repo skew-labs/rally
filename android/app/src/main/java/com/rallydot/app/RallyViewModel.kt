@@ -200,6 +200,6 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
         }
     }
     fun cancelConnect() { connection?.cancel() }
-    fun signOut() { portfolioJob?.cancel();if(mutable.value.busy || orderJob?.isActive==true) { message("Finish the current request first");return };mutable.value=AppState(busy=true);jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear();viewModelScope.launch { try { wallet.signOut();api.post("/api/auth/logout",JSONObject()) } catch (_: Exception) { } finally { api.signOut(); mutable.value=AppState();bootstrap() } } }
+    fun signOut() { portfolioJob?.cancel();if(mutable.value.busy || orderJob?.isActive==true) { message("Finish the current request first");return };mutable.value=AppState(busy=true);jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear();viewModelScope.launch { try { try{RallyPush.disable(getApplication(),api)}catch(_:Exception){};wallet.signOut();api.post("/api/auth/logout",JSONObject()) } catch (_: Exception) { } finally { api.signOut(); mutable.value=AppState();bootstrap() } } }
     fun walletURL(asset: Asset,side: String,amount: String): String = Uri.parse(ORIGIN+"/native-wallet").buildUpon().appendQueryParameter("nativeAction","trade").appendQueryParameter("asset",asset.id).appendQueryParameter("kind",asset.kind).appendQueryParameter("side",side).appendQueryParameter("amount",amount).appendQueryParameter("venue",if(asset.raw.optBoolean("nadfun"))"nadfun" else asset.venue).appendQueryParameter("account",me?.string("id")).build().toString()
 }

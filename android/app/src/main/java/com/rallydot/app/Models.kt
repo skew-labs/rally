@@ -84,7 +84,7 @@ fun nearestChartPoint(points: List<ChartPoint>, fraction: Float): ChartPoint {
     if(insertion==points.size)return points.last()
     return if(target-points[insertion-1].time<=points[insertion].time-target)points[insertion-1] else points[insertion]
 }
-data class PostDraft(val text: String="",val asset: String="",val file: String?=null,val media: String?=null,val requestKey: String="android-"+java.util.UUID.randomUUID())
+data class PostDraft(val text: String="",val asset: String="",val file: String?=null,val media: String?=null,val requestKey: String="android-"+java.util.UUID.randomUUID(),val signalEnabled: Boolean=false,val signalTarget: String="",val signalStop: String="",val signalDirection: String="up")
 
 data class DraftIdentity(val account: String,val community: String)
 class DraftCache(private val capacity: Int=8) {

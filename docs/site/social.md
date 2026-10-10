@@ -33,3 +33,8 @@ When there is no eligible evidence, a verified percentage is unavailable. Feed e
 ## Content controls
 
 Use a post's menu to edit or delete your own content, report a post or block an account. Saved posts and notifications are available through the account controls. For a moderation appeal or rights complaint, contact support from the [Terms of Service](/terms).
+
+
+## Signals and token benefits
+
+Add immutable price signals to posts, share only selected finalized token fills, unlock creator-defined holding tiers and join the weekly algorithm league. These features distinguish observed price movement from actual investment profit. [Signals and benefits](social-loop.md) explains the workflow and access rules.
