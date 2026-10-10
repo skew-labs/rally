@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.0.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.1.apk)
 
 ## Interaction and data
 
@@ -52,7 +52,7 @@ A pending intent is committed to storage before the wallet request. Once returne
 
 Native external-wallet connections use Reown Sign with a public `RALLY_WALLETCONNECT_PROJECT_ID`. The login sheet offers installed MetaMask, Rainbow and Trust Wallet applications. It opens the selected package directly, requests the Rally identity signature after the session is approved, and closes after the server verifies the linked address. An existing, unexpired session is reused. Its encrypted session reference contains no wallet key. Signing requests bind the exact account, session topic, method, request ID and chain; Monad trades require chain 143. Cancelling a login or changing accounts prevents its result from authenticating Rally.
 
-Without the Reown project configuration, the optional first-party browser pairing flow remains available. A random S256 verifier, matching device code, authenticated human consent, ten-minute expiry and atomic one-use exchange create a regular Rally session. This is not an agent OAuth grant or native access to an external wallet's private key. Browser pairing authenticates the account; it does not enable the native external-wallet signer. Google uses a secure browser authorization page, as required by OAuth providers, and returns through the separate `rallywallet` callback. WalletConnect returns through `rallyconnect://wallet`.
+Without the Reown project configuration, the optional first-party browser pairing flow remains available. A random S256 verifier, matching device code, authenticated human consent, ten-minute expiry and one-session exchange with proof-bound response recovery create a regular Rally session. This is not an agent OAuth grant or native access to an external wallet's private key. Browser pairing authenticates the account; it does not enable the native external-wallet signer. Google uses a secure browser authorization page, as required by OAuth providers, and returns through the separate `rallywallet` callback. WalletConnect returns through `rallyconnect://wallet`.
 
 ## Build and release
 
@@ -63,7 +63,7 @@ cd android
 ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.4.0 (code 13) uses the existing release certificate, allowing upgrades from the earlier APKs. Release shrinking removes SDK debug/info log calls so OAuth callback codes and relay URIs are not written to logcat.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.4.1 (code 14) uses the existing release certificate, allowing upgrades from the earlier APKs. Release shrinking removes SDK debug/info log calls so OAuth callback codes and relay URIs are not written to logcat.
 
 `/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
@@ -107,3 +107,7 @@ Validation passed 50 Android unit tests, release lint with zero errors and eight
 ## Social loop and notifications
 
 Version 0.4.0 adds native signal cards and publishing, opt-in finalized fill sharing, holder-tier configuration and access checks, weekly algorithm contests, and notification deep links. Android Firebase initialization is opt-in and reads public client configuration; the FCM service has no signing or trading authority. The app reports lock-screen push unavailable until the deployment configures Firebase. [Configuration and backend boundaries](social-loop.md)
+
+Version 0.4.1 preserves browser pairing across process recreation in encrypted device storage. Return to Rally resumes the same request immediately; a lost exchange response can recover the existing session with the device verifier before the request expires. A revoked session cannot be recreated by recovery. Anonymous bootstrap responses from an earlier session cannot replace a newly connected account.
+
+Perpl and Drake position size supports base quantity or USD notional. Dollar input rounds down to the venue quantity precision. Perpl shows estimated AUSD margin separately from position value; this estimate excludes fees and is not a fill. The existing Buy / Long and Sell / Short action opens the configured wallet signing flow directly.

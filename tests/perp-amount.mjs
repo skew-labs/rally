@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {perpAmount} from '../perp-amount.js';
+const first=perpAmount('0.3','quantity','60000',8,5);
+assert.equal(first.notional,'18000');assert.equal(first.margin,'3600');assert.equal(first.quantity,'0.3');
+const budget=perpAmount('10','usd','60000',5,2);assert.equal(budget.quantity,'0.00016');assert.equal(budget.notional,'9.6');assert(budget.rounded);
+assert(!perpAmount('0.001','usd','60000',5).valid);
+assert.equal(perpAmount('0.3000000000','quantity','60000',5).quantity,'0.3');
+assert(!perpAmount('0.000001','quantity','60000',5).valid);
+assert.equal(perpAmount('9007199254740993','quantity','1',0).notional,'9007199254740993');
+assert.equal(perpAmount('1','usd','0.000000001',10).quantity,'1000000000');
+assert.equal(perpAmount('1','quantity','0.0000001',8,3).margin,'0.000001');
+for(const input of ['NaN','Infinity','1e6','-1','0','1,000','',null,'1.1.1','9'.repeat(97)])assert(!perpAmount(input,'quantity','60000',8).valid);
+for(const precision of [-1,19,NaN])assert(!perpAmount('1','usd','60000',precision).valid);
+assert(!perpAmount('1','quantity','0',8).valid);
+console.log(JSON.stringify({checks:27,financialTransactions:0}));

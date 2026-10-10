@@ -17,6 +17,8 @@ SESSION_TTL = 7 * 86400
 def initialize():
     with s.connection() as db:
         db.execute('CREATE TABLE IF NOT EXISTS native_pairing(id TEXT PRIMARY KEY,challenge TEXT NOT NULL,origin TEXT NOT NULL,expires INTEGER NOT NULL,state TEXT NOT NULL,user_id TEXT)')
+        if 'session_hash' not in {r['name'] for r in db.execute('PRAGMA table_info(native_pairing)')}:
+            db.execute('ALTER TABLE native_pairing ADD COLUMN session_hash TEXT')
 
 
 def owned_request(ident, origin, db):
@@ -42,7 +44,7 @@ def start(data, origin):
         db.execute('DELETE FROM native_pairing WHERE expires<=?', (s.now(),))
         if db.execute('SELECT count(*) FROM native_pairing').fetchone()[0] >= 500:
             raise s.Problem('Connections are busy. Try again shortly.', 429)
-        db.execute('INSERT INTO native_pairing VALUES(?,?,?,?,?,NULL)', (ident, challenge, origin, s.now()+TTL, 'pending'))
+        db.execute('INSERT INTO native_pairing(id,challenge,origin,expires,state,user_id) VALUES(?,?,?,?,?,NULL)', (ident, challenge, origin, s.now()+TTL, 'pending'))
     return {'id': ident, 'code': code(ident), 'expiresIn': TTL, 'url': origin+'/connect-native?nativeRequest='+ident+'&view=account'}
 
 
@@ -77,13 +79,18 @@ def poll(data, origin):
         row = owned_request(data.get('id'), origin, db)
         if not hmac.compare_digest(challenge, row['challenge']):
             raise s.Problem('This connection belongs to another device', 403)
+        # A device may recover a lost response without issuing another session.
+        # Its random verifier stays on the device; only session hashes are stored.
+        token = base64.urlsafe_b64encode(hmac.new(verifier.encode(), ('rally-native-session-v1\n'+origin+'\n'+row['id']).encode(), hashlib.sha256).digest()).decode().rstrip('=')
         if row['state'] == 'consumed':
-            raise s.Problem('Connection was already used', 409)
+            session = db.execute('SELECT * FROM sessions WHERE hash=? AND user_id=? AND expires>?', (s.digest(token), row['user_id'], s.now())).fetchone()
+            if row['session_hash'] != s.digest(token) or not session:
+                raise s.Problem('Connection was already used. Sign in again.', 409)
+            return {'state': 'approved', 'session': token, 'expiresIn': session['expires']-s.now()}
         if row['state'] != 'approved':
             return {'state': row['state']}
         if not db.execute('SELECT 1 FROM accounts WHERE id=? AND kind=?', (row['user_id'], 'person')).fetchone():
             raise s.Problem('Sign in with a personal account', 403)
-        token = secrets.token_urlsafe(40)
         db.execute('INSERT INTO sessions VALUES(?,?,?)', (s.digest(token), row['user_id'], s.now()+SESSION_TTL))
-        db.execute('UPDATE native_pairing SET state=? WHERE id=?', ('consumed', row['id']))
+        db.execute('UPDATE native_pairing SET state=?,session_hash=? WHERE id=?', ('consumed', s.digest(token), row['id']))
         return {'state': 'approved', 'session': token, 'expiresIn': SESSION_TTL}

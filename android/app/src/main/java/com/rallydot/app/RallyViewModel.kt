@@ -6,6 +6,9 @@ import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.selects.onTimeout
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -14,13 +17,13 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 
 data class AppState(val boot: JSONObject?=null, val portfolio: JSONObject?=null,val portfolioError: String?=null,val walletPanel: String?=null, val pages: Map<String,Page> = emptyMap(), val message: String?=null, val connecting: Boolean=false, val connectionCode: String?=null, val busy: Boolean=false, val bootError: String?=null,val walletOpen: Boolean=false,val orderDetails: Boolean=false,val order: OrderProgress=OrderProgress())
-class RallyViewModel(application: Application): AndroidViewModel(application) {
-    val api=RallyApi(application)
+class RallyViewModel @JvmOverloads constructor(application: Application,val api: RallyApi=RallyApi(application),private val pendingPairing: DurablePairing=DurablePairing(application)): AndroidViewModel(application) {
     private val mutable=MutableStateFlow(AppState())
     val state=mutable.asStateFlow()
     private val jobs=mutableMapOf<String,Job>()
     private var portfolioJob: Job?=null
     private var connection: Job?=null
+    private val connectionWake=Channel<Unit>(Channel.CONFLATED)
     private var walletJob: Job?=null
     private val chartReads=linkedMapOf<String,Pair<Long,Deferred<JSONObject>>>()
     private val assetReads=linkedMapOf<String,Pair<Long,Deferred<Asset?>>>()
@@ -75,10 +78,12 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
     fun discardDraft(key: DraftIdentity) { drafts.remove(key) }
     private fun bounded(pages: Map<String,Page>): Map<String,Page> = if(pages.size<=16)pages else pages.entries.sortedByDescending { it.value.at }.take(16).associate { it.toPair() }
     val me get() = mutable.value.boot?.optJSONObject("me")
-    init { bootstrap();viewModelScope.launch { delay(1200);wallet.restore() } }
+    init { bootstrap();restoreConnect();viewModelScope.launch { delay(1200);wallet.restore() } }
     fun message(value: String?) { mutable.update { it.copy(message=value) } }
     private suspend fun refreshBoot(): JSONObject {
+        val version=api.sessionVersion
         val data=api.get("/api/bootstrap?markets=0",true)
+        if(version!=api.sessionVersion)throw CancellationException("Account changed")
         val changed=me?.string("id")!=data.optJSONObject("me")?.string("id") || mutable.value.boot?.string("wallet")!=data.string("wallet")
         if(changed) { portfolioJob?.cancel();jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear() }
         mutable.update { it.copy(boot=data,bootError=null,portfolio=if(changed)null else it.portfolio,portfolioError=if(changed)null else it.portfolioError,walletPanel=if(changed)null else it.walletPanel,pages=if(changed)emptyMap() else it.pages) };return data
@@ -110,7 +115,8 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
         walletJob=viewModelScope.launch { try { wallet.action();refreshBoot() } catch(e:CancellationException){throw e} catch(e:Exception) { message(e.message) } }
     }
     fun cancelWalletLogin() { walletJob?.cancel() }
-    fun resumeAccount() { bootstrap();viewModelScope.launch { wallet.restore() } }
+    fun resumeAccount() { restoreConnect();connectionWake.trySend(Unit);bootstrap();viewModelScope.launch { wallet.restore() } }
+    fun returnedToApp(url: String?) { if(pairingReturn(url)) { restoreConnect();connectionWake.trySend(Unit) } }
     private fun nativeAction(kind: String,create: suspend ()->JSONObject) {
         if(me==null || !wallet.state.value.ready || wallet.state.value.address?.lowercase()!=mutable.value.boot?.string("wallet")?.lowercase()) { showWallet();return }
         if(orderJob?.isActive==true || mutable.value.order.blocksOrder) { message("Check your pending transaction first");return }
@@ -168,8 +174,44 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
     fun refreshSocial() { mutable.update { it.copy(pages=it.pages.filterKeys { key->!key.startsWith("feed:") }) } }
     private var connectionURL: String?=null
     fun resumeConnect(open: (String)->Unit) { connectionURL?.let(open) }
+    private fun restoreConnect() {
+        if(connection?.isActive==true)return
+        val saved=try { pendingPairing.read() } catch(_:Exception) { runCatching { pendingPairing.clear() };null }
+        if(saved!=null)connection=viewModelScope.launch { completeConnect(saved) }
+    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private suspend fun completeConnect(request: NativePairing) {
+        mutable.update { it.copy(connecting=true,connectionCode=request.code,message=null) };connectionURL=request.url
+        try {
+            var failures=0
+            withTimeout((request.expires-System.currentTimeMillis()/1000).coerceAtLeast(1)*1000) {
+                while(true) {
+                    val result=try { api.post("/api/native/poll",request.poll()).also { failures=0 } } catch(e:CancellationException) { throw e } catch(e:Exception) {
+                        if(e is ApiFailure && e.status in 400..499 && e.status!=429) { pendingPairing.clear();throw e }
+                        if(++failures>=8)throw e
+                        delay(2500);continue
+                    }
+                    when(result.string("state")) {
+                        "approved" -> {
+                            api.signIn(result.string("session"))
+                            jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear()
+                            // Keep the proof until the authenticated bootstrap succeeds.
+                            val boot=refreshBoot();require(boot.optJSONObject("me")!=null) { "Account connection did not complete" }
+                            pendingPairing.clear();mutable.update { it.copy(walletOpen=false) };message("Connected");break
+                        }
+                        "denied" -> { pendingPairing.clear();message("Connection cancelled");break }
+                    }
+                    select<Unit> { connectionWake.onReceive { };onTimeout(2500) { } }
+                }
+            }
+        } catch(e:CancellationException) { if(e is TimeoutCancellationException) { pendingPairing.clear();message("Connection expired. Try again.") } else throw e }
+        catch(e:Exception) { message(e.message ?: "Connection interrupted. Return to Rally to continue.") }
+        finally { connectionURL=null;mutable.update { it.copy(connecting=false,connectionCode=null) } }
+    }
     fun connect(open: (String)->Unit) {
-        if(mutable.value.connecting)return
+        if(mutable.value.connecting) { return }
+        val saved=runCatching { pendingPairing.read() }.getOrNull()
+        if(saved!=null) { restoreConnect();open(saved.url);return }
         connection?.cancel()
         connection=viewModelScope.launch {
             mutable.update { it.copy(connecting=true,message=null) }
@@ -178,28 +220,15 @@ class RallyViewModel(application: Application): AndroidViewModel(application) {
                 val verifier=Base64.encodeToString(random,Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING)
                 val challenge=Base64.encodeToString(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()),Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING)
                 val request=api.post("/api/native/start",JSONObject().put("challenge",challenge))
-                mutable.update { it.copy(connectionCode=request.string("code")) }
-                connectionURL=request.string("url");open(request.string("url"))
-                var failures=0
-                withTimeout(request.optLong("expiresIn",600).coerceIn(60,600)*1000) {
-                    while(true) {
-                        delay(2500)
-                        val result=try { api.post("/api/native/poll",JSONObject().put("id",request.string("id")).put("verifier",verifier)).also { failures=0 } } catch(e: CancellationException) { throw e } catch(e: Exception) {
-                            if(e is ApiFailure && e.status in 400..499 && e.status!=429)throw e
-                            if(++failures>=8)throw e
-                            delay(2500);continue
-                        }
-                        when(result.string("state")) {
-                            "approved" -> { jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear();api.signIn(result.string("session"));mutable.update { it.copy(boot=null,pages=emptyMap()) };bootstrap();message("Connected");break }
-                            "denied" -> { message("Connection cancelled");break }
-                        }
-                    }
-                }
+                val durable=NativePairing.fromStart(request,verifier)
+                pendingPairing.save(durable)
+                mutable.update { it.copy(connectionCode=durable.code) }
+                connectionURL=durable.url;open(durable.url);completeConnect(durable)
             } catch(e: CancellationException) { if(e is TimeoutCancellationException)message("Connection expired. Try again.") } catch(e: Exception) { message(e.message ?: "Could not connect") }
             finally { connectionURL=null;mutable.update { it.copy(connecting=false,connectionCode=null) } }
         }
     }
-    fun cancelConnect() { connection?.cancel() }
-    fun signOut() { portfolioJob?.cancel();if(mutable.value.busy || orderJob?.isActive==true) { message("Finish the current request first");return };mutable.value=AppState(busy=true);jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear();viewModelScope.launch { try { try{RallyPush.disable(getApplication(),api)}catch(_:Exception){};wallet.signOut();api.post("/api/auth/logout",JSONObject()) } catch (_: Exception) { } finally { api.signOut(); mutable.value=AppState();bootstrap() } } }
+    fun cancelConnect() { connection?.cancel();runCatching { pendingPairing.clear() } }
+    fun signOut() { portfolioJob?.cancel();if(mutable.value.busy || orderJob?.isActive==true) { message("Finish the current request first");return };cancelConnect();mutable.value=AppState(busy=true);jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear();viewModelScope.launch { try { try{RallyPush.disable(getApplication(),api)}catch(_:Exception){};wallet.signOut();api.post("/api/auth/logout",JSONObject()) } catch (_: Exception) { } finally { api.signOut(); mutable.value=AppState();bootstrap() } } }
     fun walletURL(asset: Asset,side: String,amount: String): String = Uri.parse(ORIGIN+"/native-wallet").buildUpon().appendQueryParameter("nativeAction","trade").appendQueryParameter("asset",asset.id).appendQueryParameter("kind",asset.kind).appendQueryParameter("side",side).appendQueryParameter("amount",amount).appendQueryParameter("venue",if(asset.raw.optBoolean("nadfun"))"nadfun" else asset.venue).appendQueryParameter("account",me?.string("id")).build().toString()
 }

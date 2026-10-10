@@ -178,6 +178,9 @@ import kotlin.math.abs
     var leverage by rememberSaveable(asset.key) { mutableIntStateOf(1) }
     var positionQty by rememberSaveable(asset.key) { mutableStateOf("") }
     var amount by rememberSaveable(asset.key) { mutableStateOf("") }
+    var amountMode by rememberSaveable(asset.key) { mutableStateOf("quantity") }
+    val quantityMarket=asset.kind=="perps" && asset.venue.lowercase() in setOf("perpl","drake")
+    val estimate=remember(amount,amountMode,limit,leverage,asset.key) { perpEstimate(amount,amountMode,limit,asset.raw.optInt("lotDecimals",if(asset.venue=="Perpl")8 else 10),leverage) }
     var quote by remember { mutableStateOf<JSONObject?>(null) }
     var quoteError by remember { mutableStateOf<String?>(null) }
     var quoting by remember { mutableStateOf(false) }
@@ -232,7 +235,8 @@ import kotlin.math.abs
                         if(asset.kind!="prediction")Segmented(if(asset.kind=="perps")listOf("Buy / Long","Sell / Short") else listOf("Buy","Sell"),if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell",{if(!app.order.blocksOrder)side=if(it.startsWith("Buy"))"buy" else "sell"},accent=if(side=="buy")Buy else Sell)
                         val quantity=asset.kind=="perps" && asset.venue in listOf("Perpl","Drake")
                         val denom=if(side=="sell" && asset.kind=="spot")asset.symbol else if(asset.kind=="spot")asset.raw.string("quoteSymbol","MON") else if(quantity)asset.symbol else if(asset.venue=="Pingu")"MON" else "USDC"
-                        TradeAmount(amount,{amount=it},if(asset.kind=="prediction")"Predicted USD price" else if(quantity)"Quantity" else if(asset.kind=="perps")"Collateral" else if(side=="buy")"You pay" else "You sell",if(asset.kind=="prediction")"USD" else denom,if(side=="buy")Buy else Sell,{focus.clearFocus()},enabled=!app.order.blocksOrder)
+                        if(quantityMarket)PerpPositionInput(amount,amountMode,asset.symbol,estimate,if(side=="buy")Buy else Sell,!app.order.blocksOrder,{amount=it},{next->if(!app.order.blocksOrder && amountMode!=next) { if(estimate.valid)amount=if(next=="usd")estimate.notional else estimate.quantity;amountMode=next }},{focus.clearFocus()},margin=asset.venue=="Perpl")
+                        else TradeAmount(amount,{amount=it},if(asset.kind=="prediction")"Predicted USD price" else if(quantity)"Quantity" else if(asset.kind=="perps")"Collateral" else if(side=="buy")"You pay" else "You sell",if(asset.kind=="prediction")"USD" else denom,if(side=="buy")Buy else Sell,{focus.clearFocus()},enabled=!app.order.blocksOrder)
                         if(asset.kind=="perps") {
                             if(asset.venue.lowercase() in listOf("perpl","drake","pingu"))OutlinedTextField(limit,{limit=it},Modifier.fillMaxWidth(),singleLine=true,enabled=!app.order.blocksOrder,label={Text("Protection price · USD")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),shape=RoundedCornerShape(16.dp))
                             if(asset.venue.lowercase()=="leverup")OutlinedTextField(positionQty,{positionQty=it},Modifier.fillMaxWidth(),singleLine=true,enabled=!app.order.blocksOrder,label={Text("Position quantity · ${asset.symbol}")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),shape=RoundedCornerShape(16.dp))
@@ -255,7 +259,7 @@ import kotlin.math.abs
                 Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=if(compactTrade)8.dp else 16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     if(trade) {
                         OrderStatus(vm,compact=true)
-                        Button(onClick={focus.clearFocus();vm.trade(NativeTrade(asset,side,amount,limit,leverage,positionQty))},enabled=validAmount(amount) && asset.executable && !app.order.blocksOrder && (asset.kind!="perps" || (if(asset.venue.lowercase()=="leverup")validAmount(positionQty) else validAmount(limit))),modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=if(side=="buy")Buy else Sell,contentColor=Color.White)) {
+                        Button(onClick={focus.clearFocus();vm.trade(NativeTrade(asset,side,amount,limit,leverage,positionQty,amountMode))},enabled=validAmount(amount) && (!quantityMarket || estimate.valid) && asset.executable && !app.order.blocksOrder && (asset.kind!="perps" || (if(asset.venue.lowercase()=="leverup")validAmount(positionQty) else validAmount(limit))),modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=if(side=="buy")Buy else Sell,contentColor=Color.White)) {
                             Text(if(asset.kind=="prediction")"Predict price" else if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell",fontWeight=FontWeight.SemiBold)
                             Spacer(Modifier.width(8.dp));Icon(Icons.Outlined.ArrowForward,null,Modifier.size(18.dp))
                         }

@@ -17,7 +17,8 @@
     "test:wallet-actions": "node scripts/test-wallet-actions.mjs",
     "audit": "npm audit --audit-level=low && npm --prefix auth-client audit --audit-level=low",
     "test:auth-dependencies": "node auth-client/test-dependencies.mjs",
-    "test:social-loop": "node tests/social-loop-browser.mjs"
+    "test:social-loop": "node tests/social-loop-browser.mjs",
+    "test:order-input": "node tests/perp-amount.mjs && node tests/native-perp-browser.mjs"
   },
   "devDependencies": {
     "@openzeppelin/contracts": "5.4.0",

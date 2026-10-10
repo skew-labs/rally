@@ -41,6 +41,7 @@ class RallyActivity: ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         incomingLink=RallyPush.incoming(intent) ?: intent?.data
+        model.returnedToApp(intent?.data?.toString())
         // Render immediately; network requests never extend the starting screen.
         splash.setOnExitAnimationListener { provider ->
             if(android.os.Build.VERSION.SDK_INT<26 || ValueAnimator.areAnimatorsEnabled()) {
@@ -52,6 +53,7 @@ class RallyActivity: ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent);setIntent(intent)
         incomingLink=RallyPush.incoming(intent) ?: intent.data
+        model.returnedToApp(intent.data?.toString())
         model.bootstrap()
     }
     override fun onResume() { super.onResume();model.resumeAccount() }

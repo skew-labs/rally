@@ -46,10 +46,20 @@ class NativeAuthTest(unittest.TestCase):
         self.approve()
         with self.assertRaises(s.Problem) as e:self.poll(verifier=secrets.token_urlsafe(32))
         self.assertEqual(e.exception.status,403);self.assertIsNone(s.one('SELECT * FROM sessions'))
-    def test_cannot_replay(self):
-        self.approve();self.poll()
+    def test_lost_response_recovers_same_session(self):
+        self.approve();first=self.poll();self.assertEqual(self.poll(),first)
+        self.assertEqual(s.one('SELECT count(*) AS n FROM sessions')['n'],1)
+    def test_recovery_cannot_resurrect_revoked_session(self):
+        self.approve();self.poll();s.write('DELETE FROM sessions')
         with self.assertRaises(s.Problem) as e:self.poll()
         self.assertEqual(e.exception.status,409)
+    def test_recovery_requires_device_proof_and_unexpired_request(self):
+        self.approve();self.poll()
+        with self.assertRaises(s.Problem) as e:self.poll(verifier=secrets.token_urlsafe(32))
+        self.assertEqual(e.exception.status,403)
+        s.write('UPDATE native_pairing SET expires=1')
+        with self.assertRaises(s.Problem) as e:self.poll()
+        self.assertEqual(e.exception.status,410)
     def test_denied_never_creates_session(self):self.approve(False);self.assertEqual(self.poll(),{'state':'denied'});self.assertIsNone(s.one('SELECT * FROM sessions'))
     def test_expired_cannot_claim(self):
         self.approve();s.write('UPDATE native_pairing SET expires=?',(1,))
@@ -75,7 +85,7 @@ class NativeAuthTest(unittest.TestCase):
         def claim(_):
             try:return self.poll()['state']
             except s.Problem:return 'rejected'
-        with ThreadPoolExecutor(2) as pool:self.assertEqual(sorted(pool.map(claim,range(2))),['approved','rejected'])
+        with ThreadPoolExecutor(2) as pool:self.assertEqual(sorted(pool.map(claim,range(2))),['approved','approved'])
         self.assertEqual(s.one('SELECT count(*) AS n FROM sessions')['n'],1)
 
 if __name__=='__main__':unittest.main()

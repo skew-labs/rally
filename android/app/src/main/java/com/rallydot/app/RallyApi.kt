@@ -40,19 +40,20 @@ class CredentialStore(context: Context,namespace: String="native-session",privat
     fun clear() { check(preferences.edit().remove("session").commit()) { "Could not clear wallet request" } }
 }
 class ApiFailure(val status: Int, message: String): IOException(message)
-class RallyApi(private val context: Context) {
-    private val store=CredentialStore(context)
+private fun nativeHttpClient()=OkHttpClient.Builder().connectTimeout(8,TimeUnit.SECONDS).readTimeout(12,TimeUnit.SECONDS).callTimeout(18,TimeUnit.SECONDS).followRedirects(false).retryOnConnectionFailure(false).build()
+class RallyApi(private val context: Context,private val client: OkHttpClient=nativeHttpClient(),private val store: CredentialStore=CredentialStore(context)) {
     @Volatile private var session: String?=store.load()
     @Volatile private var generation=0
-    private val client=OkHttpClient.Builder().connectTimeout(8,TimeUnit.SECONDS).readTimeout(12,TimeUnit.SECONDS).callTimeout(18,TimeUnit.SECONDS).followRedirects(false).retryOnConnectionFailure(false).build()
+    val sessionVersion get()=generation
     private val cache=LinkedHashMap<String, Pair<Long,JSONObject>>()
-    fun signIn(token: String) { require(Regex("[A-Za-z0-9_-]{40,100}").matches(token));generation++;session=token; store.save(token); clearCache() }
+    fun signIn(token: String) { require(Regex("[A-Za-z0-9_-]{40,100}").matches(token));store.save(token);generation++;session=token;clearCache() }
     fun signOut() { generation++;session=null;store.clear();clearCache() }
     fun clearCache() = synchronized(cache) { cache.clear() }
     suspend fun get(path: String, force: Boolean=false): JSONObject {
         synchronized(cache) { cache[path]?.takeIf { !force && System.currentTimeMillis()-it.first < 20000 }?.let { return it.second } }
+        val version=generation
         val data=request(path,null)
-        synchronized(cache) { cache[path]=System.currentTimeMillis() to data;while(cache.size>50)cache.remove(cache.keys.first()) }
+        synchronized(cache) { if(version!=generation)throw kotlinx.coroutines.CancellationException("Account changed");cache[path]=System.currentTimeMillis() to data;while(cache.size>50)cache.remove(cache.keys.first()) }
         return data
     }
     suspend fun post(path: String, body: JSONObject, key: String?=null): JSONObject = request(path,body,key)

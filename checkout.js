@@ -1,4 +1,5 @@
 // Presentation and input state only. Wallet and settlement handlers stay with their venues.
+import {bindPerpAmount} from './perp-amount.js';
 export function checkoutUI(c){
  const {S,$,token,trade,closeModal,invalidateQuote}=c,clocks=new Map(),bindings=new WeakMap();let timer,nadCleanup;
  const positive=value=>/^(?:\d+\.?\d*|\.\d+)$/.test(value.trim())&&Number.isFinite(Number(value))&&Number(value)>0;
@@ -27,6 +28,7 @@ export function checkoutUI(c){
    const bar=document.createElement('div');bar.className='r-ticket-market-reference';const label=document.createElement('span'),price=document.createElement('b');label.textContent='Reference price';price.textContent=market.mark==null?'—':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumSignificantDigits:7}).format(Number(market.mark));bar.append(label,price);form.querySelector('.r-order-directions').after(bar);
   }
   form.querySelector('input[name=quantity],input[name=amount]')?.closest('.r-field')?.classList.add('r-ticket-amount-field');
+  if(market&&form.elements.quantity)bindPerpAmount(form,market,{collateral:venue==='Perpl'?'AUSD':'USDC',margin:venue==='Perpl'});
   const direction=form.querySelector('input[name=direction]:checked')?.value;intent(root,direction);sides(form.querySelector('.r-order-directions'),direction);stages(root);
   form.addEventListener('change',e=>{if(e.target.name==='direction'){intent(root,e.target.value);sides(form.querySelector('.r-order-directions'),e.target.value);}});
   const syncLeverage=leverage(form),limit=form.querySelector('input[name=limit]');let syncOptions=()=>{};
@@ -66,7 +68,7 @@ export function checkoutUI(c){
   if(form){
    const children=[...root.children].filter(x=>x!==head&&x!==form&&!x.classList.contains('r-ticket-stages'));form.prepend(body);for(const node of children)body.append(node);for(const node of [...form.children])if(node!==body&&node!==button&&node!==error)body.append(node);
    form.classList.add('r-checkout-form');footer(form,button,error);
-   const unavailable=button.disabled,inputs=[...form.querySelectorAll('input[required]')];const update=()=>{syncLeverage();if(form.dataset.pending==='true')return;if(form.dataset.orderState){button.disabled=true;button.textContent=form.dataset.orderState==='unknown'?'Check your wallet':'Submitted';return;}const direction=form.querySelector('input[name=direction]:checked')?.value,kind=form.querySelector('[name=kind]')?.value;if(direction)button.textContent=direction==='short'?'Sell / Short':'Buy / Long';else if(form.querySelector('[name=order]')?.value)button.textContent='Cancel order';else if(form.querySelector('[name=position]')?.value)button.textContent='Close position';else if(kind)button.textContent=kind==='withdraw'?'Withdraw':kind==='deposit'?'Deposit':kind==='create'?'Create portfolio':kind==='cancel'?'Cancel order':'Continue';button.disabled=unavailable||!inputs.every(i=>positive(i.value));};bindings.set(form,update);inputs.forEach(i=>i.addEventListener('input',update));form.addEventListener('change',update);update();
+   const unavailable=button.disabled,inputs=[...form.querySelectorAll('input[required]')];const update=()=>{syncLeverage();form.refreshPerpAmount?.();if(form.dataset.pending==='true')return;if(form.dataset.orderState){button.disabled=true;button.textContent=form.dataset.orderState==='unknown'?'Check your wallet':'Submitted';return;}const direction=form.querySelector('input[name=direction]:checked')?.value,kind=form.querySelector('[name=kind]')?.value;if(direction)button.textContent=direction==='short'?'Sell / Short':'Buy / Long';else if(form.querySelector('[name=order]')?.value)button.textContent='Cancel order';else if(form.querySelector('[name=position]')?.value)button.textContent='Close position';else if(kind)button.textContent=kind==='withdraw'?'Withdraw':kind==='deposit'?'Deposit':kind==='create'?'Create portfolio':kind==='cancel'?'Cancel order':'Continue';button.disabled=unavailable||form.dataset.amountValid==='false'||!inputs.every(i=>positive(i.value));};bindings.set(form,update);form.addEventListener('input',update);form.addEventListener('change',update);update();
   }else{
    for(const node of [...root.children])if(node!==head&&node!==button&&node!==error&&!node.classList.contains('r-ticket-stages'))body.append(node);root.append(body);const foot=footer(root,button,error);if(button.id==='confirm-swap')editButton(foot,'Edit amount',()=>{closeModal();syncSpot();$('#swap-amount')?.focus({preventScroll:true});});
   }

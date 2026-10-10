@@ -145,6 +145,24 @@ html .r-swipe-card.drag-left:not([data-kind=prediction]) .r-swipe-intent{backgro
 @media(max-width:760px){html .r-ticket-stages{padding-inline:16px}html .r-checkout-dialog .r-checkout-scroll{padding-top:16px}}
 @media(prefers-reduced-motion:reduce){html .r-ticket-side-pill,html .r-ticket-sides button,html .r-ticket-sides label,html [data-order-side] .r-checkout-footer>.r-btn.primary{transition:none}html [data-order-side] .r-checkout-footer>.r-btn.primary:active:not(:disabled){transform:none}}
 
+/* Position size stays in one place when its input unit changes. */
+html .r-checkout-dialog .r-perp-amount{display:block;margin:0;padding:16px;border-radius:18px;background:var(--canvas);border:1px solid var(--line);min-width:0}
+html .r-perp-input-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+html .r-perp-input-label{font-size:13px;font-weight:500;color:var(--muted)}
+html .r-perp-unit-switch{display:flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:100px;background:var(--paper)}
+html .r-perp-unit-switch button{min-height:44px;min-width:56px;padding:6px 12px;border-radius:100px;color:var(--muted);font-size:13px;font-weight:600;transition:background 140ms ease,color 140ms ease,transform 140ms ease}
+html .r-perp-unit-switch button[aria-pressed=true]{background:var(--order-soft);color:var(--order-ink)}
+html .r-perp-unit-switch button:active:not(:disabled){transform:scale(.96)}
+html .r-checkout-dialog .r-perp-amount>input{display:block;width:100%;min-width:0;min-height:56px;font-size:clamp(28px,5vw,34px);line-height:1.25;font-weight:550;letter-spacing:-.7px;border:0;background:transparent;padding:10px 0;outline:none;font-variant-numeric:tabular-nums}
+html .r-perp-equivalent{display:block;min-height:20px;font-size:13px;line-height:1.5;color:var(--muted);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+html .r-perp-estimate{display:grid;gap:10px;margin:16px 0 8px;font-size:13px;font-variant-numeric:tabular-nums}
+html .r-perp-estimate>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+html .r-perp-estimate dt{color:var(--muted)}
+html .r-perp-estimate dd{margin:0;font-weight:550;overflow-wrap:anywhere}
+html .r-perp-estimate-note{display:block;margin-bottom:16px;color:var(--muted);font-size:11px;line-height:1.5}
+html .r-checkout-dialog .r-perp-amount:focus-within{border-color:var(--order-color);box-shadow:0 0 0 1px var(--order-color)}
+@media(prefers-reduced-motion:reduce){html .r-perp-unit-switch button{transition:none}html .r-perp-unit-switch button:active:not(:disabled){transform:none}}
+
 /* A single action leads directly to the wallet. Status stays in the ticket. */
 .r-direct-status{min-width:0;font-size:13px;line-height:1.45;color:var(--muted);overflow-wrap:anywhere}
 .r-direct-status:empty{display:none}
