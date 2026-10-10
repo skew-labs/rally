@@ -5,11 +5,13 @@
   "type": "module",
   "engines": {"node": ">=22"},
   "scripts": {
-    "build": "node scripts/build-contracts.mjs && node scripts/build-app.mjs",
+    "build": "node scripts/build-contracts.mjs && node scripts/build-app.mjs && python3 scripts/build-public-docs.py",
+    "build:docs": "python3 scripts/build-public-docs.py",
     "build:auth": "npm --prefix auth-client ci && npm --prefix auth-client run build",
     "test": "python3 scripts/test.py",
     "test:contracts": "node tests/community.mjs && node tests/nad-revenue.mjs",
     "test:ui": "node tests/browser.mjs",
+    "test:docs": "python3 scripts/build-public-docs.py && node scripts/test-public-docs.mjs",
     "test:wallet-actions": "node scripts/test-wallet-actions.mjs",
     "audit": "npm audit --audit-level=low && npm --prefix auth-client audit --audit-level=low",
     "test:auth-dependencies": "node auth-client/test-dependencies.mjs"

@@ -293,6 +293,10 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/app/':return self.response(b'',302,{'Location':'/app'+('?' + u.query if u.query else '')},'text/plain')
         if path in {'/app','/authorize','/connect-native','/native-wallet','/native-return'} or path=='/' and any(k in params for k in ('view','tab','id','market','phase')):return self.file(s.ROOT/'index.html','text/html; charset=utf-8')
         if path=='/':return self.file(s.ROOT/'landing.html','text/html; charset=utf-8')
+        public_documents={'/docs':'index','/docs/getting-started':'getting-started','/docs/trading':'trading','/docs/prediction-markets':'prediction-markets','/docs/algorithms':'algorithms','/docs/community-tokens':'community-tokens','/docs/agents':'agents','/docs/architecture':'architecture','/docs/api':'api','/docs/android':'android','/docs/development':'development','/docs/verification':'verification','/terms':'terms','/privacy':'privacy'}
+        if path in public_documents:return self.file(s.ROOT/'public-pages'/(public_documents[path]+'.html'),'text/html; charset=utf-8')
+        if path.endswith('/') and path[:-1] in public_documents:return self.response(b'',302,{'Location':path[:-1]},'text/plain')
+        if path in {'/public-docs.css','/public-docs.js'}:return self.file(s.ROOT/path.lstrip('/'),'text/css' if path.endswith('.css') else 'text/javascript')
         if path=='/manifest.webmanifest':return self.file(s.ROOT/'manifest.webmanifest','application/manifest+json')
         if path=='/.well-known/assetlinks.json':return self.file(s.ROOT/'android-assetlinks.json','application/json')
         if path in {'/rally-offline.js','/network-ui.js','/native-link.js','/wallet-providers.js'}:return self.file(s.ROOT/path.lstrip('/'),'text/javascript')

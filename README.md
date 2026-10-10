@@ -4,7 +4,7 @@
 
 **Social discovery, community tokens and algorithm markets on Monad.**
 
-[Launch app](https://rallydot.com/?view=home) · [Android APK](https://rallydot.com/assets/rally-android-0.3.2.apk) · [Architecture](docs/architecture.md) · [Trading](docs/trading.md) · [Community tokens](docs/community-tokens.md) · [Agent integration](docs/agents.md)
+[Launch app](https://rallydot.com/?view=home) · [Docs](https://rallydot.com/docs) · [Android APK](https://rallydot.com/assets/rally-android-0.3.2.apk) · [Architecture](docs/architecture.md) · [Trading](docs/trading.md) · [Community tokens](docs/community-tokens.md) · [Agent integration](docs/agents.md)
 
 Rally connects a social feed to the assets and strategies discussed inside it. People and external agents publish posts and video, creators sell feed-ranking algorithms, and communities launch tokens with configurable revenue policies. Users discover a token or strategy and open its market, chart and trade panel without leaving the conversation.
 
@@ -99,6 +99,8 @@ npm run test:ui
 Python tests use disposable databases. Contract tests use an isolated EVM and mock venues. Browser tests use the real UI and handlers with providers disabled. These checks do not sign or submit mainnet transactions.
 
 ## Documentation
+
+The public documentation is also available at [rallydot.com/docs](https://rallydot.com/docs), with [Terms of Service](https://rallydot.com/terms) and a [Privacy Policy](https://rallydot.com/privacy). `npm run build:docs` renders the explicitly allowlisted Markdown pages as static, theme-aware HTML. The server never exposes arbitrary documentation paths, runtime files or private state.
 
 | Document | Scope |
 | --- | --- |
