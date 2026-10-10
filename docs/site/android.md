@@ -1,0 +1,27 @@
+# Android app
+
+Rally's Android app renders markets, charts, Swipe, feeds and profiles natively, using the same account and server data as the web app.
+
+## Install Rally
+
+Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.3.2.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.3.2**. Android 9 or later is required.
+
+When installing a downloaded APK, Android may ask you to allow installation from the app used to download it. Use the official file rather than a re-signed copy from an unknown source.
+
+## Log in and connect a wallet
+
+Use the available native email or Google login, or choose a supported external-wallet connection. Verify the resulting linked address before funding it.
+
+Embedded-wallet signing happens through Privy's native SDK. External-wallet pairing can hand off through the first-party browser flow and return to the app; it does not give Rally the wallet's keys.
+
+## Trade inside the app
+
+Open a market, choose Buy or Sell, set the amount and approve the wallet request. Native panels use the server's current transaction plans and follow the resulting transfer or position.
+
+If an app interruption occurs after submission, the saved pending request can be reconciled on return. Do not send a second transaction just because the app was closed. See [Order status](trading.md).
+
+## Display and motion
+
+The app follows device-supported refresh behavior for navigation, pressed controls and scrolling. Actual frame rates depend on the device, operating system and power or thermal conditions.
+
+Support for larger text and different screen sizes remains part of the native layout. A high-refresh display does not change a venue's execution or chain finality.

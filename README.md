@@ -100,7 +100,7 @@ Python tests use disposable databases. Contract tests use an isolated EVM and mo
 
 ## Documentation
 
-The public documentation is also available at [rallydot.com/docs](https://rallydot.com/docs), with [Terms of Service](https://rallydot.com/terms) and a [Privacy Policy](https://rallydot.com/privacy). `npm run build:docs` renders the explicitly allowlisted Markdown pages as static, theme-aware HTML. The server never exposes arbitrary documentation paths, runtime files or private state.
+The public [Guides](https://rallydot.com/docs) cover accounts, wallets, trading, communities and creator revenue. The separate [Developers](https://rallydot.com/docs/developers) section covers architecture, HTTPS APIs, OAuth and MCP. User guides are maintained in `docs/site/`; implementation documentation stays in `docs/`. [Terms of Service](https://rallydot.com/terms) and [Privacy Policy](https://rallydot.com/privacy) are linked from both the landing page and documentation. `npm run build:docs` renders the allowlisted pages and a local-search index as static assets. Search loads its public index only when opened and never sends query text to a provider. The server never exposes arbitrary documentation paths, runtime files or private state.
 
 | Document | Scope |
 | --- | --- |

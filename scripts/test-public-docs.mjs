@@ -9,7 +9,7 @@ const root=fileURLToPath(new URL('..',import.meta.url));
 const port=process.env.RALLY_DOCS_PORT||'4259';
 const origin=process.env.RALLY_DOCS_ORIGIN||'http://127.0.0.1:'+port;
 const evidence=process.env.RALLY_DOCS_EVIDENCE;
-const paths=['/docs','/docs/getting-started','/docs/trading','/docs/prediction-markets','/docs/algorithms','/docs/community-tokens','/docs/agents','/docs/architecture','/docs/api','/docs/android','/docs/development','/docs/verification','/terms','/privacy'];
+const paths=['/docs','/docs/getting-started','/docs/wallets','/docs/android','/docs/spot','/docs/memes','/docs/perps','/docs/prediction-markets','/docs/trading','/docs/fees','/docs/social','/docs/algorithms','/docs/community-tokens','/docs/agents','/docs/faq','/docs/developers','/docs/architecture','/docs/api','/docs/agent-api','/docs/development','/docs/verification','/terms','/privacy'];
 const report={origin,pages:paths.length,checks:0,layouts:[],errors:[],writes:0,documentApiRequests:0};
 let server,browser,diagnostics='';
 try{
@@ -40,9 +40,11 @@ try{
  for(const path of ['/terms/','/privacy/','/docs/','/docs/architecture/']){
   const response=await context.request.get(origin+path,{maxRedirects:0});assert.equal(response.status(),302);assert.equal(response.headers().location,path.slice(0,-1));report.checks+=2;
  }
+ const indexResponse=await context.request.get(origin+'/docs-search.json');assert.equal(indexResponse.status(),200);report.checks++;
+ const searchIndex=await indexResponse.json();assert.equal(searchIndex.length,paths.length);assert.deepEqual(new Set(searchIndex.map(item=>item.url)),new Set(paths));report.checks+=2;
  await context.close();
- for(const width of [320,390,768,1440])for(const theme of ['light','dark']){
-  const ctx=await browser.newContext({viewport:{width,height:900}});
+ for(const width of [1440,390,320,768])for(const theme of ['light','dark']){
+  const ctx=await browser.newContext({viewport:{width,height:900},permissions:['clipboard-read','clipboard-write']});
   await ctx.addInitScript(theme=>{if(!localStorage.getItem('rally-theme'))localStorage.setItem('rally-theme',theme);},theme);
   const page=await ctx.newPage();page.on('pageerror',error=>report.errors.push(error.message));
   await ctx.route('**/*',route=>{
@@ -55,7 +57,7 @@ try{
   page.on('request',request=>{if(onDocument&&new URL(request.url()).pathname.startsWith('/api/'))report.documentApiRequests++;});
   for(const path of paths){
    onDocument=true;
-   await page.goto(origin+path,{waitUntil:'networkidle'});await page.evaluate(()=>document.fonts.ready);
+   await page.goto(origin+path,{waitUntil:'load'});await page.evaluate(()=>document.fonts.ready);
    assert(await page.locator('main h1').isVisible(),path);report.checks++;
    assert.equal(await page.locator('html').getAttribute('data-theme'),theme);report.checks++;
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Overflow ${path} ${width} ${theme}`);report.checks++;
@@ -64,14 +66,42 @@ try{
    for(const href of await page.locator('a[href^="#"]').evaluateAll(elements=>elements.map(e=>e.getAttribute('href')))){
     assert(await page.evaluate(href=>Boolean(document.getElementById(href.slice(1))),href),`Broken section ${path} ${href}`);report.checks++;
    }
+   assert((await page.locator('main').evaluate(e=>getComputedStyle(e).fontFamily)).startsWith('Inter'));report.checks++;
    if(path==='/docs'&&width===390){
-    await page.locator('.p-mobile-nav summary').click();assert(await page.locator('.p-mobile-nav').getByRole('link',{name:'Trading',exact:true}).isVisible());report.checks++;
-    await page.locator('.p-mobile-nav').getByRole('link',{name:'Trading',exact:true}).click();assert.equal(new URL(page.url()).pathname,'/docs/trading');report.checks++;
+    await page.getByRole('button',{name:'Browse documentation',exact:true}).click();
+    const drawer=page.getByRole('dialog',{name:'Browse documentation',exact:true});assert(await drawer.isVisible());report.checks++;
+    await drawer.getByRole('link',{name:'Spot',exact:true}).click();assert.equal(new URL(page.url()).pathname,'/docs/spot');report.checks++;
+    assert.equal(await page.locator('body').evaluate(e=>getComputedStyle(e).overflow),'visible');report.checks++;
+    await page.goto(origin+path,{waitUntil:'networkidle'});
    }
-   if(evidence&&((width===390&&theme==='light'&&path==='/terms')||(width===1440&&theme==='dark'&&path==='/docs/architecture'))){
+   if(path==='/docs/architecture'){assert.equal(await page.locator('.p-diagram section').count(),4);assert.equal(await page.locator('.p-diagram pre').count(),0);report.checks+=2;}
+   if(evidence&&((width===390&&theme==='light'&&['/docs','/docs/community-tokens'].includes(path))||(width===1440&&['/docs','/docs/architecture'].includes(path)))){
     await page.screenshot({path:evidence+`/document-${width}-${theme}-${path.split('/').pop()}.png`});
    }
   }
+  await page.goto(origin+'/docs',{waitUntil:'networkidle'});
+  await page.getByRole('button',{name:'Search documentation',exact:true}).click();
+  assert(await page.getByRole('dialog',{name:'Search documentation',exact:true}).isVisible());report.checks++;
+  await page.locator('#p-search-input').fill('buyback');
+  await page.locator('#p-search-results a').first().waitFor();
+  assert(await page.locator('#p-search-results a[href="/docs/community-tokens"]').isVisible());report.checks++;
+  await page.locator('#p-search-input').fill('<img src=x onerror=alert(1)>');
+  await page.waitForFunction(()=>document.querySelector('.p-search-count').textContent.startsWith('No matching'));
+  assert.equal(await page.locator('#p-search-results img').count(),0);report.checks++;
+  await page.keyboard.press('Escape');assert.equal(await page.locator('dialog[open]').count(),0);report.checks++;
+  assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('aria-label')),'Search documentation');report.checks++;
+  await page.keyboard.press('Control+k');assert(await page.locator('#p-search').isVisible());report.checks++;
+  await page.locator('#p-search-input').fill('wallets');await page.locator('#p-search-results a[href="/docs/wallets"]').waitFor();
+  await page.keyboard.press('ArrowDown');assert(await page.locator('#p-search-results a[data-selected]').evaluate(e=>e===document.activeElement));report.checks++;
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Control+k');await page.locator('#p-search-input').fill('feed algorithms');
+  await page.waitForFunction(()=>document.querySelector('#p-search-results a[data-selected]')?.getAttribute('href')==='/docs/algorithms');
+  await page.locator('#p-search-input').press('Enter');await page.waitForURL(origin+'/docs/algorithms');report.checks++;
+  await page.goto(origin+'/docs',{waitUntil:'load'});
+  await page.getByRole('button',{name:'Copy page link',exact:true}).click();assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),origin+'/docs');report.checks++;
+  await page.getByRole('navigation',{name:'Documentation sections',exact:true}).getByRole('link',{name:'Developers',exact:true}).click();
+  assert.equal(new URL(page.url()).pathname,'/docs/developers');report.checks++;
+  assert.equal(await page.getByRole('navigation',{name:width<900?'Mobile documentation':'Documentation',exact:true}).getByRole('link',{name:'Spot',exact:true}).count(),0);report.checks++;
   await page.goto(origin+'/docs');await page.getByRole('button',{name:theme==='dark'?'Switch to light mode':'Switch to dark mode'}).click();
   assert.equal(await page.locator('html').getAttribute('data-theme'),theme==='dark'?'light':'dark');report.checks++;
   await page.reload();assert.equal(await page.locator('html').getAttribute('data-theme'),theme==='dark'?'light':'dark');report.checks++;
