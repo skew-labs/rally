@@ -1,4 +1,4 @@
-import {mountHolders} from './wallet-ui.js';
+import {mountHolders,warmHolders} from './holder-ui.js';
 import {closingPrices,priceLineOptions,fitPriceLine} from './price-line.js';
 // Social asset discovery and nad.fun's native MON routes use Rally's direct wallet flow.
 export function nadfunUI(c){
@@ -66,6 +66,15 @@ export function nadfunUI(c){
     const status=$('#nad-chart-status');if(status)status.textContent=Date.now()/1000-snapshot.fetchedAt>=90?'nad.fun · Last known · Updating':'nad.fun data';
     return true;
   }
+  function paintQuote(t,interval){
+    const host=$('#nad-chart'),elapsed=Date.now()/1000-(t.referenceAt||0),value=Number(t.price);
+    if(!host||t.stale||elapsed<0||elapsed>120||!Number.isFinite(value)||value<=0)return false;
+    const canvas=document.createElement('canvas'),w=host.clientWidth,h=host.clientHeight,scale=devicePixelRatio||1;
+    canvas.width=w*scale;canvas.height=h*scale;canvas.style.cssText='display:block;width:100%;height:100%;pointer-events:none';
+    const ctx=canvas.getContext('2d');ctx.scale(scale,scale);ctx.fillStyle='#9178ff';ctx.beginPath();ctx.arc(w/2,h/2,3,0,2*Math.PI);ctx.fill();
+    host.replaceChildren(canvas);host.dataset.preview='true';host.dataset.quoteOnly='true';host.dataset.token=t.id;host.dataset.interval=interval;
+    const status=$('#nad-chart-status');if(status)status.textContent='Price quote · Loading history';return true;
+  }
   function dispose(){listSequence++;clearTimeout(referenceTimer);listObserver?.disconnect();c.checkout.disposeNad();resetChart();}
   async function catalog(phase='',sort='latest',force=false,search='',cursor=''){
     const key=JSON.stringify([phase,sort,search,cursor]),query=new URLSearchParams({sort,query:search});if(phase)query.set('phase',phase);if(cursor)query.set('cursor',cursor);
@@ -81,7 +90,7 @@ export function nadfunUI(c){
     const button=event.target.closest?.('[data-action=nad-token]');if(!button)return;
     library().catch(()=>{});
     // Warm one explicit intent at a time, rather than consuming the venue quota for a whole list.
-    if(!document.hidden&&!S.nadOverlay&&chartRequests.size===0&&/^0x[0-9a-f]{40}$/i.test(button.dataset.id))readChart(button.dataset.id,S.nadInterval||'60').catch(()=>{});
+    if(!document.hidden&&!S.nadOverlay&&chartRequests.size===0&&/^0x[0-9a-f]{40}$/i.test(button.dataset.id)){readChart(button.dataset.id,S.nadInterval||'60').catch(()=>{});warmHolders({api},button.dataset.id).catch(()=>{});}
   }
   document.addEventListener('pointerover',warmIntent,{passive:true});
   document.addEventListener('touchstart',warmIntent,{passive:true});
@@ -98,6 +107,7 @@ export function nadfunUI(c){
     const start=state.shown;state.shown=Math.min(state.tokens.length,start+24);
     state.host.querySelector('tbody').insertAdjacentHTML('beforeend',state.tokens.slice(start,state.shown).map((t,i)=>row(t,start+i)).join(''));
     quickReferences();
+    if(start===0&&!document.hidden)state.tokens.slice(0,2).forEach(t=>warmHolders({api},t.id).catch(()=>{}));
     const more=state.host.querySelector('.nad-load-more');more.innerHTML=`<span>${state.shown} of ${state.total} tokens</span>${state.shown<state.tokens.length||state.nextCursor?'<button class="r-text-button" data-action="nad-more">Load more</button>':''}`;
     if(state.shown>=state.tokens.length&&!state.nextCursor)listObserver?.disconnect();
   }
@@ -159,9 +169,10 @@ export function nadfunUI(c){
 
       remember(t);S.nadDetail=t;S.nadQuote=null;S.nadOrderVersion=0;S.nadSide=panel?.side||S.nadIntentSide||'buy';S.nadIntentSide=null;if(panel)S.nadOrigin=panel.context;
       host.innerHTML=`<div class="r-page-head"><button class="nad-back r-text-button" data-action="nad-back">${icon('chevron')}${S.nadReturn?'Back':'Memes'}</button><div class="nad-token-actions"><button class="r-icon-button ${S.boot.watches.includes(t.id)?'saved':''}" data-action="watch" data-id="${esc(t.id)}" aria-label="Watch ${esc(t.symbol)}">${icon('star')}</button><button class="r-icon-button" data-action="nad-share" data-id="${esc(t.id)}" aria-label="Copy token link">${icon('share')}</button></div></div><section class="nad-identity"><div class="nad-token-title">${img(t)}<div><h1>${esc(t.name)}</h1><span>${esc(t.symbol)} <button class="r-text-button" data-action="nad-copy" data-id="${esc(t.id)}">${short(t.address)} ${icon('link')}</button></span></div></div><div class="nad-price"><span class="nad-cap-label">Market cap / FDV</span>${metrics(t)}</div></section>${c.originCard(S.nadOrigin)}<section class="nad-lifecycle"><span id="nad-phase" class="r-pill ${t.graduated?'good':''}">${phase(t)}</span><div class="nad-progress-track"><i id="nad-progress" style="width:${Math.min(100,t.progressBps/100)}%"></i></div><b id="nad-progress-label">${t.graduated?'100':(t.progressBps/100).toFixed(1)}%</b></section><section class="nad-chart-section"><div class="nad-chart-toolbar"><div class="nad-filters">${[['1','1m'],['15','15m'],['60','1h'],['240','4h']].map(([id,label])=>`<button data-action="nad-interval" data-id="${id}" class="${(S.nadInterval||'60')===id?'selected':''}">${label}</button>`).join('')}</div><span>USD</span></div><div id="nad-chart" aria-label="${esc(t.symbol)} price line chart">${loading()}</div><section id="nad-holders" class="r-holders"></section><div class="r-data-foot"><a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts™</a><span id="nad-chart-status" role="status">nad.fun data</span></div></section><div class="nad-token-bottom"><section class="nad-order"><div class="r-order-directions"><button data-action="nad-side" data-id="buy" aria-pressed="${S.nadSide==='buy'}" class="${S.nadSide==='buy'?'selected':''}">Buy</button><button data-action="nad-side" data-id="sell" aria-pressed="${S.nadSide==='sell'}" class="${S.nadSide==='sell'?'selected':''}">Sell</button></div><form id="nad-order-form"><label class="nad-amount"><span>Amount <b id="nad-input-unit">${esc(S.nadSide==='sell'?t.symbol:t.quoteSymbol||'MON')}</b></span><input name="amount" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" required aria-label="Trade amount"></label><div class="nad-slippage"><label for="nad-slippage">Slippage</label><select id="nad-slippage" name="slippage"><option value="50">0.5%</option><option value="100" selected>1%</option><option value="300">3%</option><option value="500">5%</option></select></div><small id="nad-penalty" class="r-note" ${t.snipingPenaltyBps>0?'':'hidden'}>${t.snipingPenaltyBps>0?'Early-trade penalty: '+t.snipingPenaltyBps/100+'%':''}</small><div id="nad-quote"></div><div class="r-form-error" role="alert"></div><button type="submit" class="r-btn primary full" ${t.locked||t.tradeSupported===false?'disabled':''}>${t.locked?'Migrating':t.tradeSupported===false?'Quote asset unavailable':(S.nadSide==='sell'?'Sell':'Buy')}</button></form></section><section class="nad-facts"><h2>Token</h2><div class="r-summary"><span>Network</span><b>Monad</b><span>Market</span><b id="nad-market">${phase(t)}</b><span>Creator</span><a href="https://monadvision.com/address/${esc(t.creator)}" target="_blank" rel="noopener noreferrer">${short(t.creator)} ${icon('external')}</a><span>Contract</span><a href="https://monadvision.com/token/${esc(t.address)}" target="_blank" rel="noopener noreferrer">${short(t.address)} ${icon('external')}</a>${t.holders!=null?`<span>Holders</span><b>${quantity(t.holders)}</b>`:''}${t.creatorFeeBps!=null?`<span>Creator fee</span><b>${t.creatorFeeBps/100}%</b>`:''}</div><button class="r-btn subtle full" data-action="nad-post" data-id="${esc(t.id)}">${icon('plus')}Post about ${esc(t.symbol)}</button><a class="nad-source-link" href="https://nad.fun/tokens/${esc(t.id)}" target="_blank" rel="noopener noreferrer">nad.fun ${icon('external')}</a></section></div>`;
-      const previewPainted=paintSnapshot(t.id,S.nadInterval||'60');
-      // Secondary reads and controls follow the first chart frame.
-      const extras=()=>{if(!current())return;mountHolders({api,esc,age},$('#nad-holders'),t.id);host.insertAdjacentHTML('beforeend','<div id="nad-launch-social"></div>');c.launchPanel?.(t);c.checkout.nad(t);};
+      const previewPainted=paintSnapshot(t.id,S.nadInterval||'60')||paintQuote(t,S.nadInterval||'60');
+      // Cached holders join the same first frame; social reads follow it.
+      mountHolders({api,esc,age},$('#nad-holders'),t.id);
+      const extras=()=>{if(!current())return;host.insertAdjacentHTML('beforeend','<div id="nad-launch-social"></div>');c.launchPanel?.(t);c.checkout.nad(t);};
       if(previewPainted)requestAnimationFrame(()=>setTimeout(extras,0));else extras();
       if(panel){host.querySelector('.r-page-head').remove();$('.r-nad-panel').setAttribute('aria-label','Trade '+t.symbol);$('.r-trade-head>b').textContent=t.symbol;}
       const form=$('#nad-order-form');
@@ -173,7 +184,8 @@ export function nadfunUI(c){
         catch(e){if(error.isConnected)error.textContent=e.message;}
         finally{c.checkout.formBusy(form,false);c.checkout.valid(form);}
       };
-      const interactive=()=>{if(!current())return;mount(t,seq).catch(e=>{if($('#nad-chart')&&seq===chartSequence){if(previewPainted)$('#nad-chart-status').textContent='nad.fun · Update delayed';else $('#nad-chart').innerHTML=`<div class="nad-chart-empty">${esc(e.message)}<button class="r-btn small" data-action="nad-chart-retry">Retry chart</button></div>`;}});};
+      let chartFailures=0;
+      const interactive=()=>{if(!current())return;mount(t,seq).catch(e=>{if($('#nad-chart')&&seq===chartSequence){if(previewPainted){$('#nad-chart-status').textContent='nad.fun · Updating history';if(chartFailures++<6){clearTimeout(chartTimer);chartTimer=setTimeout(interactive,2000);}}else $('#nad-chart').innerHTML=`<div class="nad-chart-empty">${esc(e.message)}<button class="r-btn small" data-action="nad-chart-retry">Retry chart</button></div>`;}});};
       if(previewPainted)requestAnimationFrame(()=>setTimeout(interactive,0));else interactive();
     }catch(e){if(current())host.innerHTML=(panel?'':pageHeader('Token'))+empty('Token unavailable',esc(e.message),`<button class="r-btn" data-action="${panel?'nad-close':'nad-back'}">${panel?'Close':S.nadReturn?'Back':'Back to Memes'}</button>`);}
   }
@@ -194,7 +206,7 @@ export function nadfunUI(c){
       chartSeries=chartApi.addSeries(lib.LineSeries,priceLineOptions(precision));
       if(cover){host.style.position='relative';cover.style.position='absolute';cover.style.inset='0';cover.style.zIndex='2';host.append(cover);requestAnimationFrame(()=>requestAnimationFrame(()=>{if(seq!==chartSequence||!host.isConnected)return;cover.remove();host.removeAttribute('data-preview');}));}else host.removeAttribute('data-preview');
     }
-    chartSeries.applyOptions({pointMarkersVisible:data.candles.length===1,pointMarkersRadius:3});chartSeries.setData(closingPrices(data.candles));host.dataset.series='line';chartAt=Date.now();
+    delete host.dataset.quoteOnly;chartSeries.applyOptions({pointMarkersVisible:data.candles.length===1,pointMarkersRadius:3});chartSeries.setData(closingPrices(data.candles));host.dataset.series='line';chartAt=Date.now();
     if(initial)fitPriceLine(chartApi,data.candles);
   }
   async function launch(){

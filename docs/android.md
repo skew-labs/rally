@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.8.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.9.apk)
 
 ## Interaction and data
 
@@ -137,3 +137,8 @@ Version 0.4.7 starts Algorithms with four public wallets and three live feeds, w
 Version 0.4.8 uses an unfilled Rally-purple line for observed prices, with a dot at the latest point. Sparse and single-observation histories remain visible. The cached path retains actual observation times and values; no prices or trades are inserted into quiet intervals. Cached reads and drag scrubbing keep their existing bounded paths.
 
 A valid quote observed within the last two minutes can display as a single point while history loads or when the chosen period has no history. Its caption distinguishes a quote from historical observations. Stale, invalid and future quotes are rejected. Period controls sit directly below the chart, ahead of the holder list.
+
+
+## Token and holder response
+
+Version 0.4.9 warms holders alongside the first visible token charts and shares bounded public observation snapshots across token sheets. Reopening a token shows its cached holders immediately while a single refresh task updates them. Holder rows use fixed rank and quantity columns, compact quantities and one address for unnamed wallets. Long names truncate within the identity column. Snapshot identity and observation age are checked; stale observations are labeled and observations older than fifteen minutes are withheld. Initial provider acquisition and network latency remain separate from cached rendering.

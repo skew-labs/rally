@@ -147,7 +147,7 @@ def api(path,data=None,mime=None):
     global API_AT,API_RETRY_AT,API_BUSY
     # Chart clicks precede bulk discovery; old requests age into the same lane.
     # Keep the same 7.5s spacing and one upstream request at a time.
-    ticket=(time.monotonic(),object(),path.startswith('/trade/chart/'))
+    ticket=(time.monotonic(),object(),path.startswith(('/trade/chart/','/trade/holder/')))
     with API_CONDITION:
         API_WAITERS.append(ticket);API_CONDITION.notify_all()
         try:

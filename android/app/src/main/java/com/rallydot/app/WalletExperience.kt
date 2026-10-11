@@ -27,6 +27,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.zxing.BarcodeFormat
@@ -147,19 +148,32 @@ import java.util.Locale
 
 @Composable fun TokenHolders(vm: RallyViewModel,asset: Asset) {
     if(!asset.id.startsWith("0x"))return
-    var data by remember(asset.id) { mutableStateOf<JSONObject?>(null) };var error by remember(asset.id) { mutableStateOf(false) }
+    val snapshots by vm.holderSnapshots.collectAsStateWithLifecycle()
+    val data=snapshots[asset.id.lowercase()]?.takeIf { it.isNull("fetchedAt") || System.currentTimeMillis()/1000-it.optLong("fetchedAt") in 0..900 }
     LaunchedEffect(asset.id) {
-        repeat(25) {
-            try { data=vm.api.get("/api/token-holders?asset="+android.net.Uri.encode(asset.id),true);if(data?.optBoolean("refreshing")!=true)return@LaunchedEffect }
-            catch(e:CancellationException) { throw e } catch(_:Exception) { error=true;return@LaunchedEffect }
-            delay(2000)
+        repeat(20) {
+            vm.warmHolders(asset)
+            val snapshot=vm.holderSnapshots.value[asset.id.lowercase()]
+            if(snapshot!=null && !snapshot.optBoolean("refreshing") && !snapshot.optBoolean("waiting"))return@LaunchedEffect
+            delay(1000)
         }
     }
-    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Holders",Modifier.weight(1f),style=MaterialTheme.typography.titleSmall);data?.number("total")?.let { Text(compact(it),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant) } }
         val holders=data?.objects("holders").orEmpty()
-        if(holders.isEmpty())Text(if(error || data?.has("error")==true)"Holder data temporarily unavailable" else if(data?.optBoolean("indexed")==false)"Holder indexing is unavailable for this asset" else if(data?.optBoolean("refreshing")!=false)"Updating holders…" else "No indexed holders yet",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        holders.take(10).forEachIndexed { index,h->Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("${index+1}",Modifier.width(26.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Column(Modifier.weight(1f).padding(end=12.dp)) { val address=h.string("address");Text(h.string("name").takeIf { it.isNotBlank() && !it.startsWith("0x") } ?: address.take(6)+"…"+address.takeLast(4),style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis);Text(address.take(6)+"…"+address.takeLast(4),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text(displayAmount(h.string("amount")),Modifier.widthIn(max=100.dp),style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis) } }
-        if(holders.isNotEmpty())Text("nad.fun · ${age(data?.optLong("fetchedAt") ?: 0)}"+if(data?.optBoolean("stale")==true)" · Last known" else "",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if(holders.isEmpty())Text(if(data?.has("error")==true)"Holder data temporarily unavailable" else if(data?.optBoolean("indexed")==false)"Holder indexing is unavailable for this asset" else if(data?.optBoolean("refreshing")!=false || data.optBoolean("waiting"))"Updating holders…" else "No indexed holders yet",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if(holders.isNotEmpty())Row(Modifier.fillMaxWidth()) { Spacer(Modifier.width(26.dp));Text("Wallet",Modifier.weight(1f),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Text("Tokens",Modifier.width(90.dp),textAlign=androidx.compose.ui.text.style.TextAlign.End,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+        holders.take(10).forEachIndexed { index,h->
+            Row(Modifier.fillMaxWidth().heightIn(min=44.dp),verticalAlignment=Alignment.CenterVertically) {
+                Text("${index+1}",Modifier.width(26.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                val address=h.string("address");val short=address.take(6)+"…"+address.takeLast(4);val name=h.string("name").takeIf { it.isNotBlank() && !it.startsWith("0x",true) }
+                Column(Modifier.weight(1f).padding(end=12.dp)) {
+                    Text(name ?: short,style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    if(name!=null)Text(short,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                }
+                Text(holderAmount(h.string("amount")),Modifier.width(90.dp).semantics { contentDescription=h.string("amount")+" tokens" },textAlign=androidx.compose.ui.text.style.TextAlign.End,style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+            }
+        }
+        if(holders.isNotEmpty())Text("nad.fun · ${age(data?.optLong("fetchedAt") ?: 0)}"+if(data?.optBoolean("stale")==true || System.currentTimeMillis()/1000-(data?.optLong("fetchedAt") ?: 0)>90)" · Last known" else "",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

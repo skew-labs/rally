@@ -1,4 +1,4 @@
-import {mountHolders} from './wallet-ui.js';
+import {mountHolders,warmHolders} from './holder-ui.js';
 import {priceLineOptions,fitPriceLine} from './price-line.js';
 let renderer;
 const library=()=>renderer ||= import(location.origin+'/assets/lightweight-charts-5.2.1.mjs').catch(e=>{renderer=null;throw e;});
@@ -14,7 +14,8 @@ export function marketUI(c){
     if(!signal.aborted&&!data.stale){charts.delete(key);charts.set(key,data);while(charts.size>12)charts.delete(charts.keys().next().value);}
     return data;
   }
-  document.addEventListener('pointerover',e=>{if(e.target.closest('[data-action="market-detail"],[data-action="perp-detail"],[data-action="prediction-detail"]'))library().catch(()=>{});},{passive:true});
+  const intent=e=>{const el=e.target.closest('[data-action="market-detail"],[data-action="perp-detail"],[data-action="prediction-detail"]');if(!el)return;library().catch(()=>{});const a=el.dataset.action==='market-detail'&&token(el.dataset.id);if(a)warmHolders({api},a.address||a.id).catch(()=>{});};
+  document.addEventListener('pointerover',intent,{passive:true});document.addEventListener('touchstart',intent,{passive:true});
   function details(id,kind='spot'){
     const pool=kind==='prediction'?S.predictions?.pools.find(p=>String(p.id)===String(id)):null;
     const perp=kind==='perps'?S.perps?.markets.find(m=>String(m.id)===String(id)):null;

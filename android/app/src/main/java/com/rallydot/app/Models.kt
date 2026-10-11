@@ -61,6 +61,19 @@ data class PostReaction(val liked: Boolean,val likes: Int,val pending: Boolean=f
 fun Post.withReaction(value: PostReaction?)=if(value==null)this else copy(liked=value.liked,likes=value.likes)
 data class Page(val items: List<JSONObject> = emptyList(), val cursor: String? = null, val total: Int = 0, val loading: Boolean = false, val error: String? = null, val at: Long = 0)
 data class ChartPoint(val time: Long, val value: Float)
+fun checkedHolders(data: JSONObject,asset: String,now: Long=System.currentTimeMillis()/1000): JSONObject {
+    require(data.string("asset").equals(asset,true) && data.opt("indexed") is Boolean && data.opt("holders") is JSONArray) { "Holder identity changed" }
+    val holders=data.objects("holders")
+    require(holders.size<=20 && holders.all { Regex("0x[0-9a-fA-F]{40}").matches(it.string("address")) && Regex("[0-9]+(\\.[0-9]+)?").matches(it.string("amount")) && it.string("amount").length<=116 && it.string("name").length<=80 }) { "Holder observations changed" }
+    if(!data.isNull("fetchedAt"))require(now-data.optLong("fetchedAt") in 0..900) { "Holder snapshot expired" }
+    return data
+}
+fun holderAmount(value: String): String {
+    val n=value.toDoubleOrNull() ?: return "—"
+    return if(!n.isFinite() || n<0)"—" else if(n>=100000)compact(n) else if(n>0 && n<.000001)String.format(java.util.Locale.US,"%.3e",n) else displayAmount(value)
+}
+fun accountIdentityChanged(previous: JSONObject?,next: JSONObject): Boolean = previous!=null &&
+    (previous.optJSONObject("me")?.string("id")!=next.optJSONObject("me")?.string("id") || previous.string("wallet").lowercase()!=next.string("wallet").lowercase())
 fun referenceChart(asset: Asset,now: Long=System.currentTimeMillis()/1000): JSONObject? {
     val price=asset.price ?: return null
     if(asset.stale || !price.isFinite() || price<=0 || !price.toFloat().isFinite() || asset.time<=0 || now-asset.time !in 0..120)return null

@@ -4,6 +4,28 @@ import org.junit.Test
 import org.junit.Assert.*
 
 class ModelsTest {
+    @Test fun firstAnonymousBootstrapDoesNotCancelAlreadyLoadingPublicMarkets() {
+        assertFalse(accountIdentityChanged(null,JSONObject().put("wallet","")))
+        assertFalse(accountIdentityChanged(JSONObject(),JSONObject().put("wallet","")))
+    }
+    @Test fun realAccountOrWalletChangesStillInvalidatePreviousAccountData() {
+        val previous=JSONObject().put("me",JSONObject().put("id","a")).put("wallet","0xABC")
+        assertFalse(accountIdentityChanged(previous,JSONObject(previous.toString()).put("wallet","0xabc")))
+        assertTrue(accountIdentityChanged(previous,JSONObject(previous.toString()).put("me",JSONObject().put("id","b"))))
+        assertTrue(accountIdentityChanged(previous,JSONObject(previous.toString()).put("wallet","0xdef")))
+        assertTrue(accountIdentityChanged(previous,JSONObject().put("wallet","")))
+    }
+    @Test fun holderObservationsKeepIdentityAndRejectExpiredOrCrossTokenSnapshots() {
+        val now=System.currentTimeMillis()/1000;val address="0x"+"1".repeat(40)
+        val data=JSONObject().put("asset",address).put("indexed",true).put("fetchedAt",now).put("holders",org.json.JSONArray().put(JSONObject().put("address",address).put("amount","890567000.123456789")))
+        assertSame(data,checkedHolders(data,address,now))
+        listOf(JSONObject(data.toString()).put("asset","0x"+"2".repeat(40)),JSONObject(data.toString()).put("fetchedAt",now-901),JSONObject(data.toString()).put("fetchedAt",now+1)).forEach { assertTrue(runCatching { checkedHolders(it,address,now) }.isFailure) }
+    }
+    @Test fun holderAmountsStayCompactWithoutLosingTheExactModelAmount() {
+        assertEquals("890.6M",holderAmount("890567000.123456789"))
+        assertTrue(holderAmount("0.00000000123456").length<14)
+        assertEquals("—",holderAmount("NaN"));assertEquals("—",holderAmount("-1"))
+    }
     @Test fun quoteOnlyChartPreservesItsActualIdentityPriceAndTimestamp() {
         val now=System.currentTimeMillis()/1000
         val asset=Asset.parse(JSONObject().put("id","0x1").put("price",.002536).put("referenceAt",now-10).put("priceSource","Fixture quote"))

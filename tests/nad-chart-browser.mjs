@@ -13,7 +13,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const id='0x'+'a'.repeat(40),now=Math.floor(Date.now()/1000);
 const token={id,address:id,symbol:'BUSY',name:'Busy Land',venue:'nad.fun',nadfun:true,price:.002,marketCap:2000000,referenceAt:now,created:now,graduated:true,progressBps:10000,locked:false,tradeSupported:true,quoteSymbol:'MON',logoURI:'/assets/MON.png',creator:'0x'+'b'.repeat(40)};
 const candles=Array.from({length:30},(_,i)=>({time:now-3600*(30-i),open:1+i*.01,high:1.03+i*.01,low:.97+i*.01,close:1.02+i*.01,volume:10}));
-const holders={indexed:true,total:1412,source:'nad.fun',fetchedAt:now,refreshing:false,holders:[
+const holders={asset:id,indexed:true,total:1412,source:'nad.fun',fetchedAt:now,refreshing:false,holders:[
  {address:'0x'+'1'.repeat(40),name:'',amount:'890567000.123456789123456789'},
  {address:'0x'+'2'.repeat(40),name:'A very long holder nickname that must not push the balance outside the panel',amount:'50000000'},
  {address:'0x'+'3'.repeat(40),name:'',amount:'22501200'},
@@ -37,13 +37,13 @@ try{
     const interval=u.searchParams.get('interval');requests.push({kind:'chart',interval,at:Date.now()});
     await sleep(interval==='15'?650:80);
     body={token:id,interval,candles,source:'nad.fun',fetchedAt:now,stale:false,refreshing:false};
-   }else if(u.pathname==='/api/token-holders')body=holders;
+   }else if(u.pathname==='/api/token-holders'){await sleep(500);body=holders;}
    return body?r.fulfill({contentType:'application/json',body:JSON.stringify(body)}):r.continue();
   });
   await page.goto(origin+'/?view=home&section=markets&tab=memes');
   const buy=page.locator('.r-market-buy');
   try{await buy.waitFor({timeout:15000});}catch(e){console.error(JSON.stringify({url:page.url(),errors,body:(await page.locator('body').innerText()).slice(0,2000)}));await page.screenshot({path:evidence+'/failure.png'});throw e;}
-  await buy.click();await page.locator('#nad-chart canvas').first().waitFor();
+  await buy.click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.series==='line');
   const observed=await page.evaluate(()=>window.chartSeriesObserved);
   assert(observed.length>0);assert(observed.every(s=>s.type==='line'),'Basic price charts must use real line series');
   assert.deepEqual(observed.at(-1).points,candles.map(({time,close})=>({time,value:close})),'Keep actual closes and sparse observation times');
@@ -70,11 +70,11 @@ try{
   await page.locator('[data-action=nad-close]').last().click();await page.locator('.r-nad-panel').waitFor({state:'detached'});
   const before=requests.filter(r=>r.kind==='chart').length;
   await page.evaluate(()=>{
-   window.chartPaintMs=null;window.chartFirstFrameMs=null;window.chartSetupMs=null;document.addEventListener('click',e=>{if(!e.target.closest('.r-market-buy'))return;const at=performance.now();const watch=new MutationObserver(()=>{if(document.querySelector('#nad-chart canvas')){watch.disconnect();window.chartSetupMs=performance.now()-at;requestAnimationFrame(()=>{window.chartFirstFrameMs=performance.now()-at;requestAnimationFrame(()=>window.chartPaintMs=performance.now()-at);});}});watch.observe(document.querySelector('#trade-root'),{childList:true,subtree:true});},{once:true,capture:true});
+   window.chartPaintMs=null;window.chartFirstFrameMs=null;window.chartSetupMs=null;window.tokenCompleteFrameMs=null;document.addEventListener('click',e=>{if(!e.target.closest('.r-market-buy'))return;const at=performance.now();const watch=new MutationObserver(()=>{if(document.querySelector('#nad-chart canvas')&&document.querySelector('#nad-holders')?.dataset.holdersReady==='true'&&document.querySelector('#nad-holders .r-holder')){watch.disconnect();window.chartSetupMs=performance.now()-at;requestAnimationFrame(()=>{window.chartFirstFrameMs=performance.now()-at;window.tokenCompleteFrameMs=window.chartFirstFrameMs;requestAnimationFrame(()=>window.chartPaintMs=performance.now()-at);});}});watch.observe(document.querySelector('#trade-root'),{childList:true,subtree:true});},{once:true,capture:true});
   });
   const start=Date.now();await buy.click();await page.locator('#nad-chart canvas').first().waitFor();await page.waitForFunction(()=>window.chartPaintMs!=null);const {paintMs,firstFrameMs,setupMs}=await page.evaluate(()=>({paintMs:window.chartPaintMs,firstFrameMs:window.chartFirstFrameMs,setupMs:window.chartSetupMs}));
   const reopenMs=Date.now()-start;assert.equal(requests.filter(r=>r.kind==='chart').length,before,'Reopen must reuse the snapshot');
-  assert(firstFrameMs<=30,'Cached line first frame must be within 30ms: '+firstFrameMs);assert(paintMs<100,'Warm chart must not wait for a 650ms identity read: '+paintMs);assert.deepEqual(errors,[]);results.push({width,theme,...geometry,reopenMs,setupMs,firstFrameMs,paintMs,chartRequests:before});await context.close();
+  assert(firstFrameMs<=30,'Cached token chart and holders must share a first frame within 30ms: '+firstFrameMs);assert(paintMs<100,'Warm chart must not wait for a 650ms identity read: '+paintMs);assert.deepEqual(errors,[]);results.push({width,theme,...geometry,reopenMs,setupMs,firstFrameMs,paintMs,chartRequests:before});await context.close();
  }
  // A stale snapshot stays on screen while polling, without recreating the chart.
  const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();let updates=0;
@@ -97,5 +97,13 @@ try{
  await page.waitForFunction(()=>document.querySelector('#nad-chart-status')?.textContent==='nad.fun data');
  assert.equal(updates,2);assert(await page.evaluate(()=>window.firstChartCanvas===document.querySelector('#nad-chart canvas')));
  await context.close();
- await fs.writeFile(evidence+'/browser.json',JSON.stringify({results,financialTransactions:0,providerCalls:0},null,2));console.log(JSON.stringify(results));
+ // A cold request timeout must not strand the quote preview after the server warms.
+ const retryContext=await browser.newContext({viewport:{width:390,height:850}}),retryPage=await retryContext.newPage();let attempts=0;
+ await retryContext.route('**/*',async r=>{const u=new URL(r.request().url());if(u.origin!==origin)return r.abort();assert.equal(r.request().method(),'GET');let body;
+  if(u.pathname==='/api/nadfun/tokens')body={tokens:[token],total:1};else if(u.pathname==='/api/nadfun/token')body=token;else if(u.pathname==='/api/nadfun/references')body={tokens:[token]};else if(u.pathname==='/api/token-holders')body=holders;
+  else if(u.pathname==='/api/nadfun/chart'){attempts++;if(attempts===1){await sleep(150);return r.fulfill({status:503,json:{message:'Read-only fixture timeout'}});}body={token:id,interval:u.searchParams.get('interval'),candles,source:'nad.fun',fetchedAt:now,stale:false,refreshing:false};}
+  return body?r.fulfill({json:body}):r.continue();});
+ await retryPage.goto(origin+'/?view=home&section=markets&tab=memes');await retryPage.locator('.r-market-buy').waitFor();await retryPage.evaluate(()=>document.querySelector('.r-market-buy').click());
+ await retryPage.waitForFunction(()=>document.querySelector('#nad-chart-status')?.textContent==='nad.fun · Updating history');await retryPage.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.series==='line',{},{timeout:10000});assert.equal(attempts,2);assert.equal(await retryPage.locator('.r-holder').count(),4);await retryContext.close();
+ await fs.writeFile(evidence+'/browser.json',JSON.stringify({results,financialTransactions:0,providerCalls:0,coldRetryRecovered:true},null,2));console.log(JSON.stringify(results));
 }finally{await browser?.close();server.kill('SIGTERM');}

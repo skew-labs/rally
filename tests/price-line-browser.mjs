@@ -11,7 +11,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms)),now=Math.floor(Date.now()/1000)
 const points=[{time:now-86400,value:1.23},{time:now-3600,value:1.26},{time:now,value:1.24}];
 const candles=points.map(p=>({time:p.time,open:p.value-.01,high:p.value+.02,low:p.value-.02,close:p.value,volume:1}));
 const html=`<!doctype html><html><head><style>body{margin:16px;font:14px Arial}.chart-embed,.r-mini-chart{height:280px}button{min-height:44px}.r-asset-actions{display:flex}</style></head><body><main id="root"></main></body></html>`;
-const modules=new Map(await Promise.all(['charts.js','price-line.js','market-ui.js','wallet-ui.js'].map(async name=>['/'+name,await fs.readFile(root+'/'+name,'utf8')])));
+const modules=new Map(await Promise.all(['charts.js','price-line.js','market-ui.js','wallet-ui.js','holder-ui.js'].map(async name=>['/'+name,await fs.readFile(root+'/'+name,'utf8')])));
 const serveModule=async(r,u)=>{if(!modules.has(u.pathname))return false;await r.fulfill({contentType:'text/javascript',body:modules.get(u.pathname)});return true;};
 let browser;const results=[];
 try{

@@ -39,3 +39,9 @@ html .r-wallet-modal>.r-modal-head{flex:none;padding:20px 24px 16px;margin:0}
 @keyframes r-wallet-reveal{from{opacity:.35;transform:scale(.98)}to{opacity:1;transform:none}}@keyframes r-wallet-spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){.r-wallet-hero{padding:24px 20px 16px}.r-wallet-holdings{padding:0 20px}.r-wallet-actions{max-width:none}.r-holders-title{flex-wrap:wrap}.r-wallet-hero h2{font-size:clamp(32px,10vw,46px)}html .r-modal.r-wallet-modal{max-width:none;width:100%;max-height:calc(var(--wallet-visible-height,100dvh) - 20px - env(safe-area-inset-top));border-radius:26px 26px 0 0}html .r-wallet-modal>.r-modal-head{padding:20px 20px 16px}.r-wallet-form-body,.r-deposit{padding-inline:20px}.r-wallet-footer{padding-inline:20px}}
 @media(prefers-reduced-motion:reduce){.r-wallet-actions .r-btn,.r-wallet-holding,.r-holder,.r-send-value button{transition:none}.r-deposit-qr,.r-send-status[data-state=working]:before{animation:none}}
+.r-holders{--holder-rank:18px;--holder-gap:12px;--holder-amount:minmax(64px,32%)}
+.r-holders-columns,.r-holder{display:grid;grid-template-columns:var(--holder-rank) minmax(0,1fr) var(--holder-amount);column-gap:var(--holder-gap)}
+.r-holders-columns{padding-left:0}.r-holders-columns>span:first-child{grid-column:2}.r-holders-columns>span:last-child{grid-column:3;text-align:right}
+.r-holder>.r-holder-amount{max-width:none;min-width:0;justify-self:stretch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r-holder-skeleton{display:grid;gap:12px;padding:18px 0}.r-holder-skeleton i{height:34px;background:var(--raised);border-radius:8px;opacity:.6}
+@media(max-width:600px){.r-holders{--holder-rank:16px;--holder-gap:10px}.r-holder{min-height:54px;padding-block:10px}.r-holders-title>small{max-width:100%;text-wrap:balance}.r-holders-columns{padding-left:0}}

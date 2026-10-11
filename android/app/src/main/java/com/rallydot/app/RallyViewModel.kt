@@ -28,6 +28,10 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
     private val chartReads=linkedMapOf<String,Pair<Long,Deferred<JSONObject>>>()
     private val chartSnapshots=linkedMapOf<String,Pair<Long,JSONObject>>()
     private val assetReads=linkedMapOf<String,Pair<Long,Deferred<Asset?>>>()
+    private val holderJobs=linkedMapOf<String,Job>()
+    private val holderMutable=MutableStateFlow<Map<String,JSONObject>>(emptyMap())
+    val holderSnapshots=holderMutable.asStateFlow()
+    private var holderEpoch=0
     val wallet=NativeWallet(application,api) { refreshBoot() }
     private val pendingOrders=DurableOrders(application)
     private var orderJob: Job?=null
@@ -71,9 +75,35 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         return pending
     }
     fun cachedChart(asset: Asset,period: String): JSONObject?=chartSnapshots[asset.key+":"+period]?.takeIf { System.currentTimeMillis()-it.first<20_000 }?.second
-    fun warmChart(asset: Asset) { chartRead(asset,"1D").start() }
+    fun warmChart(asset: Asset) { chartRead(asset,"1D").start();warmHolders(asset) }
+    fun warmHolders(asset: Asset) {
+        if(!Regex("0x[0-9a-fA-F]{40}").matches(asset.id))return
+        val id=asset.id.lowercase();val saved=holderMutable.value[id]
+        if(holderJobs[id]?.isActive==true || saved!=null && !saved.optBoolean("refreshing") && System.currentTimeMillis()/1000-saved.optLong("fetchedAt") in 0..60)return
+        if(holderJobs.values.count { it.isActive }>=3)return
+        val epoch=holderEpoch
+        holderJobs[id]=viewModelScope.launch {
+            try {
+                repeat(20) { attempt->
+                    val data=checkedHolders(api.get("/api/token-holders?asset="+Uri.encode(id),true),id)
+                    if(epoch!=holderEpoch)return@launch
+                    holderMutable.update { previous->
+                        val next=LinkedHashMap(previous)
+                        if(data.isNull("fetchedAt") && next[id]?.isNull("fetchedAt")==false)return@update previous
+                        next.remove(id);next[id]=data
+                        while(next.size>16)next.remove(next.keys.first())
+                        next
+                    }
+                    if(!data.optBoolean("refreshing") && !data.optBoolean("waiting"))return@launch
+                    delay(when(attempt){0->400L;1->800L;2->1500L;else->2500L})
+                }
+            } catch(e:CancellationException) { throw e } catch(_:Exception) {
+                if(holderMutable.value[id]==null)holderMutable.update { it+(id to JSONObject().put("asset",id).put("holders",org.json.JSONArray()).put("error","Holder data temporarily unavailable").put("refreshing",false)) }
+            } finally { if(epoch==holderEpoch)holderJobs.remove(id) }
+        }
+    }
     suspend fun chart(asset: Asset,period: String): JSONObject=withContext(Dispatchers.Main.immediate) { chartRead(asset,period).await() }
-    private fun clearCharts() { chartReads.values.forEach { it.second.cancel() };chartReads.clear();chartSnapshots.clear();assetReads.values.forEach { it.second.cancel() };assetReads.clear() }
+    private fun clearCharts() { chartReads.values.forEach { it.second.cancel() };chartReads.clear();chartSnapshots.clear();assetReads.values.forEach { it.second.cancel() };assetReads.clear();holderEpoch++;holderJobs.values.toList().forEach { it.cancel() };holderJobs.clear();holderMutable.value=emptyMap() }
     private val drafts=DraftCache()
     fun draftKey(community: String?)=DraftIdentity(me?.string("id") ?: "guest",community.orEmpty())
     fun draft(key: DraftIdentity)=drafts.get(key)
@@ -89,7 +119,7 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         val version=api.sessionVersion
         val data=api.get("/api/bootstrap?markets=0",true)
         if(version!=api.sessionVersion)throw CancellationException("Account changed")
-        val changed=me?.string("id")!=data.optJSONObject("me")?.string("id") || mutable.value.boot?.string("wallet")!=data.string("wallet")
+        val changed=accountIdentityChanged(mutable.value.boot,data)
         if(changed) { portfolioJob?.cancel();jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear() }
         mutable.update { it.copy(boot=data,bootError=null,portfolio=if(changed)null else it.portfolio,portfolioError=if(changed)null else it.portfolioError,walletPanel=if(changed)null else it.walletPanel,pages=if(changed)emptyMap() else it.pages,reactions=if(changed)emptyMap() else it.reactions) };return data
     }
