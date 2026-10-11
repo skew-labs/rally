@@ -62,8 +62,8 @@ import org.json.JSONObject
 @Composable fun OptionRow(label: String,icon: androidx.compose.ui.graphics.vector.ImageVector,onClick: ()->Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=20.dp,vertical=18.dp).heightIn(min=24.dp),verticalAlignment=Alignment.CenterVertically) { Icon(icon,null,tint=MaterialTheme.colorScheme.onSurfaceVariant);Text(label,Modifier.weight(1f).padding(horizontal=14.dp));Icon(Icons.Outlined.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant) }
 }
-@Composable fun AlgorithmsScreen(vm: RallyViewModel,onAlgorithm: (JSONObject)->Unit) {
-    UnifiedAlgorithms(vm,onAlgorithm)
+@Composable fun AlgorithmsScreen(vm: RallyViewModel,onAlgorithm: (JSONObject)->Unit,onMarket: (String)->Unit={}) {
+    UnifiedAlgorithms(vm,onAlgorithm,onMarket)
 }
 @Composable fun AgentsScreen(state: AppState) {
     val brands=listOf(Triple("Codex","OpenAI","agent-openai.svg"),Triple("Claude","Anthropic","agent-claude.png"),Triple("Hermes","Nous Research","agent-hermes.png"),Triple("Muse","Meta","agent-meta.svg"),Triple("Grok Bot","xAI","agent-grok.svg"))

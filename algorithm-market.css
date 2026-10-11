@@ -137,3 +137,21 @@ html .am-preview-modal>.r-modal-head h2{font-size:18px}
  .am-get{min-width:64px;min-height:44px;padding:10px 8px;font-size:12px}
 }
 @media(max-width:359px){.am-section{padding-inline:12px}.am-card{grid-template-columns:minmax(0,1fr) 56px;gap:6px}.am-card-preview{padding-left:45px;column-gap:5px}.am-card .r-token-art,.am-card .am-feed-art{width:34px;height:34px;min-width:34px}.am-card h2{font-size:12px}.am-return{font-size:15px}.am-metric-label{font-size:8px}.am-get{min-width:56px}.am-card-by{font-size:9px}}
+
+.am-head{padding-bottom:18px}.am-toolbar{margin-top:8px}.am-controls{padding-bottom:4px}
+.am-wallet-card{background:var(--paper);border-color:var(--line)}
+.am-wallet-card .am-get{background:#0866ff;color:#fff}
+.am-card-top{margin-bottom:12px}.am-return{margin-top:16px}.am-card-preview{padding:18px 18px 14px}
+.am-wallet-more{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:4px}
+.am-section-head>.am-sort{flex:none}.am-section-head .am-sort button{min-height:40px}
+.am-card-by{font-size:11px}.am-get{min-height:44px}
+.am-card-preview,.al-open,.cx-card-open{transition:background-color 120ms ease,transform 120ms var(--rx-ease)}
+.am-card-preview:active,.al-open:active,.cx-card-open:active{transform:scale(.985)}
+@media(max-width:760px),(pointer:coarse){
+ .am-section-head{gap:8px;min-height:60px}.am-section-head>.am-sort{width:auto;gap:2px;border:0;padding:2px;background:var(--soft);border-radius:100px}
+ .am-section-head .am-sort button{font-size:10px;padding:7px 9px;border:0;border-radius:100px;min-height:36px}
+ .am-section-head .am-sort button[aria-pressed=true]{background:var(--paper)!important}
+ .am-section-head p{font-size:10px;margin-top:4px}.am-card-preview{padding:14px 0 14px 52px;min-height:96px}.am-return{margin:0}.am-card-top{top:18px}.am-wallet-card{background:transparent}
+ .am-section{padding-bottom:14px}.am-controls{padding-bottom:0}.am-card h2{font-size:13px}.am-card-by{font-size:10px}.am-metric-label{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){.am-card-preview,.al-open,.cx-card-open{transition:none}.am-card-preview:active,.al-open:active,.cx-card-open:active{transform:none}}

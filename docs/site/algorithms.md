@@ -38,12 +38,12 @@ A compatible community revenue vault can divide algorithm-sale proceeds between 
 
 ## Browse on mobile
 
-Phones show compact rows with token artwork, sampled wallet ROI when available, and **Get** or **Buy**. Open **Swipe → Algorithms** to browse one algorithm at a time. **Preview** opens its existing feed preview and price; closing it returns to the same swipe position. A swipe never purchases a subscription. The Android app uses the same catalog and access checks.
+Phones show compact rows with token artwork, sampled wallet ROI when available, and **Track**, **Use** or **Buy**. Open **Swipe → Algorithms** to browse one algorithm at a time. **Preview** opens its existing feed preview and price; closing it returns to the same swipe position. A swipe never purchases a subscription. The Android app uses the same catalog and access checks.
 
 ## Strategy methods
 
-**Algorithms** brings live feeds and 100 strategy methods into one searchable collection. Search a wallet, strategy or source, choose a source/category and tap a row for its rule and original research. **Save** keeps a shortlist on this device.
+**Algorithms** brings live feeds and 100 strategy methods into one searchable collection. Search a wallet, strategy or source, choose **Memes**, **Momentum** or **Yield** and tap a row for its rule. Source/category filters are available under **Filters**. **Save** keeps a shortlist on this device.
 
-Rows show a **1Y model** when a complete published factor year is available. Tap for the exact period, universe and calculation basis. These hypothetical excess-return research figures exclude fees and are separate from Rally trading returns. A dash means there is no complete published year; short wallet samples are never annualized.
+Rows show a **1Y model** when a complete published factor year is available. Tap for the exact period, universe and calculation basis. These hypothetical excess-return research figures exclude fees and are separate from Rally trading returns. Unrecorded years are listed inside **How it works**; short wallet samples are never annualized.
 
-Live feeds keep their Get/Buy actions. Research methods can be read and saved without requesting a payment or order. Source attribution sits in the detail footer; logos identify the original material and do not imply a partnership.
+Live feeds keep their Track/Use/Buy actions. Research methods can be read and saved without requesting a payment or order. Selected nad.fun, Kuru and Perpl methods also link to their existing token/market lists. Source attribution sits in the detail footer; logos identify the original material and do not imply a partnership.

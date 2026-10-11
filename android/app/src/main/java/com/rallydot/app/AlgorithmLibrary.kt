@@ -64,7 +64,7 @@ private object PublicAlgorithmReferences {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun UnifiedAlgorithms(vm: RallyViewModel,onAlgorithm: (JSONObject)->Unit) {
+@Composable fun UnifiedAlgorithms(vm: RallyViewModel,onAlgorithm: (JSONObject)->Unit,onMarket: (String)->Unit={}) {
     val app by vm.state.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf("All") };var rank by rememberSaveable { mutableStateOf("Top PnL") }
     val context=LocalContext.current;val links=LocalUriHandler.current
@@ -72,23 +72,33 @@ private object PublicAlgorithmReferences {
     var saved by remember { mutableStateOf(preferences.getStringSet("saved",emptySet()).orEmpty().toSet()) }
     var data by remember { mutableStateOf(PublicAlgorithmReferences.cache) };var error by remember { mutableStateOf<String?>(null) };var retry by remember { mutableIntStateOf(0) }
     var query by rememberSaveable { mutableStateOf("") };var source by rememberSaveable { mutableStateOf("") };var category by rememberSaveable { mutableStateOf("") };var onlySaved by rememberSaveable { mutableStateOf(false) }
+    var lane by rememberSaveable { mutableStateOf("All") };var showFilters by rememberSaveable { mutableStateOf(false) };var showWallets by rememberSaveable { mutableStateOf(false) };var showFeeds by rememberSaveable { mutableStateOf(false) }
     var selected by remember { mutableStateOf<JSONObject?>(null) }
     val save: (String)->Unit={id->val next=if(id in saved)saved-id else saved+id;saved=next;preferences.edit().putStringSet("saved",next).apply()}
     LaunchedEffect(retry) { if(data==null){error=null;try { data=PublicAlgorithmReferences.load() } catch(e:CancellationException){throw e} catch(e:Exception){error="Can't load strategies. Check your connection and retry."}} }
     val entries=data?.objects("items").orEmpty()
-    val filtered=remember(entries,query,source,category,onlySaved,saved,filter){entries.filter { a->filter!="Paid" && (!onlySaved || a.string("id") in saved) && (source.isEmpty() || a.string("sourceId")==source) && (category.isEmpty() || a.string("category")==category) && query.trim().split(Regex("\\s+")).all { word->listOf("name","method","author","sourceName","rule").joinToString(" "){a.string(it)}.contains(word,true) } }}
+    val filtered=remember(entries,query,source,category,onlySaved,saved,filter,lane){orderedStrategies(entries.filter { a->filter!="Paid" && (!onlySaved || a.string("id") in saved) && (source.isEmpty() || a.string("sourceId")==source) && (category.isEmpty() || a.string("category")==category) && query.trim().split(Regex("\\s+")).all { word->listOf("name","method","author","sourceName","rule").joinToString(" "){a.string(it)}.contains(word,true) } },lane)}
     val feeds=rankedAlgorithms(app.boot?.objects("feeds").orEmpty(),rank=="Top ROI").filter { f->
         !onlySaved && source.isEmpty() && category.isEmpty() && (filter!="Free" || (f.number("price") ?: 0.0)==0.0) && (filter!="Paid" || (f.number("price") ?: 0.0)>0.0) && (algorithmTitle(f)+" "+algorithmOwner(f)).contains(query,true)
     }
+    val wallets=feeds.filter { !it.optJSONObject("research")?.string("wallet").isNullOrBlank() }
+    val live=feeds.filter { it.optJSONObject("research")?.string("wallet").isNullOrBlank() }.sortedWith(compareByDescending<JSONObject>{it.optJSONObject("research")!=null}.thenByDescending{it.optJSONObject("algorithm_version")!=null})
     LazyColumn(Modifier.fillMaxSize().highRefresh(),contentPadding=PaddingValues(16.dp)) {
         item {
-            OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),singleLine=true,placeholder={Text("Search algorithms, wallets, sources",fontSize=13.sp)},leadingIcon={Icon(Icons.Outlined.Search,null)},shape=RoundedCornerShape(16.dp))
+            OutlinedTextField(query,{query=it},Modifier.fillMaxWidth(),singleLine=true,placeholder={Text("Find your next move",fontSize=13.sp)},leadingIcon={Icon(Icons.Outlined.Search,null)},shape=RoundedCornerShape(16.dp))
             Segmented(listOf("All","Free","Paid"),filter,{filter=it},Modifier.padding(vertical=8.dp))
-            Segmented(listOf("Top PnL","Top ROI"),rank,{rank=it})
         }
-        items(feeds,key={it.string("id")},contentType={"feed"}) { f->AlgorithmListRow(f){onAlgorithm(algorithmItem(f))} }
+        if(wallets.isNotEmpty())item { Row(Modifier.fillMaxWidth().padding(top=6.dp),verticalAlignment=Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Top wallets",fontWeight=FontWeight.Medium);Text("Sampled closed trades",fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) };TextButton(onClick={rank=if(rank=="Top PnL")"Top ROI" else "Top PnL"}) { Text(rank,fontSize=11.sp);Icon(Icons.Outlined.SwapVert,null,Modifier.size(14.dp)) } } }
+        items(if(showWallets || query.isNotBlank())wallets else wallets.take(4),key={it.string("id")},contentType={"feed"}) { f->AlgorithmListRow(f){onAlgorithm(algorithmItem(f))} }
+        if(wallets.size>4 && !showWallets && query.isBlank())item { TextButton(onClick={showWallets=true}){Text("See all ${wallets.size} wallets",fontSize=12.sp)} }
+        if(live.isNotEmpty())item { Text("Live feeds",Modifier.padding(top=18.dp,bottom=4.dp),fontWeight=FontWeight.Medium) }
+        items(if(showFeeds || query.isNotBlank())live else live.take(3),key={it.string("id")},contentType={"feed"}) { f->AlgorithmListRow(f){onAlgorithm(algorithmItem(f))} }
+        if(live.size>3 && !showFeeds && query.isBlank())item { TextButton(onClick={showFeeds=true}){Text("See all ${live.size} feeds",fontSize=12.sp)} }
         if(filter!="Paid")item {
-            Row(Modifier.fillMaxWidth().padding(top=22.dp),verticalAlignment=Alignment.CenterVertically) { Text("Strategies",Modifier.weight(1f),fontWeight=FontWeight.Medium);FilterChip(selected=onlySaved,onClick={onlySaved=!onlySaved},label={Text("Saved")},leadingIcon={Icon(Icons.Outlined.BookmarkBorder,null,Modifier.size(16.dp))}) }
+            Row(Modifier.fillMaxWidth().padding(top=18.dp),verticalAlignment=Alignment.CenterVertically) { Text("Playbooks",Modifier.weight(1f),fontWeight=FontWeight.Medium);IconToggleButton(checked=onlySaved,onCheckedChange={onlySaved=it},modifier=Modifier.semantics { contentDescription="Saved playbooks" }){Icon(Icons.Outlined.BookmarkBorder,null,Modifier.size(18.dp))} }
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp)) { items(listOf("All","Memes","Momentum","Yield","1Y returns")) { name->FilterChip(selected=lane==name,onClick={lane=name;source="";category=""},label={Text(name,fontSize=12.sp)}) } }
+            TextButton(onClick={showFilters=!showFilters},contentPadding=PaddingValues(0.dp)){Text("Filters",fontSize=11.sp);Icon(if(showFilters)Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,null,Modifier.size(14.dp))}
+            if(showFilters) {
             LazyRow(Modifier.padding(vertical=10.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 item { FilterChip(selected=source.isEmpty(),onClick={source=""},label={Text("All sources")}) }
                 items(data?.objects("sources").orEmpty(),key={it.string("id")}) { b->FilterChip(selected=source==b.string("id"),onClick={source=if(source==b.string("id"))"" else b.string("id")},label={Text(b.string("name"),fontSize=12.sp)},leadingIcon={AlgorithmBrand(JSONObject().put("brandIcon",b.string("logo")).put("brandIconDark",b.string("logoDark")),24.dp)}) }
@@ -97,22 +107,22 @@ private object PublicAlgorithmReferences {
                 item { FilterChip(selected=category.isEmpty(),onClick={category=""},label={Text("All strategies")}) }
                 items(entries.map { it.string("category") }.distinct()) { g->FilterChip(selected=category==g,onClick={category=if(category==g)"" else g},label={Text(g,fontSize=12.sp)}) }
             }
-            Text("${filtered.size} algorithms · 1Y model = published factor",Modifier.padding(vertical=14.dp),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text("${filtered.size} ${if(filtered.size==1)"playbook" else "playbooks"}",Modifier.padding(vertical=6.dp),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if(filter!="Paid" && data==null && error==null)item { LoadingRows() }
         if(filter!="Paid" && error!=null)item { EmptyState("Algorithms unavailable",error.orEmpty(),"Retry",{retry++}) }
         items(filtered,key={it.string("id")},contentType={"reference"}) { a->
-            Row(Modifier.fillMaxWidth().heightIn(min=92.dp),verticalAlignment=Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().heightIn(min=80.dp),verticalAlignment=Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).clickable { selected=a }.padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     AlgorithmBrand(a,44.dp)
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         Text(a.string("name"),fontSize=14.sp,fontWeight=FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis)
-                        Text(a.string("category"),fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                        Text(strategyTag(a),fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
                     }
                     Column(horizontalAlignment=Alignment.End) {
                         val record=a.optJSONObject("performance1Y")
-                        Text(record?.number("returnPct")?.let(::algorithmPercent) ?: "—",fontSize=16.sp,fontWeight=FontWeight.Medium,color=if(record?.number("returnPct")==null)MaterialTheme.colorScheme.onSurface else performanceInk(record.number("returnPct")!!))
-                        Text(if(record!=null)"1Y model" else "1Y return",fontSize=9.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(record!=null){Text(record.number("returnPct")?.let(::algorithmPercent) ?: "—",fontSize=16.sp,fontWeight=FontWeight.Medium,color=performanceInk(record.number("returnPct") ?: 0.0));Text("1Y model",fontSize=9.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}else Text("View",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 IconToggleButton(checked=a.string("id") in saved,onCheckedChange={save(a.string("id"))},modifier=Modifier.size(48.dp).semantics { contentDescription="Save "+a.string("name") }) { Icon(if(a.string("id") in saved)Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,null,Modifier.size(19.dp)) }
@@ -125,11 +135,15 @@ private object PublicAlgorithmReferences {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal=22.dp).navigationBarsPadding(),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) { AlgorithmBrand(a,64.dp);Column(Modifier.weight(1f)){Text(a.string("name"),fontSize=23.sp,fontWeight=FontWeight.Medium);Text(a.string("category"),fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)} }
                 val record=a.optJSONObject("performance1Y")
-                Text(record?.number("returnPct")?.let(::algorithmPercent) ?: "—",fontSize=36.sp,fontWeight=FontWeight.Medium,color=if(record?.number("returnPct")==null)MaterialTheme.colorScheme.onSurface else performanceInk(record.number("returnPct")!!))
-                Text(if(record==null)"No complete 1Y record published." else "1Y model · ${record.string("from")} — ${record.string("to")}",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(record!=null)Text(record.number("returnPct")?.let(::algorithmPercent) ?: "—",fontSize=36.sp,fontWeight=FontWeight.Medium,color=performanceInk(record.number("returnPct") ?: 0.0))
+                if(record!=null)Text("1Y model · ${record.string("from")} — ${record.string("to")}",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(record!=null)Text("${record.string("universe")} · Hypothetical compounded factor excess returns; fees excluded. These are research results, not Rally trading returns.",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(a.string("method"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(a.string("rule"),fontSize=17.sp,lineHeight=26.sp)
+                var expanded by remember(a.string("id")){mutableStateOf(false)}
+                TextButton(onClick={expanded=!expanded},contentPadding=PaddingValues(0.dp)){Text("How it works",fontSize=12.sp);Icon(if(expanded)Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,null,Modifier.size(16.dp))}
+                if(expanded){if(record==null)Text("No complete 1Y record published.",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(a.string("method"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(a.string("dataNeeded"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+                val market=when(a.string("sourceId")){"perpl"->"Perps";"kuru"->"Spot";"nad","nansen"->"Memes";else->null}
+                if(market!=null)Button(onClick={selected=null;onMarket(market)},Modifier.fillMaxWidth().heightIn(min=48.dp),shape=RoundedCornerShape(100.dp)){Text(if(market=="Memes")"See tokens" else "Open "+market.lowercase(),fontSize=13.sp)}
                 Button(onClick={save(a.string("id"))},Modifier.fillMaxWidth().heightIn(min=48.dp),shape=RoundedCornerShape(100.dp)){Text(if(a.string("id") in saved)"Saved" else "Save",fontSize=13.sp)}
                 Column(Modifier.fillMaxWidth().padding(bottom=20.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)) {
                     Text("Source: "+a.string("sourceName",a.string("author")),Modifier.clickable { runCatching { links.openUri(a.string("sourceURL")) } }.padding(vertical=8.dp),fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -138,6 +152,13 @@ private object PublicAlgorithmReferences {
             }
         }
     }
+}
+
+fun strategyLane(a: JSONObject)=when { a.string("sourceId") in listOf("nad","kuru","nansen")->"Memes";a.string("category")=="DeFi"->"Yield";a.string("category") in listOf("Trader playbooks","Trend signals","Volume signals")->"Momentum";else->"All" }
+fun strategyTag(a: JSONObject)=strategyLane(a).takeIf { it!="All" } ?: when(a.string("category")){"Institutional"->"Macro";"Feed ranking"->"Feeds";"Token research"->"Onchain";else->a.string("category")}
+fun orderedStrategies(items: List<JSONObject>,lane: String): List<JSONObject> {
+    val first=listOf("rally-ref-098","rally-ref-099","rally-ref-080","rally-ref-100","rally-ref-074")
+    return items.filter { lane=="All" || lane=="1Y returns" && it.optJSONObject("performance1Y")!=null || strategyLane(it)==lane }.sortedWith(compareBy<JSONObject>{first.indexOf(it.string("id")).takeIf { n->n>=0 } ?: 99}.thenBy { listOf("Memes","Momentum","Yield","All").indexOf(strategyLane(it)) })
 }
 
 @Composable private fun AlgorithmBrand(a: JSONObject,size: Dp) {

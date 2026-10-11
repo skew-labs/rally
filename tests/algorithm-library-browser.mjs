@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
 import {validYear} from '../assets/algorithm-library.js';
 import {ALGORITHM_LIBRARY_URL} from '../assets/algorithm-library-data.js';
+import {discoveryOrder,strategyLane} from '../assets/algorithm-discovery.js';
 const root=fileURLToPath(new URL('..',import.meta.url)),origin='http://127.0.0.1:33241';
 const temp=await fs.mkdtemp(path.join(os.tmpdir(),'rally-unified-'));
 const server=spawn(process.env.RALLY_PYTHON||'python3',['scripts/social-loop-preview.py'],{cwd:root,env:{...process.env,RALLY_TESTING:'1',RALLY_PREVIEW_PORT:'33241',RALLY_FIXTURE_FILE:path.join(temp,'fixture.json'),RALLY_WALLET_MARKET_FIXTURE:'1'},stdio:['ignore','ignore','pipe']});
@@ -16,6 +17,7 @@ const evidence=process.env.RALLY_EVIDENCE_DIR;
 const settle=p=>p.evaluate(async()=>{await Promise.all(document.getAnimations().map(a=>a.finished.catch(()=>{})));await new Promise(r=>requestAnimationFrame(r));});
 const catalog=JSON.parse(await fs.readFile(path.join(root,ALGORITHM_LIBRARY_URL),'utf8'));
 const recorded=catalog.items.filter(a=>a.performance1Y);assert.equal(recorded.length,5);
+assert.equal(discoveryOrder(catalog.items)[0].id,'rally-ref-098');assert.equal(discoveryOrder(catalog.items,'year').length,5);assert(discoveryOrder(catalog.items,'memes').every(a=>strategyLane(a)==='memes'));
 for(const a of recorded){assert(validYear(a.performance1Y));assert(!validYear({...a.performance1Y,months:11}));assert(!validYear({...a.performance1Y,to:'2029-07-31'}));assert(!validYear({...a.performance1Y,returnPct:Infinity}));}
 try{
  for(let i=0;i<100;i++){try{if((await fetch(origin+'/api/health')).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
@@ -27,13 +29,17 @@ try{
   await page.goto(origin+'/?view=feeds');await page.locator('.am-wallet-card').first().waitFor();await page.locator('.al-row').first().waitFor();await settle(page);
   assert.equal(await page.locator('.al-row').count(),24);assert.equal(loads.length,1);assert.equal(await page.locator('[data-action=algorithm-tab]').count(),0);checks+=3;
   assert.equal(await page.locator('.al-library [data-action=subscribe-feed]').count(),0);
-  assert.equal(await page.locator('.al-row .al-year').count(),24);assert.equal(await page.locator('.al-row .al-year .positive,.al-row .al-year .negative').count(),5);checks+=3;
+  assert.equal(await page.locator('.al-row').first().getAttribute('data-algorithm'),'rally-ref-098');assert(!(await page.locator('.al-filter-menu').evaluate(e=>e.open)));checks+=2;
+  await page.getByRole('button',{name:'Memes',exact:true}).click();assert.equal(await page.locator('.al-row').count(),4);assert.equal(await page.locator('.al-row .al-year').count(),0);checks+=2;
+  await page.getByRole('button',{name:'1Y returns',exact:true}).click();assert.equal(await page.locator('.al-row').count(),5);assert.equal(await page.locator('.al-row .al-year .positive,.al-row .al-year .negative').count(),5);checks+=2;
   await page.locator('[data-algorithm=rally-ref-001] .al-open').click();await page.locator('.al-detail-foot').waitFor();
   assert.match(await page.locator('.al-performance').innerText(),/1Y model/);assert.match(await page.locator('.al-performance').innerText(),new RegExp(recorded[0].performance1Y.to));
   await page.locator('.al-evidence summary').click();assert.match(await page.locator('.al-evidence').innerText(),/not Rally trading returns/);checks+=3;
   await page.keyboard.press('Escape');await page.locator('[role=dialog]').waitFor({state:'detached'});
+  await page.locator('[data-action=library-lane][data-id=all]').click();await page.locator('.al-filter-menu>summary').click();
   await page.locator('[data-action=library-source][data-id=a16z]').click();assert.equal(await page.locator('.al-row').count(),3);
   await page.locator('.al-row .al-open').first().click();await page.locator('.al-detail-foot').waitFor();await settle(page);
+  await page.locator('.al-evidence summary').click();
   assert.match(await page.locator('.al-attribution').innerText(),/a16z/);assert.match(await page.locator('.al-performance').innerText(),/No complete 1Y/);checks+=3;
   const box=await page.locator('.al-detail-modal').boundingBox(),foot=await page.locator('.al-detail-foot').boundingBox();assert(box.x>=-1&&box.x+box.width<=width+1);assert(foot.y+foot.height<=901);checks+=2;
   await page.locator('.al-detail-save').click();assert.equal(await page.locator('.al-detail-save').innerText(),'Saved');
@@ -55,7 +61,12 @@ try{
  await page.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
  await page.route('**/assets/algorithm-library-*.json',r=>failures-->0?r.fulfill({status:503,body:'Unavailable'}):r.continue());
  await page.goto(origin+'/?view=feeds&section=library');await page.locator('[data-action=library-retry]').click();await page.locator('.al-row').first().waitFor();assert.equal(await page.locator('[data-action=algorithm-tab]').count(),0);checks++;
+ await page.locator('[data-algorithm=rally-ref-098] .al-open').click();await page.getByRole('button',{name:'See tokens',exact:true}).click();
+ await page.waitForURL('**view=home&section=markets&tab=memes');assert.equal(await page.locator('[role=dialog]').count(),0);checks++;
+ await page.goto(origin+'/?view=communities');await page.locator('.cx-card').first().waitFor();
+ assert.equal(await page.locator('.cx-card:not(.has-token) .cx-card-value').first().isVisible(),false);checks++;
+ const c=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth+1,buttons:[...document.querySelectorAll('.cx-card-foot button')].map(e=>e.getBoundingClientRect().height)}));assert(!c.overflow);assert(c.buttons.every(h=>h>=44));checks+=2;
  await page.close();
- const report={checks,layouts,algorithms:100,officialLogos:37,datedYearRecords:5,boundedRows:24,noWrites:true};
+  const report={checks,layouts,algorithms:100,officialLogos:37,datedYearRecords:5,boundedRows:24,noWrites:true};
  if(evidence)await fs.writeFile(path.join(evidence,'algorithms-browser.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }catch(e){console.error(logs.slice(-2000));throw e;}finally{await browser?.close();server.kill('SIGTERM');await fs.rm(temp,{recursive:true,force:true});}

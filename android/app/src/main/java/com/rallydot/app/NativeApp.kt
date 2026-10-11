@@ -56,6 +56,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
     var dark by rememberSaveable { mutableStateOf(settings.getBoolean("dark",systemDark)) }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var home by rememberSaveable { mutableStateOf("Markets") }
+    var marketCategory by rememberSaveable { mutableStateOf("Memes") }
     var extra by rememberSaveable { mutableStateOf<String?>(null) }
     var asset by remember { mutableStateOf<Asset?>(null) }
     var post by remember { mutableStateOf<Post?>(null) }
@@ -153,11 +154,11 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                                     shown=="Weekly league"->WeeklyLeagueScreen(vm)
                                     shown.startsWith("Benefits:")->TokenBenefitsScreen(vm,shown.substringAfter(":"))
                                     shown=="Token benefits"->TokenBenefitsScreen(vm,vm.me?.string("id").orEmpty())
-                                    shown=="Algorithms"->AlgorithmsScreen(vm,{algorithm=it})
+                                    shown=="Algorithms"->AlgorithmsScreen(vm,{algorithm=it},{marketCategory=it;extra=null;tab=0;home="Markets"})
                                     shown=="Agents"->AgentsScreen(data)
                                     shown=="Activity"->ActivityScreen(vm)
                                     shown=="Wallet"->PortfolioScreen(vm,::showAsset)
-                                    shown=="0:Markets"->MarketsScreen(vm,{asset=it})
+                                    shown=="0:Markets"->MarketsScreen(vm,{asset=it},initialCategory=marketCategory)
                                     shown=="0:Launch"->MarketsScreen(vm,{asset=it},launch=true,create={if(vm.me==null)vm.showWallet() else launching=true})
                                     shown=="0:Swipe"->SwipeScreen(vm,{asset=it},{post=it},{algorithm=it})
                                     shown=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={extra="Algorithms"},onFeedPreview={algorithm=it})

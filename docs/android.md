@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.6.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.7.apk)
 
 ## Interaction and data
 
@@ -63,7 +63,7 @@ cd android
 ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.4.6 (code 19) uses the existing release certificate, allowing upgrades from the earlier APKs. Release shrinking removes SDK debug/info log calls so OAuth callback codes and relay URIs are not written to logcat.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.4.7 (code 20) uses the existing release certificate, allowing upgrades from the earlier APKs. Release shrinking removes SDK debug/info log calls so OAuth callback codes and relay URIs are not written to logcat.
 
 `/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
@@ -124,6 +124,10 @@ Research ROI belongs to the identified wallet’s sampled closed trades, not to 
 
 ## Unified algorithms
 
-Version 0.4.6 presents live wallet/community feeds and 100 public strategy methods in one native lazy list. Search, source/category filters, theme-aware official logos and local saves match the web collection. Five methods include dated one-year hypothetical factor summaries, with their source, universe and fee basis in the detail sheet. Missing annual records stay blank.
+Version 0.4.7 presents live wallet/community feeds and 100 public strategy methods in one native lazy list. Search, source/category filters, theme-aware official logos and local saves match the web collection. Five methods include dated one-year hypothetical factor summaries, with their source, universe and fee basis in the detail sheet. Missing annual records stay blank.
 
 An unauthenticated, bounded public HTTP client loads the immutable catalog. Schema checks reject executable and pricing fields and validate complete annual windows. Research browsing does not request a payment, subscription or trade. Completed chart snapshots paint immediately on re-entry while the existing read pipeline refreshes history.
+
+## Retail algorithm discovery
+
+Version 0.4.7 starts Algorithms with four public wallets and three live feeds, with explicit controls to show the full lists. Research playbooks follow in the same scroll, with Memes, Momentum, Yield and 1Y return lanes. Source filters are collapsed initially. Playbook links open native Memes, Spot or Perps markets. Wallet records remain sampled closed-trade results, separate from hypothetical published factor years.

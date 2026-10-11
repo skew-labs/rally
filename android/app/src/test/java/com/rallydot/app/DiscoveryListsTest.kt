@@ -4,6 +4,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DiscoveryListsTest {
+ @Test fun playbookLanesKeepResearchResultsSeparateFromWalletReturns() {
+  val meme=JSONObject("""{"id":"rally-ref-098","sourceId":"nad","category":"Token research"}""")
+  val year=JSONObject("""{"id":"rally-ref-001","sourceId":"aqr","category":"Institutional","performance1Y":{"basis":"published_factor","months":12,"returnPct":10}}""")
+  assertEquals("Memes",strategyLane(meme));assertEquals(listOf(meme),orderedStrategies(listOf(year,meme),"Memes"))
+  assertEquals(listOf(year),orderedStrategies(listOf(year,meme),"1Y returns"));assertNull(algorithmReturn(year))
+  assertEquals(listOf(meme,year),orderedStrategies(listOf(year,meme),"All"))
+ }
  @Test fun roiRequiresAnIdentifiedWalletAndNeverInventsAlgorithmReturns() {
   assertNull(algorithmReturn(JSONObject("""{"research":{"returnPct":300}}""")))
   assertNull(algorithmReturn(JSONObject("""{"research":{"wallet":"0xabc"}}""")))

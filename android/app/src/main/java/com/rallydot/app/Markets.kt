@@ -41,9 +41,9 @@ import org.json.JSONObject
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun MarketsScreen(vm: RallyViewModel,onAsset: (Asset)->Unit,launch: Boolean=false,create: ()->Unit={}) {
+@Composable fun MarketsScreen(vm: RallyViewModel,onAsset: (Asset)->Unit,launch: Boolean=false,create: ()->Unit={},initialCategory: String="Memes") {
     val state by vm.state.collectAsStateWithLifecycle()
-    var category by rememberSaveable { mutableStateOf("Memes") }
+    var category by rememberSaveable(initialCategory) { mutableStateOf(initialCategory) }
     var query by rememberSaveable { mutableStateOf("") }
     var applied by rememberSaveable { mutableStateOf("") }
     val field=when { launch->"tokens";category=="Perps"->"markets";category=="Prediction"->"pools";else->"tokens" }

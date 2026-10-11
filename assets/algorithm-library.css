@@ -79,3 +79,18 @@ html[data-theme=dark] .al-art .al-logo-dark{display:block}
 
 .al-open>.al-art{flex:0 0 56px}
 @media(max-width:760px){.al-open>.al-art{flex-basis:42px}}
+
+/* Fast retail discovery: a few lanes, with the source catalogue behind Filters. */
+.al-lanes{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;overscroll-behavior-inline:contain;padding:0 0 8px}
+.al-lanes>button{flex:none;min-height:44px;padding:8px 15px;border-radius:100px;font-size:13px;color:var(--muted);white-space:nowrap}
+.al-lanes>button[aria-pressed=true]{background:var(--text);color:var(--paper)}
+.al-filter-menu{margin-top:4px}.al-filter-menu>summary{list-style:none;display:flex;align-items:center;gap:5px;min-height:36px;width:max-content;font-size:11px;color:var(--muted);cursor:pointer}
+.al-filter-menu>summary::-webkit-details-marker{display:none}.al-filter-menu>summary>.icon{width:12px;height:12px}
+.al-filter-menu[open]{padding:12px;background:var(--canvas);border-radius:16px}.al-filter-menu[open]>.al-sources{margin-top:10px}
+.al-caption{margin-top:2px;margin-bottom:0}.al-library .am-section-head{margin-bottom:2px}
+.al-saved-filter{border:0;width:44px;min-height:44px;padding:0;justify-content:center;border-radius:50%}
+.al-open>.al-view{display:flex;align-items:center;gap:3px;flex:none;color:var(--muted);font-size:11px}.al-view>.icon{width:12px;height:12px}
+.al-row{min-height:88px}.al-open{min-height:86px;padding-block:12px}.al-open>.al-art{flex-basis:46px;width:46px;height:46px}
+.al-detail-scroll>.al-rule{margin-top:24px;font-size:18px;line-height:1.5}.al-detail-actions{display:flex;gap:8px}.al-detail-actions>.r-btn{min-width:0;flex:1}
+.al-filter-menu[open] .al-sources,.al-filter-menu[open] .al-categories{margin-inline:0;padding-inline:0}
+@media(max-width:760px){.al-open>.al-art{flex-basis:42px;width:42px;height:42px}.al-lanes>button{font-size:12px;padding-inline:12px}.al-row{min-height:80px}.al-open{min-height:78px}.al-view{font-size:10px}.al-filter-menu[open]{margin-bottom:8px}}

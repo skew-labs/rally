@@ -22,8 +22,8 @@ import java.util.Locale
 
 fun algorithmTitle(f: JSONObject): String {
     val r=f.optJSONObject("research")
-    if(!r?.string("wallet").isNullOrBlank())return (r?.objects("tokens")?.firstOrNull()?.string("symbol") ?: "Public wallet")+" trader"
-    return when(f.string("id")){"wallet-reentry"->"Buying again";"wallet-confluence"->"Buying together";"wallet-exits"->"Taking profit";else->f.string("name","Algorithm").replace(Regex("\\s*·\\s*v\\d+$"),"")}
+    if(!r?.string("wallet").isNullOrBlank())return (r?.objects("tokens")?.firstOrNull()?.string("symbol") ?: "Public")+" wallet"
+    return when(f.string("id")){"wallet-reentry"->"Repeat buys";"wallet-confluence"->"Wallet consensus";"wallet-exits"->"Exit watch";else->f.string("name","Algorithm").replace(Regex("\\s*·\\s*v\\d+$"),"")}
 }
 fun algorithmReturn(f: JSONObject): Double?=f.optJSONObject("research")?.takeIf { it.string("wallet").isNotBlank() }?.number("returnPct")
 fun algorithmPercent(n: Double?)=n?.let { String.format(Locale.US,"%+.1f%%",it) } ?: "—"
@@ -42,7 +42,7 @@ fun algorithmOwner(f: JSONObject): String {
 }
 @Composable fun AlgorithmArtwork(f: JSONObject,size: Dp=44.dp) {
     val t=f.optJSONObject("research")?.objects("tokens")?.firstOrNull()
-    if(t!=null)Artwork(safeImage(t.string("logoURI")),t.string("symbol"),size)
+    if(t!=null)Artwork(safeImage(if(t.string("id",t.string("address")).equals("0x90ecbb77c7010828562d6f2d82636516e8347777",true))"/assets/token-art-82fd0643f209d4ba79eb.webp" else t.string("logoThumbURI",t.string("logoURI"))),t.string("symbol"),size)
     else Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceContainer) { Box(Modifier.size(size),contentAlignment=Alignment.Center){Icon(Icons.Outlined.Layers,null,Modifier.size(size*.55f),tint=MaterialTheme.colorScheme.onSurfaceVariant)} }
 }
 @Composable private fun DiscoveryAction(label: String,description: String,onClick: ()->Unit,enabled: Boolean=true,buy: Boolean=false) {
@@ -50,7 +50,7 @@ fun algorithmOwner(f: JSONObject): String {
 }
 @Composable fun AlgorithmListRow(feed: JSONObject,onOpen: ()->Unit) {
     val roi=algorithmReturn(feed);val pnl=feed.optJSONObject("research")?.number("pnlMON")
-    Row(Modifier.fillMaxWidth().heightIn(min=104.dp).clickable(onClick=onOpen).padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+    Row(Modifier.fillMaxWidth().heightIn(min=96.dp).clickable(onClick=onOpen).padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
         AlgorithmArtwork(feed,40.dp)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
             Text(algorithmTitle(feed),fontSize=14.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -59,7 +59,7 @@ fun algorithmOwner(f: JSONObject): String {
         }
         Column(horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(3.dp)) {
             if(roi!=null){Text(algorithmPercent(roi),fontSize=17.sp,color=performanceInk(roi),fontWeight=FontWeight.Medium);Text("Wallet ROI",fontSize=9.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-            DiscoveryAction(if((feed.number("price") ?: 0.0)==0.0)"Get" else if(feed.optBoolean("access"))"Open" else "Buy","Preview "+algorithmTitle(feed),onOpen)
+            DiscoveryAction(if((feed.number("price") ?: 0.0)==0.0)if(roi!=null)"Track" else "Use" else if(feed.optBoolean("access"))"Open" else "Buy","Preview "+algorithmTitle(feed),onOpen,buy=roi!=null)
             Text(algorithmPrice(feed),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -91,9 +91,9 @@ fun algorithmOwner(f: JSONObject): String {
             Row(Modifier.fillMaxWidth().heightIn(min=112.dp).clickable { onCommunity(c.string("id")) }.padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 Artwork(safeImage(image),c.string("name"),44.dp)
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                    Text(c.string("name"),fontSize=15.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Text(token?.string("symbol") ?: c.string("name"),fontSize=15.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
                     Text(listOfNotNull(token?.string("symbol"),"${c.optInt("members")} members").joinToString(" · "),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
-                    Text("${c.optInt("posts24h")} posts in 24h",fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if(c.optInt("posts24h")==0)"No posts today" else "${c.optInt("posts24h")} posts today",fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     if(token!=null)Text(communityReference(c)?.let { "$"+compact(it)+" cap" } ?: "Price unavailable",fontSize=13.sp,fontWeight=FontWeight.Medium)
                 }
                 Column(horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)) {

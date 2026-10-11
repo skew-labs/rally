@@ -21,4 +21,4 @@ The MIT license in this repository applies to Rally-owned source. It does not tr
 
 External contract interfaces and deployment identifiers under `config/` are used for interoperability; upstream rights and changes remain applicable. External source repositories are referenced in integration documentation, not represented as Rally's own matching or launch engines.
 
-Generated third-party bundles and runtime token-image caches are excluded from Git. A deployment rebuilds its dependencies and caches, retaining their notices. Public market data or a publicly visible brand logo is not a blanket license for unrelated commercial reuse.
+Generated third-party bundles and runtime token-image caches are excluded from Git. The curated MOCHI discovery thumbnail is pinned separately, with its exact token identity and provenance in `assets/algorithm-wallet-art-sources.json`. A deployment rebuilds its dependencies and other caches, retaining their notices. Public market data or a publicly visible brand logo is not a blanket license for unrelated commercial reuse.
