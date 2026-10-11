@@ -1,3 +1,5 @@
+import {algorithmLibraryUI} from './assets/algorithm-library.js';
+
 export function feedPresentation(f) {
   if(f?.research?.wallet)return {icon:'markets',name:(f.research.tokens?.[0]?.symbol||'Public wallet')+' trader',description:'This wallet’s buys & sells'};
   const research={
@@ -22,6 +24,7 @@ export const feedTerms=f=>Number(f.priceRaw)?f.price+' USDC / '+(f.periodDays||3
 export function feedReturn(f){const r=f?.research;return r?.wallet&&r.returnPct!=null&&Number.isFinite(Number(r.returnPct))?Number(r.returnPct):null;}
 
 export function journeyUI(c) {
+  const library=algorithmLibraryUI(c);
   const {S,$,api,esc,icon,avatar,token,logo,safeURL,postCard,pageHeader,empty,loading,boot,navigate,notify,modal,closeModal,closeTrade}=c;
   const date=n=>new Date(n*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'});
   const txLink=tx=>tx?`<a class="r-receipt-link" href="https://monadvision.com/tx/${esc(tx)}" target="_blank" rel="noopener noreferrer">Transaction ${icon('external')}</a>`:'';
@@ -65,7 +68,9 @@ export function journeyUI(c) {
     document.querySelectorAll('[data-action=feed-sort]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===(S.feedSort||'pnl'))));
   }
   function feeds(){
-    $('#page').innerHTML=`<header class="am-head"><div><h1>Algorithms</h1><p>Find a wallet. Get its feed.</p></div><button class="am-text" data-action="swipe-algorithms">Swipe</button><button class="r-icon-button" data-action="algorithm-market-menu" aria-label="Algorithm tools">${icon('ellipsis')}</button></header>`+feedControls()+'<div id="algorithm-market-list"></div>';
+    const research=S.algorithmsTab==='library';
+    $('#page').innerHTML=`<header class="am-head"><div><h1>Algorithms</h1>${research?'':'<p>Find a wallet. Get its feed.</p>'}</div><button class="am-text" data-action="swipe-algorithms">Swipe</button><button class="r-icon-button" data-action="algorithm-market-menu" aria-label="Algorithm tools">${icon('ellipsis')}</button></header><div class="al-tabs" role="group" aria-label="Algorithm collection"><button data-action="algorithm-tab" data-id="market" aria-pressed="${!research}">Marketplace</button><button data-action="algorithm-tab" data-id="library" aria-pressed="${research}">Library <small>100</small></button></div>`+(research?'<div class="al-library" id="algorithm-library"></div>':feedControls()+'<div id="algorithm-market-list"></div>');
+    if(research){library.mount($('#algorithm-library'));return;}
     $('#algorithm-market-search').addEventListener('input',e=>{S.feedQuery=e.target.value;paintFeeds();});paintFeeds();
   }
   function marketMenu(){modal('Your algorithms',`<div class="r-account-options"><button data-action="create-feed">${icon('plus')}Create a feed${icon('chevron')}</button><button data-action="creator-studio">${icon('feeds')}Creator studio${icon('chevron')}</button><button data-action="activity" data-id="subscriptions">${icon('saved')}Subscriptions${icon('chevron')}</button></div>`);}
@@ -185,6 +190,8 @@ export function journeyUI(c) {
   function origin(el){const id=el?.closest('[data-post]')?.dataset.post;const post=S.posts.find(p=>p.id===id);return post?{post:post.id,feed:S.view==='feed'?S.feed:S.boot.activeFeed}:null;}
   function originCard(context){const post=S.posts.find(p=>p.id===context?.post);if(post)return `<button class="r-trade-context" data-action="open-post" data-id="${esc(post.id)}">${avatar(post.author)}<span><b>@${esc(post.author.handle)}</b><small>${esc(post.text.slice(0,100))}</small></span>${icon('chevron')}</button>`;const feed=S.boot.feeds.find(f=>f.id===context?.feed);return feed?`<button class="r-trade-context" data-action="feed-detail" data-id="${esc(feed.id)}"><div class="r-feed-icon">${icon(feedPresentation(feed).icon)}</div><span><b>${esc(feed.name)}</b><small>@${esc(feed.creator?.handle)}</small></span>${icon('chevron')}</button>`:'';}
   async function handle(action,id,el){
+    if(await library.handle(action,id))return true;
+    if(action==='algorithm-tab'){S.algorithmTools=false;S.algorithmsTab=id==='library'?'library':'market';await navigate(S.view==='algorithms'?'algorithms':'feeds');return true;}
     if(action==='feed-detail'){closeModal();S.feed=id;await navigate('feed');}
     else if(action==='algorithm-preview'){await preview(id);}
     else if(action==='algorithm-market-menu'){marketMenu();}

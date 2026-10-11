@@ -20,6 +20,7 @@
     "test:social-loop": "node tests/social-loop-browser.mjs",
     "test:order-input": "node tests/perp-amount.mjs && node tests/native-perp-browser.mjs",
     "test:touch": "node tests/touch-browser.mjs",
+    "test:algorithm-library": "node tests/algorithm-library-browser.mjs",
     "test:experience": "node tests/experience-browser.mjs"
   },
   "devDependencies": {
