@@ -18,7 +18,7 @@ try{
     await context.addInitScript(t=>localStorage.setItem('rally-theme',t),theme);page.on('pageerror',e=>errors.push(e.message));
     await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
     await page.goto(origin+'/?view=feed&id=wallet-confluence');
-    await page.getByRole('heading',{name:'Wallet Confluence · v1',exact:true}).waitFor();checks++;
+    await page.getByRole('heading',{name:'Buying together',exact:true}).waitFor();checks++;
     assert.equal(await page.locator('.r-feed-price b').innerText(),'Free');checks++;
     await page.getByRole('button',{name:'Wallet research',exact:true}).click();
     await page.getByRole('heading',{name:'Public wallet research',exact:true}).waitFor();checks++;

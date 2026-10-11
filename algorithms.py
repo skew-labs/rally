@@ -48,7 +48,7 @@ def run(expression, items):
     finally:SLOTS.release()
 
 
-def features(posts,viewer,watched):
+def features(posts,viewer,watched,feed=None):
     ids=[p['id'] for p in posts];likes={};replies={}
     if ids:
         marks=','.join('?' for _ in ids)
@@ -60,7 +60,7 @@ def features(posts,viewer,watched):
     stamp=s.now()
     items=[{'id':p['id'],'features':{'recency':1/(1+max(0,stamp-p['created'])/3600),'likes':min(likes.get(p['id'],0),1e6),'replies':min(replies.get(p['id'],0),1e6),'watched':int(p['asset'] in watched),'following':int(p['author'] in following),'has_media':int(bool(p['media'])),'is_agent':int(p['author'] in agents),'has_asset':int(bool(p['asset']))}} for p in posts]
     import wallet_research
-    signals=wallet_research.feature_map({p['asset'] for p in posts})
+    signals=wallet_research.feature_map({p['asset'] for p in posts},wallet_research.watched_wallet(feed or {}))
     for item,post in zip(items,posts):item['features'].update({**dict.fromkeys(FEATURES-SOCIAL_FEATURES,0),**signals.get(post['asset'],{})})
     return items
 
@@ -68,7 +68,7 @@ def features(posts,viewer,watched):
 def rank(posts, feed, viewer, watched, record=False, snapshot=None):
     version=s.one('SELECT * FROM algorithm_versions WHERE id=?',(feed.get('algorithm_version'),))
     if not version:return None
-    items=snapshot if snapshot is not None else features(posts,viewer,watched)
+    items=snapshot if snapshot is not None else features(posts,viewer,watched,feed)
     scores,ms=run(version['expression'],items);mapping={r['id']:r['score'] for r in scores}
     result=sorted([dict(p,rankingReason='Custom formula',score=mapping[p['id']]) for p in posts],key=lambda p:(-p['score'],-p['created'],p['id']))
     top=result[:10]
@@ -183,7 +183,9 @@ def action(path,who,data):
             if not social.visible(user,feed['owner']):raise s.Problem('Version not found',404)
             from settlement import allowed
             if not allowed(feed,user):raise s.Problem('Subscribe to compare this feed',403)
-            r=rank(posts,feed,user,watched,True,snapshot)
+            import wallet_research
+            scoped=features(posts,user,watched,feed) if wallet_research.watched_wallet(feed) else snapshot
+            r=rank(posts,feed,user,watched,True,scoped)
             comparisons.append({**r,'name':feed['name'],'posts':[s.post_view(p,user) for p in r['posts'][:10]]})
         match=s.uid()
         s.write('INSERT INTO algorithm_matches VALUES(?,?,?,?,?)',(match,user,s.dump(versions),s.dump([p['id'] for p in posts]),s.now()+3600))

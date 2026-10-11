@@ -1,5 +1,6 @@
 // Shared navigation, media-first discovery and verified performance surfaces.
 // Wallet requests and subscription settlement remain in the existing checkout.
+import {feedTitle,feedReturn} from './flow.js';
 export function experienceUI(c){
  const {S,$,api,esc,icon,avatar,mediaCard,postCard,safeURL,usd,pct,navigate,notify,modal,closeModal,needAccount,empty,loading,motion}=c;
  let generation=0,controller,observer,searchTimer,previewController,loadingMore=false;
@@ -37,12 +38,13 @@ export function experienceUI(c){
  const rate=p=>p?.roi==null?'—':pct(p.roi);
  const status=p=>p?.roi==null?'No verified returns':'Realized ROI · 30d';
  function tile(item,index=0){
-  const f=item.feed,algorithm=item.kind==='algorithm',art=item.cover;
+  const f=item.feed,algorithm=item.kind==='algorithm',wallet=!!f?.research?.wallet,art=wallet?f.research.tokens?.[0]?.logoURI:item.cover;
+  const title=algorithm?feedTitle(f):item.title,roi=wallet?feedReturn(f):item.performance?.roi;
   return `<button class="rx-tile ${art?'has-art':'is-text'} ${item.coverType==='token'?'is-token-art':''} ${algorithm?'is-algorithm':''}" data-action="discover-preview" data-id="${esc(item.id)}" aria-label="${algorithm?'Preview algorithm':'Open post'}: ${esc(item.title.slice(0,100)||item.author.name)}">
    ${art?`<img src="${esc(safeURL(art))}" alt="" width="320" height="320" loading="${index<6?'eager':'lazy'}" decoding="async" onload="this.classList.add('is-loaded')" onerror="this.hidden=true;this.parentElement.classList.add('art-missing')">`:''}
-   <span class="rx-tile-fallback" aria-hidden="true">${algorithm?icon('feeds'):avatar(item.author)}<b>${esc(item.title.slice(0,120)||item.author.name)}</b></span>
+   <span class="rx-tile-fallback" aria-hidden="true">${algorithm?icon('feeds'):avatar(item.author)}<b>${esc(title.slice(0,120)||item.author.name)}</b></span>
    ${algorithm||item.kind==='video'?`<span class="rx-tile-type">${icon(algorithm?'feeds':'video')}</span>`:''}
-   ${algorithm?`<span class="rx-tile-bottom"><b>${esc(item.title)}</b><span><strong class="${item.performance?.roi>=0&&item.performance?.roi!=null?'positive':item.performance?.roi<0?'negative':''}">${rate(item.performance)}</strong><small>${Number(f.priceRaw)?f.access?'Subscribed':esc(f.price)+' USDC':'Free'}</small></span></span>`:`<span class="rx-tile-author">@${esc(item.author.handle)}</span>`}
+   ${algorithm?`<span class="rx-tile-bottom"><b>${esc(title)}</b><span><strong class="${roi>=0&&roi!=null?'positive':roi<0?'negative':''}">${roi==null?'':pct(roi)}</strong><small>${Number(f.priceRaw)?f.access?'Subscribed':esc(f.price)+' USDC':'Free'}</small></span>${wallet?'<small>Wallet’s closed-trade ROI</small>':''}</span>`:`<span class="rx-tile-author">@${esc(item.author.handle)}</span>`}
   </button>`;
  }
  const skeleton=()=>`<div class="rx-grid rx-grid-skeleton" aria-label="Loading discovery" role="status">${Array.from({length:9},()=>'<div></div>').join('')}</div>`;
@@ -79,6 +81,7 @@ export function experienceUI(c){
   finally{if(controller===request){loadingMore=false;host.removeAttribute('aria-busy');const more=$('#discover-more');if(S.discoverCursor&&more&&seq===generation)observer?.observe(more);}}
  }
  async function preview(id){
+  if(id.startsWith('feed:'))return c.algorithmPreview(id.slice(5));
   previewController?.abort();previewController=new AbortController();const request=previewController;
   modal('Preview',loading(),'rx-preview-modal');
   const instance=S.modal;instance.cleanup=()=>request.abort();

@@ -27,6 +27,7 @@ def initialize():
         db.executescript('''
         CREATE TABLE IF NOT EXISTS wallet_research_state(id INTEGER PRIMARY KEY CHECK(id=1),payload TEXT,updated INTEGER);
         CREATE TABLE IF NOT EXISTS wallet_research_receipts(tx TEXT PRIMARY KEY,payload TEXT,created INTEGER);
+        CREATE TABLE IF NOT EXISTS wallet_watch_feeds(wallet TEXT PRIMARY KEY,feed TEXT UNIQUE,evidence TEXT,observed INTEGER);
         ''')
         # First-party curated feeds have a service author, never a third-party
         # identity or an invented human session. Existing versions stay immutable.
@@ -35,6 +36,29 @@ def initialize():
             db.execute('INSERT OR IGNORE INTO algorithms VALUES(?,?,?,?)',(ident,'rally',name,s.now()))
             db.execute('INSERT OR IGNORE INTO algorithm_versions VALUES(?,?,?,?,?)',(version,ident,1,expression,s.now()))
             db.execute('INSERT OR IGNORE INTO feeds(id,owner,name,weights,assets,created,algorithm_version,price_raw) VALUES(?,?,?,?,?,?,?,?)',(ident,'rally',name+' · v1','[100,0,0]','[]',s.now(),version,'0'))
+    value=snapshot()
+    if value.get('wallets'):watch_feeds(value['wallets'],value['asOf'])
+
+
+def watch_feeds(wallets,stamp):
+    """Rally-owned public-data feeds, never an impersonated trader product."""
+    with s.connection() as db:
+        for row in wallets[:10]:
+            wallet=str(row.get('wallet','')).lower()
+            if not ADDRESS.fullmatch(wallet) or not row.get('trades'):continue
+            if not db.execute('SELECT 1 FROM wallet_watch_feeds WHERE wallet=?',(wallet,)).fetchone() and db.execute('SELECT count(*) FROM wallet_watch_feeds').fetchone()[0]>=100:continue
+            ident='wallet-'+wallet[2:];version=ident+'-v1'
+            name=wallet[:6]+'…'+wallet[-4:]
+            db.execute('INSERT OR IGNORE INTO algorithms VALUES(?,?,?,?)',(ident,'rally',name,stamp))
+            db.execute('INSERT OR IGNORE INTO algorithm_versions VALUES(?,?,?,?,?)',(version,ident,1,'40 * wallet_buyers + 20 * wallet_exits + recency',stamp))
+            db.execute('INSERT OR IGNORE INTO feeds(id,owner,name,weights,assets,created,algorithm_version,price_raw) VALUES(?,?,?,?,?,?,?,?)',(ident,'rally',name,'[100,0,0]','[]',stamp,version,'0'))
+            db.execute('INSERT INTO wallet_watch_feeds VALUES(?,?,?,?) ON CONFLICT(wallet) DO UPDATE SET evidence=excluded.evidence,observed=excluded.observed',(wallet,ident,s.dump(row),stamp))
+
+
+def watched_wallet(feed):
+    ident=feed.get('id','')
+    match=re.fullmatch(r'wallet-([0-9a-f]{40})',ident)
+    return '0x'+match[1] if match and feed.get('owner')=='rally' else None
 
 
 def snapshot():
@@ -47,16 +71,30 @@ def snapshot():
 
 def context(feed):
     recipe=RECIPES.get(feed['id'])
-    if not recipe:return None
+    wallet=watched_wallet(feed)
+    if not recipe and not wallet:return None
     value=snapshot()
-    return {'description':recipe[2],'asOf':value['asOf'],'stale':value['stale'],
+    detail={}
+    if wallet:
+        stored=s.one('SELECT evidence,observed FROM wallet_watch_feeds WHERE wallet=?',(wallet,))
+        if not stored:return None
+        evidence=json.loads(stored['evidence']);cost=sum((Decimal(t['costMON']) for t in evidence['trades']),Decimal(0))
+        tokens=[]
+        for trade in evidence['trades']:
+            if any(t['address']==trade['token'] for t in tokens):continue
+            cached=s.one('SELECT info FROM nad_tokens WHERE address=?',(trade['token'],))
+            info=json.loads(cached['info']) if cached else s.GATEWAY.token_map.get(trade['token'],{})
+            tokens.append({'id':trade['token'],'address':trade['token'],'symbol':trade['symbol'],'name':info.get('name',trade['symbol']),'logoURI':info.get('logoThumbURI') or info.get('logoURI')})
+        active=sum(any(a['wallet']==wallet for a in signal.get('activity',[])) for signal in value.get('signals',{}).values()) if not value['stale'] else 0
+        detail={'wallet':wallet,'pnlMON':evidence['pnlMON'],'returnPct':str(Decimal(evidence['pnlMON'])*100/cost) if cost>0 else None,'roundTrips':evidence['roundTrips'],'closedAt':evidence['latestClose'],'evidenceAsOf':stored['observed'],'trades':evidence['trades'],'tokens':tokens,'activeAssets':active}
+    return {'description':recipe[2] if recipe else 'Token posts ranked by this public wallet’s recent buys and sells','asOf':value['asOf'],'stale':value['stale'],
             'wallets':len(value['wallets']),'markets':len(value['markets']),
             'activeAssets':len(value.get('signals',{})),
             'source':'Public nad.fun trades + finalized Monad receipts',
-            'url':'/api/wallet-research','method':'Sampled market round trips; not a global wallet ranking'}
+            'url':'/api/wallet-research','method':'Sampled closed-trade returns, not algorithm returns or a global trader ranking',**detail}
 
 
-def feature_map(assets):
+def feature_map(assets,wallet=None):
     value=snapshot()
     if value['stale']:return {}
     result={}
@@ -64,7 +102,10 @@ def feature_map(assets):
         if not ADDRESS.fullmatch(str(asset or '')):continue
         signal=value.get('signals',{}).get(asset.lower())
         if not signal:continue
-        result[asset]={k:min(1,max(0,float(signal.get(k,0)))) for k in ('wallet_reentry','wallet_buyers','wallet_exits')}
+        if wallet:
+            activity=[a for a in signal.get('activity',[]) if a['wallet']==wallet]
+            result[asset]={'wallet_buyers':int(any(a['side']=='BUY' for a in activity)),'wallet_exits':int(any(a['side']=='SELL' for a in activity)),'wallet_reentry':0}
+        else:result[asset]={k:min(1,max(0,float(signal.get(k,0)))) for k in ('wallet_reentry','wallet_buyers','wallet_exits')}
     return result
 
 
@@ -213,6 +254,7 @@ def build(cohort,verified,stamp):
 def save(value):
     if not value.get('wallets'):raise ValueError('No verified profitable round trips; preserve the previous snapshot')
     s.write('INSERT INTO wallet_research_state VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,updated=excluded.updated',(s.dump(value),value['asOf']))
+    watch_feeds(value['wallets'],value['asOf'])
 
 
 def collect():

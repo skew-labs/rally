@@ -2,6 +2,12 @@
 
 Rally offers three free, first-party feed algorithms: **Wallet Re-entry**, **Wallet Confluence** and **Wallet Exit Watch**. They prioritize social posts about exact Monad token addresses associated with researched public wallets. They do not place trades or claim that following a wallet reproduces its return.
 
+The marketplace also provides **individual public-wallet feeds**. Each profit card opens a trader-results sheet with sampled realized MON PnL, closed-trade ROI and transaction evidence, followed by the free feed action. Top PnL and Top ROI sort the displayed cohort. Paid creator feeds retain their own subscription prices and entitlement checks.
+
+An individual wallet feed ranks token posts using only that address's observed buys and sells. It is published by Rally, not sold or endorsed by the wallet owner. Its displayed ROI is total matched round-trip MON profit divided by total matched buy cost, including matched swap gas. Multiple trade returns are weighted by their cost, not averaged or added. Results belong to the sampled wallet trades, not the feed algorithm or its subscribers.
+
+Published wallet evidence retains its original observation time when a later collector selects different wallets. Missing or stale activity contributes zero to ranking. The registry is bounded to 100 wallet feeds; saved formulas and feed identities remain immutable.
+
 ## Research and attribution
 
 The public research endpoint is [`/api/wallet-research`](https://rallydot.com/api/wallet-research). Feed previews provide a wallet research panel with public address links, observation times and transaction proofs. The author is Rally's service account. Wallet owners have not endorsed these feeds or published their private strategies through Rally.

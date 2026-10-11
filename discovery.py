@@ -172,7 +172,7 @@ def catalog(who,params):
             first=next((p for p in posts if (authors.get(p['author'],{}).get('owner') or p['author'])==owner and p['media']),None)
             art=cover(first)
             card.update(cover=art or (info.get('communityToken') or {}).get('logoURI'),coverType='media' if art else 'token',
-                feed={k:info[k] for k in ('id','name','price','priceRaw','access','accessExpires','periodDays')},
+                feed={k:info[k] for k in ('id','name','price','priceRaw','access','accessExpires','periodDays','research')},
                 performance=performance(raw))
         else:
             art=cover(raw);token=s.GATEWAY.token_map.get(raw.get('asset')) or {}

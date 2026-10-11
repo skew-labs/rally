@@ -18,6 +18,14 @@ with tempfile.TemporaryDirectory(prefix='rally-social-loop-') as directory:
     s.GATEWAY.token_map[TOKEN]={'id':TOKEN,'address':TOKEN,'name':'QA Token','symbol':'TEST','decimals':18,'logoURI':'/assets/community-rally.png','chainId':143}
     s.GATEWAY.token_map[s.USDC]={'id':s.USDC,'address':s.USDC,'symbol':'USDC','name':'USDC','decimals':6,'logoURI':'/assets/USDC.png'}
     s.GATEWAY.prices[TOKEN]={'price':'0.01','fetchedAt':s.now(),'source':'QA reference'}
+    if os.environ.get('RALLY_WALLET_MARKET_FIXTURE')=='1':
+        import wallet_research as research
+        rows=[]
+        for i,(pnl,cost) in enumerate([('100','100'),('50','10'),('75','50')],1):
+            wallet='0x'+format(i,'040x')
+            trade={'wallet':wallet,'token':TOKEN,'symbol':'TEST','pnlMON':pnl,'costMON':cost,'returnPct':str(float(pnl)*100/float(cost)),'closedAt':s.now()-3600,'holdingSeconds':60,'transactions':[TX],'verification':'synthetic_fixture'}
+            rows.append({'wallet':wallet,'pnlMON':pnl,'roundTrips':1,'latestClose':trade['closedAt'],'trades':[trade]})
+        research.save({'asOf':s.now(),'wallets':rows,'markets':[],'signals':{}})
     # Avoid market/provider requests in every fixture render.
     s.GATEWAY.markets=lambda *a,**k:{'tokens':[dict(t,price=.01 if t['id']==TOKEN else 1,change=0,fetchedAt=s.now()) for t in s.GATEWAY.token_map.values() if t['id']in{TOKEN,s.USDC}],'venues':[],'fetchedAt':s.now()}
     s.write('INSERT INTO communities VALUES(?,?,?)',('qa-community','QA community','Disposable UI fixture'))

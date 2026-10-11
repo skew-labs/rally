@@ -1,5 +1,6 @@
 """Synthetic cash flow and feed boundaries; no live providers."""
 import os,sys,unittest
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 assert os.environ.get('RALLY_TESTING')=='1'
@@ -14,7 +15,31 @@ class Research(unittest.TestCase):
     @classmethod
     def setUpClass(cls):s.initialize()
     def setUp(self):
-        s.write('DELETE FROM wallet_research_state');s.write('DELETE FROM wallet_research_receipts')
+        s.write('DELETE FROM wallet_research_state');s.write('DELETE FROM wallet_research_receipts');s.write('DELETE FROM wallet_watch_feeds')
+    def wallet_row(self,wallet=W):
+        return {'wallet':wallet,'pnlMON':'20','roundTrips':2,'latestClose':s.now(),
+            'trades':[{'wallet':wallet,'token':T,'symbol':'TEST','costMON':'10','pnlMON':'10','returnPct':'100','closedAt':s.now(),'holdingSeconds':60,'transactions':[tx(1),tx(2)]},
+                      {'wallet':wallet,'token':T,'symbol':'TEST','costMON':'30','pnlMON':'10','returnPct':'33.333','closedAt':s.now(),'holdingSeconds':120,'transactions':[tx(3),tx(4)]}]}
+    def test_wallet_feed_is_free_first_party_and_weighted_return(self):
+        row=self.wallet_row();w.save({'asOf':s.now(),'wallets':[row],'markets':[],'signals':{}})
+        ident='wallet-'+W[2:];f=s.one('SELECT * FROM feeds WHERE id=?',(ident,));self.assertEqual(f['owner'],'rally');self.assertEqual(f['price_raw'],'0')
+        detail=w.context(f);self.assertEqual(Decimal(detail['returnPct']),Decimal(50));self.assertEqual(detail['roundTrips'],2);self.assertEqual(detail['wallet'],W)
+        old=s.one('SELECT * FROM algorithm_versions WHERE id=?',(f['algorithm_version'],));w.save({'asOf':s.now(),'wallets':[row],'markets':[],'signals':{}})
+        self.assertEqual(old,s.one('SELECT * FROM algorithm_versions WHERE id=?',(f['algorithm_version'],)))
+    def test_wallet_feed_does_not_rank_another_wallet_activity(self):
+        other='0x'+'99'*20;row=self.wallet_row()
+        w.save({'asOf':s.now(),'wallets':[row],'markets':[],'signals':{T:{'wallet_buyers':1,'wallet_exits':1,'activity':[{'wallet':other,'side':'BUY'}]}}})
+        self.assertEqual(w.feature_map({T},W)[T]['wallet_buyers'],0)
+        self.assertEqual(w.feature_map({T},other)[T]['wallet_buyers'],1)
+        self.assertEqual(w.feature_map({T})[T]['wallet_buyers'],1)
+    def test_wallet_feed_scope_requires_service_owner(self):
+        self.assertIsNone(w.watched_wallet({'id':'wallet-'+W[2:],'owner':'someone'}))
+        self.assertEqual(w.watched_wallet({'id':'wallet-'+W[2:],'owner':'rally'}),W)
+    def test_wallet_evidence_survives_cohort_rotation(self):
+        row=self.wallet_row();w.save({'asOf':s.now(),'wallets':[row],'markets':[],'signals':{}})
+        other='0x'+'99'*20;w.save({'asOf':s.now(),'wallets':[self.wallet_row(other)],'markets':[],'signals':{}})
+        f=s.one('SELECT * FROM feeds WHERE id=?',('wallet-'+W[2:],));self.assertEqual(w.context(f)['pnlMON'],'20')
+        s.write('UPDATE wallet_research_state SET updated=?',(s.now()-w.TTL-1,));self.assertEqual(w.feature_map({T},W),{})
     def test_free_service_author_and_immutable_version(self):
         for ident in w.RECIPES:
             f=s.one('SELECT * FROM feeds WHERE id=?',(ident,));self.assertEqual(f['owner'],'rally');self.assertEqual(f['price_raw'],'0')
