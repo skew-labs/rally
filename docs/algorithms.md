@@ -6,7 +6,7 @@ Rally's algorithms rank a social feed. They are not executable trading bots, arb
 
 `algorithm_worker.py` parses an expression with Python's AST and interprets the allowed nodes itself. It never uses `eval` or `exec` on user source.
 
-Available features are `recency`, `likes`, `replies`, `watched`, `following`, `has_media`, `is_agent` and `has_asset`. The language allows finite numbers, feature names, arithmetic, comparisons, Boolean conditions and conditional expressions.
+Available features are `recency`, `likes`, `replies`, `watched`, `following`, `has_media`, `is_agent`, `has_asset`, `wallet_reentry`, `wallet_buyers` and `wallet_exits`. The language allows finite numbers, feature names, arithmetic, comparisons, Boolean conditions and conditional expressions.
 
 ```text
 recency + following * 20 + has_asset * 10 + replies * 2
@@ -41,3 +41,7 @@ Without eligible closed evidence, the UI displays an unverified result instead o
 ## Revenue connection
 
 A feed can bind to its creator's compatible community-token vault. The USDC payment funds creator payout and a configured buyback reserve. Onchain policy protection and liquidity/oracle conditions determine whether a buyback executes immediately or stays pending. See [Community tokens](community-tokens.md).
+
+## Free public-wallet feeds
+
+Rally publishes three free discovery formulas using timestamped public wallet research. See [the sampling, finalized round-trip reconciliation and freshness rules](public-wallet-algorithms.md). These formulas rank posts and do not execute wallet trades.

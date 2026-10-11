@@ -5,7 +5,8 @@ import math
 import resource
 import sys
 
-FEATURES={'recency','likes','replies','watched','following','has_media','is_agent','has_asset'}
+SOCIAL_FEATURES={'recency','likes','replies','watched','following','has_media','is_agent','has_asset'}
+FEATURES=SOCIAL_FEATURES | {'wallet_reentry','wallet_buyers','wallet_exits'}
 
 
 def parse(source):

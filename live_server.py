@@ -132,6 +132,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_HEAD(self):self.do_GET()
     def get(self):
         u=urlsplit(self.path);path=u.path;params={k:v[0] for k,v in parse_qs(u.query).items()};who=self.who()
+        if path=='/api/wallet-research':return self.response(__import__('wallet_research').public())
         if path=='/api/health':return self.response({'ok':True,'storage':'sqlite','messages':False,'rpc':{'provider':'QuickNode' if (urlsplit(s.RPC_URL).hostname or '').endswith('.quiknode.pro') else 'Public Monad' if s.RPC_URL=='https://rpc.monad.xyz' else 'Configured RPC','networkVerified':bool(s.RPC_CHECKED_AT and time.monotonic()-s.RPC_CHECKED_AT<300)}})
         if path=='/api/native/request':return self.response(native_auth.status(params.get('id'),self.public_origin()))
         if path=='/api/auth/config':return self.response({'privy':privy_auth.config(),'agentWallet':agent_wallet.config(who,self.agent_device(),self.public_origin())})
@@ -618,4 +619,5 @@ if __name__=='__main__':
     threading.Thread(target=social_loop.background,daemon=True,name='social-loop').start()
     threading.Thread(target=push_delivery.background,daemon=True,name='push-delivery').start()
     threading.Thread(target=token_images.background,daemon=True,name='public-token-art').start()
+    threading.Thread(target=__import__('wallet_research').background,daemon=True,name='public-wallet-research').start()
     ThreadingHTTPServer(('127.0.0.1',PORT),Handler).serve_forever()

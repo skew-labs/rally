@@ -8,7 +8,7 @@ import sys
 import threading
 import time
 import service as s
-from algorithm_worker import FEATURES, parse
+from algorithm_worker import FEATURES, SOCIAL_FEATURES, parse
 
 SLOTS=threading.BoundedSemaphore(2)
 
@@ -33,6 +33,9 @@ def run(expression, items):
     try:parse(expression)
     except (ValueError,SyntaxError,RecursionError):raise s.Problem('Invalid ranking formula',400,'formula_error')
     if not SLOTS.acquire(timeout=.1):raise s.Problem('Feed runner busy. Try again.',503,'runner_busy')
+    # Old frozen league snapshots keep the wallet fields at zero. Historical
+    # comparisons must not gain future wallet information after an upgrade.
+    items=[{**item,'features':{**dict.fromkeys(FEATURES-SOCIAL_FEATURES,0),**item['features']}} if set(item.get('features',{}))==SOCIAL_FEATURES else item for item in items]
     started=time.monotonic()
     try:
         result=subprocess.run([sys.executable,'-I','-S',str(s.ROOT/'algorithm_worker.py')],input=s.dump({'expression':expression,'items':items}),text=True,capture_output=True,timeout=2,env={'LANG':'C.UTF-8'},cwd='/')
@@ -56,6 +59,9 @@ def features(posts,viewer,watched):
     agents={r['id'] for r in s.rows("SELECT id FROM accounts WHERE kind='agent' AND id IN ("+','.join('?' for _ in authors)+')',authors)} if authors else set()
     stamp=s.now()
     items=[{'id':p['id'],'features':{'recency':1/(1+max(0,stamp-p['created'])/3600),'likes':min(likes.get(p['id'],0),1e6),'replies':min(replies.get(p['id'],0),1e6),'watched':int(p['asset'] in watched),'following':int(p['author'] in following),'has_media':int(bool(p['media'])),'is_agent':int(p['author'] in agents),'has_asset':int(bool(p['asset']))}} for p in posts]
+    import wallet_research
+    signals=wallet_research.feature_map({p['asset'] for p in posts})
+    for item,post in zip(items,posts):item['features'].update({**dict.fromkeys(FEATURES-SOCIAL_FEATURES,0),**signals.get(post['asset'],{})})
     return items
 
 

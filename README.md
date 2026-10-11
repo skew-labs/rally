@@ -28,6 +28,10 @@ Public discovery works without funding a wallet. Start at [Home](https://rallydo
 
 The [native Android app](https://rallydot.com/assets/rally-android-0.4.3.apk) renders these surfaces in Kotlin/Jetpack Compose and shares the web application's HTTPS APIs. Version **0.4.3** includes in-place feed interactions, an algorithm selector, direct token sheets, USD/base perpetual sizing and durable order recovery. [Android implementation](docs/android.md)
 
+The next mobile distribution goal is an official iOS App Store launch. iOS is a planned release, not a currently available app.
+
+Three free [public-wallet discovery algorithms](docs/public-wallet-algorithms.md) connect researched Monad trading activity to token-linked posts: Wallet Re-entry, Wallet Confluence and Wallet Exit Watch. Their source report separates finalized closed round trips from recent provider observations.
+
 The product's connecting loop is **discover → choose a feed → join a community → trade → creator revenue**. A subscription or token holding does not guarantee a profitable strategy, token appreciation or an executed buyback.
 
 ## Product map
@@ -126,6 +130,7 @@ The public [Guides](https://rallydot.com/docs) cover accounts, wallets, trading,
 | [Predictions](docs/prediction-markets.md) | Live pool discovery, reference prices and wallet-controlled entries |
 | [Android](docs/android.md) | Native APK, device pairing, screen layout, wallet boundary and release signing |
 | [Algorithms](docs/algorithms.md) | Scoring language, versioning, paid access and performance accounting |
+| [Public wallet discovery](docs/public-wallet-algorithms.md) | Free feeds, sampled market coverage, exact cash flows and freshness |
 | [Community tokens](docs/community-tokens.md) | Custom launches, nad.fun launches, beneficiaries, fees and buybacks |
 | [Agents](docs/agents.md) | OAuth, MCP, posting, media upload and wallet identity boundaries |
 | [Social trading loop](docs/social-loop.md) | Signals, shared fills, holder benefits, weekly leagues and push delivery |

@@ -1,4 +1,10 @@
 export function feedPresentation(f) {
+  const research={
+    'wallet-reentry':{icon:'feed-watchlist',description:'New buys after profitable round trips'},
+    'wallet-confluence':{icon:'markets',description:'Multiple researched wallets buying'},
+    'wallet-exits':{icon:'feed-custom',description:'Researched wallets selling'}
+  };
+  if(research[f?.id])return research[f.id];
   const defaults={latest:{icon:'feed-latest',description:'Newest posts first'},community:{icon:'feed-watchlist',description:'Prioritizes your watchlist'},signals:{icon:'feed-popular',description:'Prioritizes engagement'}};
   if(!f?.algorithm_version)return defaults[f?.id]||{icon:'feed-custom',description:'Custom ranking'};
   const formula=String(f.formula||'').replace(/\s+/g,' ').trim();
@@ -52,6 +58,14 @@ export function journeyUI(c) {
     $('#page').innerHTML=pageHeader('Algorithms',`<button class="r-btn" data-action="create-feed">${icon('plus')}Create</button>`)+feedControls()+'<div class="r-feed-directory" id="algorithm-market-list"></div>';
     $('#algorithm-market-search').addEventListener('input',e=>{S.feedQuery=e.target.value;paintFeeds();});paintFeeds();
   }
+  async function walletResearch(){
+    modal('Public wallet research','<div id="wallet-research-body">'+loading()+'</div>','r-wide-modal');
+    const body=$('#wallet-research-body');
+    try{
+      const d=await api('/api/wallet-research');if(!body?.isConnected)return;
+      body.innerHTML=`<p class="r-note">${d.stale?'Last snapshot · ':''}${d.asOf?new Date(d.asOf*1000).toLocaleString():'Collecting data'} · ${d.markets.length} sampled markets</p><p class="r-note">Closed round trips after matched swap gas. Sampled markets, not a global ranking.</p><div class="r-wallet-research-list">${d.wallets.map(w=>`<article class="r-wallet-research-row"><div><a href="https://nad.fun/profile/${esc(w.wallet)}" target="_blank" rel="noopener noreferrer">${esc(w.wallet.slice(0,6)+'…'+w.wallet.slice(-4))}${icon('external')}</a><small>${w.roundTrips} closed round trip${w.roundTrips===1?'':'s'}</small></div><b>+${Number(w.pnlMON).toLocaleString('en-US',{maximumFractionDigits:2})} MON</b><div class="r-wallet-research-proofs">${w.trades.map(t=>`<details><summary>${esc(t.symbol)} · ${Math.round(t.holdingSeconds/60)} min</summary>${t.transactions.map(txLink).join('')}</details>`).join('')}</div></article>`).join('')||'<p class="r-note">No verified profitable round trips yet.</p>'}</div><details class="r-feed-ranking"><summary>Method & coverage</summary><p class="r-note">${esc(d.method)}</p><p class="r-note">${esc(d.scope)}</p><p class="r-note">${esc(d.selection||'')}</p><a class="r-text-button" href="https://github.com/skew-labs/rally/blob/main/docs/public-wallet-algorithms.md" target="_blank" rel="noopener noreferrer">Methodology${icon('external')}</a></details>`;
+    }catch(e){if(body?.isConnected)body.textContent=e.message;}
+  }
   async function feedDetail(){
     const id=S.feed;$('#page').innerHTML=pageHeader('Algorithm',`<button class="r-text-button" data-nav="feeds">All algorithms</button>`)+loading();
     try{
@@ -60,6 +74,10 @@ export function journeyUI(c) {
       S.feedPreview=d;S.previewMode='ranked';S.posts=[...d.posts,...d.latest].filter((p,i,a)=>a.findIndex(x=>x.id===p.id)===i);
       const f=d.feed;
       $('#page').innerHTML=pageHeader('Algorithm',`<button class="r-text-button" data-nav="feeds">All algorithms</button>`)+`<section class="r-feed-detail"><div class="r-feed-detail-title"><div class="r-feed-icon">${icon(feedPresentation(f).icon)}</div><div><h2>${esc(f.name)}</h2><button class="r-feed-creator" data-action="profile" data-id="${esc(f.owner)}">@${esc(f.creator?.handle||'rally')}</button></div><button class="r-icon-button" data-action="copy-feed" data-id="${esc(f.id)}" aria-label="Copy feed link">${icon('share')}</button></div><p class="r-feed-detail-description">${esc(feedPresentation(f).description)}</p><div class="r-feed-price"><b>${Number(f.priceRaw)?esc(f.price)+' USDC':'Free'}</b><span>${Number(f.priceRaw)?esc(f.periodDays||30)+' days · Manual renewal':'Use anytime'}</span></div>${f.algorithm_version&&f.formula?`<details class="r-feed-ranking"><summary>Ranking</summary><pre class="r-code r-codex-command">${esc(f.formula)}</pre></details>`:f.weights?`<details class="r-feed-ranking"><summary>Ranking</summary><div class="r-ranking-legend">${f.weights.map((w,i)=>`<span>${['Recency','Watchlist','Engagement'][i]} <b>${w}</b></span>`).join('')}</div></details>`:''}<div class="r-feed-detail-actions">${feedAction(f)}<button class="r-text-button" data-action="benefits-open" data-id="${esc(f.owner)}">Token benefits${f.holderDiscountBps?' · '+f.holderDiscountBps/100+'% off':''}</button>${f.accessExpires?`<span>Access until ${date(f.accessExpires)}</span><button class="r-text-button" data-action="subscribe-feed" data-id="${esc(f.id)}">Renew</button>`:Number(f.priceRaw)?`<span>${f.creatorShareBps/100}% creator${f.communityToken?' · '+f.communityToken.buybackBps/100+'% buyback':''}</span>`:''}</div></section><div class="r-preview-head"><h2>Preview</h2><span>${d.posts.length} posts${!f.access?' · Limited preview':''}</span></div><div class="r-tabs"><button class="active" data-action="preview-mode" data-id="ranked">This feed</button><button data-action="preview-mode" data-id="latest">Latest</button></div><div id="feed-preview-posts"></div>`;
+      if(f.id.startsWith('wallet-')){
+        const b=document.createElement('button');b.className='r-text-button';b.dataset.action='wallet-research';b.textContent='Wallet research';$('.r-feed-detail-actions').append(b);
+        const note=document.createElement('p');note.className='r-note';note.textContent=!f.research?.asOf?'Collecting public wallet research':f.research.stale?'Wallet snapshot is stale · Recent posts shown':!f.research.activeAssets?'No matching wallet activity in the collected 24h window · Recent posts shown':f.research.wallets+' researched wallets · '+f.research.activeAssets+' assets with recent activity';$('.r-feed-detail').append(note);
+      }
       paintPreview();
     }catch(e){if(S.view==='feed'&&S.feed===id)$('#page').innerHTML=pageHeader('Algorithm')+empty('Algorithm unavailable',esc(e.message),'<button class="r-btn" data-nav="feeds">All algorithms</button>');}
   }
@@ -143,6 +161,7 @@ export function journeyUI(c) {
   function originCard(context){const post=S.posts.find(p=>p.id===context?.post);if(post)return `<button class="r-trade-context" data-action="open-post" data-id="${esc(post.id)}">${avatar(post.author)}<span><b>@${esc(post.author.handle)}</b><small>${esc(post.text.slice(0,100))}</small></span>${icon('chevron')}</button>`;const feed=S.boot.feeds.find(f=>f.id===context?.feed);return feed?`<button class="r-trade-context" data-action="feed-detail" data-id="${esc(feed.id)}"><div class="r-feed-icon">${icon(feedPresentation(feed).icon)}</div><span><b>${esc(feed.name)}</b><small>@${esc(feed.creator?.handle)}</small></span>${icon('chevron')}</button>`:'';}
   async function handle(action,id,el){
     if(action==='feed-detail'){closeModal();S.feed=id;await navigate('feed');}
+    else if(action==='wallet-research'){await walletResearch();}
     else if(action==='algorithm-picker'){picker();}
     else if(action==='feed-filter'){S.feedFilter=id;paintFeeds();}
     else if(action==='feed-clear-search'){S.feedQuery='';$('#algorithm-market-search').value='';paintFeeds();$('#algorithm-market-search').focus();}

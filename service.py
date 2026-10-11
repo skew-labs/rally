@@ -141,6 +141,8 @@ def initialize():
     nadfun.initialize()
     import social, algorithms, oauth_sessions, wallet_auth, privy_auth
     social.initialize(); algorithms.initialize(); oauth_sessions.initialize(); wallet_auth.initialize(); privy_auth.initialize()
+    import wallet_research
+    wallet_research.initialize()
     import media_pipeline
     media_pipeline.initialize()
     import community_tokens
