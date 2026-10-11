@@ -62,14 +62,7 @@ import org.json.JSONObject
 @Composable fun OptionRow(label: String,icon: androidx.compose.ui.graphics.vector.ImageVector,onClick: ()->Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=20.dp,vertical=18.dp).heightIn(min=24.dp),verticalAlignment=Alignment.CenterVertically) { Icon(icon,null,tint=MaterialTheme.colorScheme.onSurfaceVariant);Text(label,Modifier.weight(1f).padding(horizontal=14.dp));Icon(Icons.Outlined.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant) }
 }
-@Composable fun AlgorithmsScreen(vm: RallyViewModel,onAlgorithm: (JSONObject)->Unit) {
-    val state by vm.state.collectAsStateWithLifecycle();val feeds=state.boot?.objects("feeds").orEmpty()
-    LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        items(feeds,key={it.string("id")}) { feed->val author=feed.optJSONObject("creator") ?: JSONObject();Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surface,modifier=Modifier.fillMaxWidth().clickable { onAlgorithm(JSONObject().put("id","feed:"+feed.string("id")).put("title",feed.string("name")).put("feed",feed).put("author",author)) }) {
-            Row(Modifier.padding(20.dp),verticalAlignment=Alignment.CenterVertically) { Icon(Icons.Outlined.Layers,null,Modifier.size(32.dp),tint=Violet);Column(Modifier.weight(1f).padding(horizontal=14.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) { Text(feed.string("name"),fontWeight=FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis);Text("@${author.string("handle","rally")}",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall) };Text(if((feed.number("price") ?: 0.0)>0)feed.string("price")+" USDC" else "Free",style=MaterialTheme.typography.labelMedium) }
-        } }
-    }
-}
+@Composable fun AlgorithmsScreen(vm: RallyViewModel,onAlgorithm: (JSONObject)->Unit) { AlgorithmList(vm,onAlgorithm) }
 @Composable fun AgentsScreen(state: AppState) {
     val brands=listOf(Triple("Codex","OpenAI","agent-openai.svg"),Triple("Claude","Anthropic","agent-claude.png"),Triple("Hermes","Nous Research","agent-hermes.png"),Triple("Muse","Meta","agent-meta.svg"),Triple("Grok Bot","xAI","agent-grok.svg"))
     LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -104,25 +97,35 @@ import org.json.JSONObject
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun AlgorithmSheet(item: JSONObject,vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit) {
-    val feed=item.optJSONObject("feed") ?: item;val id=feed.string("id",item.string("id")).removePrefix("feed:")
+    val initial=item.optJSONObject("feed") ?: item;val id=initial.string("id",item.string("id")).removePrefix("feed:")
     var benefitOwner by remember {mutableStateOf<String?>(null)}
-    var preview by remember { mutableStateOf<JSONObject?>(null) };var error by remember { mutableStateOf<String?>(null) };val scope=rememberCoroutineScope()
+    var preview by remember(id) { mutableStateOf<JSONObject?>(null) };var error by remember(id) { mutableStateOf<String?>(null) };val scope=rememberCoroutineScope()
+    val feed=preview?.optJSONObject("feed") ?: initial
+    val price=feed.number("price") ?: 0.0
     val app by vm.state.collectAsStateWithLifecycle()
     val sheet=rememberModalBottomSheetState(skipPartiallyExpanded=true)
     LaunchedEffect(id) { try { preview=vm.api.get("/api/discover/preview?id="+Uri.encode("feed:$id")) } catch(e:Exception){error=e.message} }
     if(benefitOwner!=null){ModalBottomSheet(onDismissRequest={benefitOwner=null},containerColor=MaterialTheme.colorScheme.surface){Box(Modifier.fillMaxWidth().heightIn(max=650.dp)){TokenBenefitsScreen(vm,benefitOwner!!)}};return}
     ModalBottomSheet(onDismissRequest=close,sheetState=sheet,containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
-        Column(Modifier.fillMaxWidth().heightIn(max=720.dp).verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-            Icon(Icons.Outlined.Layers,null,Modifier.size(40.dp),tint=Violet);Text(item.string("title",feed.string("name")),style=MaterialTheme.typography.headlineSmall)
+        Column(Modifier.fillMaxWidth().heightIn(max=720.dp).padding(horizontal=20.dp,vertical=12.dp)) {
+            Column(Modifier.weight(1f,false).verticalScroll(rememberScrollState()).padding(bottom=16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+            AlgorithmArtwork(feed,48.dp);Text(algorithmTitle(feed),style=MaterialTheme.typography.headlineSmall)
             item.optJSONObject("author")?.let { a->val p=Person.parse(a);Row(verticalAlignment=Alignment.CenterVertically) { Artwork(p.image,p.name,36.dp);Text(p.name,Modifier.padding(start=10.dp),color=MaterialTheme.colorScheme.onSurfaceVariant) } }
-            val roi=item.optJSONObject("performance")?.number("roi")
-            Fact("30-day realized return",roi?.let { String.format(java.util.Locale.US,"%.2f%%",it) } ?: "No verified returns")
-            val price=feed.number("price") ?: 0.0;Fact("Subscription",if(price>0)feed.string("price")+" USDC / ${feed.optInt("periodDays",30)} days" else "Free")
+            val research=feed.optJSONObject("research");val roi=algorithmReturn(feed)
+            if(roi!=null) {
+                Text(algorithmPercent(roi),fontSize=36.sp,fontWeight=FontWeight.Medium,color=performanceInk(roi))
+                Fact("Sampled wallet ROI", "Closed trades")
+                Fact("Realized PnL",compact(research?.number("pnlMON"))+" MON")
+                research?.objects("trades")?.take(5)?.forEach { t->Fact(t.string("symbol"),algorithmPercent(t.number("returnPct"))) }
+                Text("Wallet results, not algorithm returns.",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            } else preview?.optJSONObject("performance")?.takeIf { it.string("state")=="verified" }?.number("roi")?.let { Fact("Creator ROI · 30d",algorithmPercent(it)) }
+            Fact("Subscription",if(price>0)feed.string("price")+" USDC / ${feed.optInt("periodDays",30)} days" else "Free")
             preview?.let { p->p.objects("posts").take(1).forEach { Text(it.string("text"),style=MaterialTheme.typography.bodyLarge) };p.optJSONObject("post")?.let { Text(it.string("text"),style=MaterialTheme.typography.bodyLarge) } }
             error?.let { Text(it,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall) }
             TextButton(onClick={benefitOwner=feed.string("owner")}){Text("Community token benefits")}
             OrderStatus(vm)
-            Button(onClick={ if(price>0 && !feed.optBoolean("access"))vm.subscribe(JSONObject(feed.toString()).put("id",id)) else vm.action("/api/feeds/use",JSONObject().put("id",id)) { scope.launch { sheet.hide();close();vm.message("Feed selected") } } },enabled=!app.order.blocksOrder,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(price>0 && !feed.optBoolean("access"))"Subscribe" else "Use algorithm") }
+            }
+            Button(onClick={ if(price>0 && !feed.optBoolean("access"))vm.subscribe(JSONObject(feed.toString()).put("id",id)) else vm.action("/api/feeds/use",JSONObject().put("id",id)) { scope.launch { sheet.hide();close();vm.message("Feed selected") } } },enabled=preview!=null && !app.busy && !app.order.blocksOrder,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(price>0 && !feed.optBoolean("access"))"Buy · "+feed.string("price")+" USDC" else if(price>0)"Open feed" else "Get for free") }
         }
     }
 }

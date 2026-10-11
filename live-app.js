@@ -583,7 +583,7 @@ const CX=communityMarketUI({S,$,esc,icon,logo,trade,empty});
 const M=marketUI({S,$,api,esc,usd,priceHTML,volumeHTML,age,logo,token,modal,trade,finance:F});
 const J=journeyUI({S,$,api,esc,icon,avatar,token,logo,safeURL,postCard,pageHeader,empty,loading,boot,navigate,notify,modal,closeModal,closeTrade,age,finance:F});
 const P=feedUI({S,$,esc,icon,safeURL,scope:socialScope});
-const W=swipeUI({homeHeader:()=>E.homeHeader(),nad:N,readingAnchor:()=>P.anchor(),S,$,api,esc,icon,logo,avatar,usd,age,mediaCard,safeURL,token,navigate,notify,trade,finance:F,needAccount,walletReady,openPost:replies});
+const W=swipeUI({previewAlgorithm:id=>J.handle('algorithm-preview',id),homeHeader:()=>E.homeHeader(),nad:N,readingAnchor:()=>P.anchor(),S,$,api,esc,icon,logo,avatar,usd,age,mediaCard,safeURL,token,navigate,notify,trade,finance:F,needAccount,walletReady,openPost:replies});
 const U=authUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,connectWallet,afterWallet:async next=>{if(next&&!T.defer(next))await next();},afterLogin:async next=>{if(['/connect-native','/native-wallet'].includes(location.pathname)){if(next)await next();else await nativeLink({S,api,$,esc,notify,trade,finance:F,nad:N,launch:L,needAccount,boot,auth:U});return;}if(location.pathname==='/authorize'){if(next)await next();else await oauthConsent();return;}if(S.view==='launch'){if(next)await next();else await L.create();return;}if(await T.onboard(next))return;if(next)await next();}});
 const G=creatorUI({S,$,api,esc,icon,avatar,priceHTML,notify,navigate,render,closeModal,trade,openCommunityToken:()=>T.open(),pageHeader,empty,loading,modal,needAccount,walletReady,afterEarnings:()=>L.earningsPanel()});
 const T=communityTokenUI({S,$,api,esc,icon,modal,closeModal,boot,render,notify,walletReady,receipt,navigate,trade,creator:G});
@@ -594,7 +594,7 @@ async function start(){
  clearInterval(refreshTimer);clearInterval(S.feedTimer);clearInterval(S.mediaTimer);shell();$('#page').innerHTML=loading();
  S.community=params.get('id');S.profile=params.get('id');S.feed=params.get('id');S.post=params.get('id')||params.get('post');S.nadToken=params.get('id')||params.get('token');
  try{
-  const memeStart=(S.view==='explore'||S.view==='home'&&S.homeSection==='markets')&&S.marketTab==='memes',compact=['discover','feeds','algorithms','feed','communities','community'].includes(S.view)||memeStart;
+  const memeStart=(S.view==='explore'||S.view==='home'&&S.homeSection==='markets')&&S.marketTab==='memes',compact=['discover','feeds','algorithms','feed','communities','community'].includes(S.view)||S.view==='swipe'&&S.swipeTab==='algorithms'||memeStart;
   if(S.view==='discover')E.prime();else if(memeStart)N.catalog(S.nadMode==='dex'?'dex':'',S.nadMode==='cap'?'cap':'latest').catch(()=>{});
   bootReady=boot(compact);await bootReady;await render();const authResumed=await U.resume();S.mediaTimer=setInterval(refreshMedia,4000);
   // Venue outages cannot delay the social feed or account authorization screen.

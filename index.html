@@ -13,7 +13,7 @@
       if(location.pathname==='/authorize')return;
       const p=new URLSearchParams(location.search),view=p.get('view')||'home';
       const memes=(view==='explore'||view==='home'&&p.get('section')!=='feed')&&(p.get('tab')||'memes')==='memes';
-      if(!['discover','feeds','algorithms','feed','communities','community'].includes(view)&&!memes)return;
+      if(!['discover','feeds','algorithms','feed','communities','community'].includes(view)&&!(view==='swipe'&&p.get('market')==='algorithms')&&!memes)return;
       const read=url=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);return fetch(url,{credentials:'same-origin',signal:controller.signal,headers:{'X-Rally-Request':'1'}}).then(r=>r.ok?r.json():null).catch(()=>null).finally(()=>clearTimeout(timer));};
       const requests=new Map([['/api/bootstrap?markets=0',read('/api/bootstrap?markets=0')]]);
       const url=view==='discover'?'/api/discover?q=&scope=all':'/api/nadfun/tokens?sort='+(p.get('phase')==='dex'||p.get('sort')==='latest'?'latest':'cap')+(p.get('phase')==='dex'?'&phase=dex':'');

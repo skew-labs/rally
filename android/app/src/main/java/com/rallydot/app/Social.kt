@@ -98,22 +98,7 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
     }
     HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
 }
-@Composable fun CommunitiesScreen(vm: RallyViewModel,onCommunity: (String)->Unit,onBenefits: (String)->Unit={}) {
-    val state by vm.state.collectAsStateWithLifecycle();val communities=state.boot?.objects("communities").orEmpty()
-    LazyColumn(modifier=Modifier.highRefresh(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        if(state.boot==null && state.bootError==null)item { LoadingRows() }
-        items(communities,key={it.string("id")}) { c->val image=when { c.string("id")=="monad"->"/assets/MON.png";c.string("name")=="Rally"->"/assets/community-rally.png";else->c.string("logoURI") }
-            Surface(Modifier.fillMaxWidth().clickable { onCommunity(c.string("id")) },shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface) {
-                Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                    Row(verticalAlignment=Alignment.CenterVertically) { Artwork(safeImage(image),c.string("name"),48.dp);Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)) { Text(c.string("name"),style=MaterialTheme.typography.titleMedium);Text("${c.optInt("members")} members",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall) };Icon(Icons.Outlined.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant) }
-                    if(c.string("tokenOwner").isNotEmpty())TextButton(onClick={onBenefits(c.string("tokenOwner"))}){Text("Token benefits")}
-                    Text(c.string("description"),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium)
-                    OutlinedButton(onClick={vm.action("/api/join",JSONObject().put("id",c.string("id")).put("active",!c.optBoolean("joined")))},shape=RoundedCornerShape(14.dp),enabled=!state.busy) { Text(if(c.optBoolean("joined"))"Joined" else "Join") }
-                }
-            }
-        }
-    }
-}
+@Composable fun CommunitiesScreen(vm: RallyViewModel,onCommunity: (String)->Unit,onAsset: (Asset)->Unit) { CommunityList(vm,onCommunity,onAsset) }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun DiscoverScreen(vm: RallyViewModel,onPost: (Post)->Unit,onAlgorithm: (JSONObject)->Unit) {
     val state by vm.state.collectAsStateWithLifecycle();var query by rememberSaveable { mutableStateOf("") };var applied by rememberSaveable { mutableStateOf("") };var filter by rememberSaveable { mutableStateOf("all") }

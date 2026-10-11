@@ -159,10 +159,10 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                                     shown=="Wallet"->PortfolioScreen(vm,::showAsset)
                                     shown=="0:Markets"->MarketsScreen(vm,{asset=it})
                                     shown=="0:Launch"->MarketsScreen(vm,{asset=it},launch=true,create={if(vm.me==null)vm.showWallet() else launching=true})
-                                    shown=="0:Swipe"->SwipeScreen(vm,{asset=it},{post=it})
+                                    shown=="0:Swipe"->SwipeScreen(vm,{asset=it},{post=it},{algorithm=it})
                                     shown=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={extra="Algorithms"},onFeedPreview={algorithm=it})
-                                    shown.startsWith("1:") && shown.substringAfter(':').isNotEmpty()->FeedScreen(vm,community=shown.substringAfter(':'),onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={extra="Algorithms"},onFeedPreview={algorithm=it})
-                                    shown.startsWith("1:")->CommunitiesScreen(vm,{community=it},{extra="Benefits:$it"})
+                                    shown.startsWith("1:") && shown.substringAfter(':').isNotEmpty()->CommunityRoom(vm,shown.substringAfter(':'),{asset=it},{algorithm=it},{extra="Benefits:$it"}) { FeedScreen(vm,community=shown.substringAfter(':'),onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={extra="Algorithms"},onFeedPreview={algorithm=it}) }
+                                    shown.startsWith("1:")->CommunitiesScreen(vm,{community=it},{asset=it})
                                     shown.startsWith("2:")->DiscoverScreen(vm,onPost={post=it},onAlgorithm={algorithm=it})
                                     shown.startsWith("3:")->LeaderboardScreen(vm,{algorithm=it},{extra="Weekly league"})
                                     else->ProfileScreen(vm,openBrowser,{extra=it},::showAsset)

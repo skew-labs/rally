@@ -35,3 +35,7 @@ Supported inputs include recency, following, replies, media and asset presence. 
 Reader metrics describe feed use. Eligible closed Spot performance is attributed from recorded activity; it does not prove that a feed caused a return or cover all trading costs.
 
 A compatible community revenue vault can divide algorithm-sale proceeds between creator payout and buyback reserve. The purchase and a later token buyback are distinct actions. See [Community tokens](community-tokens.md).
+
+## Browse on mobile
+
+Phones show compact rows with token artwork, sampled wallet ROI when available, and **Get** or **Buy**. Open **Swipe → Algorithms** to browse one algorithm at a time. **Preview** opens its existing feed preview and price; closing it returns to the same swipe position. A swipe never purchases a subscription. The Android app uses the same catalog and access checks.

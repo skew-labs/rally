@@ -29,7 +29,7 @@ import kotlinx.coroutines.*
 import org.json.JSONObject
 import kotlin.math.abs
 
-@Composable fun SwipeScreen(vm: RallyViewModel,onAsset: (Asset)->Unit,onPost: (Post)->Unit) {
+@Composable fun SwipeScreen(vm: RallyViewModel,onAsset: (Asset)->Unit,onPost: (Post)->Unit,onAlgorithm: (JSONObject)->Unit={}) {
     val state by vm.state.collectAsStateWithLifecycle()
     var mode by rememberSaveable { mutableStateOf("Spot") }
     val feed=state.boot?.string("activeFeed","latest") ?: "latest"
@@ -37,12 +37,18 @@ import kotlin.math.abs
     val path=when(mode) { "Perps"->"/api/perps";"Prediction"->"/api/predictions";else->"/api/posts?mode=for-you&feed="+Uri.encode(feed) }
     val field=when(mode) { "Perps"->"markets";"Prediction"->"pools";else->"posts" }
     val page=state.pages[pageKey] ?: Page(loading=true)
-    LaunchedEffect(pageKey) { if(mode!="Memes")vm.load(pageKey,path,field) }
+    LaunchedEffect(pageKey) { if(mode!="Memes" && mode!="Algorithms")vm.load(pageKey,path,field) }
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(pageKey,lifecycle) { lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { while(mode!="Memes") { delay(30000);vm.load(pageKey,path,field,true,retain=true) } } }
+    LaunchedEffect(pageKey,lifecycle) { lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { while(mode!="Memes" && mode!="Algorithms") { delay(30000);vm.load(pageKey,path,field,true,retain=true) } } }
     Column(Modifier.fillMaxSize()) {
-        Segmented(listOf("Spot","Perps","Prediction","Memes"),mode,{mode=it},Modifier.padding(horizontal=12.dp,vertical=4.dp))
-        if(mode=="Memes")NadSwipeScreen(vm,onAsset)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=12.dp,vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+            listOf("Spot","Algorithms","Perps","Prediction","Memes").forEach { name->TextButton(onClick={mode=name},modifier=Modifier.heightIn(min=44.dp).semantics { selected=mode==name;contentDescription=name },shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(containerColor=if(mode==name)MaterialTheme.colorScheme.surfaceContainer else Color.Transparent,contentColor=if(mode==name)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)) { Text(name,fontSize=12.sp) } }
+        }
+        if(mode=="Algorithms") {
+            val feeds=rankedAlgorithms(state.boot?.objects("feeds").orEmpty())
+            if(feeds.isEmpty()) { if(state.boot==null)LoadingRows() else EmptyState("No algorithms yet") }
+            else key("algorithm-deck") { NativeSwipeDeck(feeds.map { it.string("id") },Modifier.weight(1f)) { index->AlgorithmSwipeCard(feeds[index]){onAlgorithm(algorithmItem(feeds[index]))} } }
+        } else if(mode=="Memes")NadSwipeScreen(vm,onAsset)
         else if(page.items.isEmpty()) { if(page.loading)LoadingRows() else EmptyState("No ${if(mode=="Spot")"posts" else "markets"} yet",page.error,"Retry",{vm.load(pageKey,path,field,true)}) }
         else key(pageKey) {
             val keys=remember(page.items) { page.items.map { if(mode=="Spot")it.string("id") else Asset.parse(it,if(mode=="Perps")"perps" else "prediction").key } }

@@ -65,7 +65,7 @@ export function journeyUI(c) {
     document.querySelectorAll('[data-action=feed-sort]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===(S.feedSort||'pnl'))));
   }
   function feeds(){
-    $('#page').innerHTML=`<header class="am-head"><div><h1>Algorithms</h1><p>Find a wallet. Get its feed.</p></div><button class="r-icon-button" data-action="algorithm-market-menu" aria-label="Algorithm tools">${icon('ellipsis')}</button></header>`+feedControls()+'<div id="algorithm-market-list"></div>';
+    $('#page').innerHTML=`<header class="am-head"><div><h1>Algorithms</h1><p>Find a wallet. Get its feed.</p></div><button class="am-text" data-action="swipe-algorithms">Swipe</button><button class="r-icon-button" data-action="algorithm-market-menu" aria-label="Algorithm tools">${icon('ellipsis')}</button></header>`+feedControls()+'<div id="algorithm-market-list"></div>';
     $('#algorithm-market-search').addEventListener('input',e=>{S.feedQuery=e.target.value;paintFeeds();});paintFeeds();
   }
   function marketMenu(){modal('Your algorithms',`<div class="r-account-options"><button data-action="create-feed">${icon('plus')}Create a feed${icon('chevron')}</button><button data-action="creator-studio">${icon('feeds')}Creator studio${icon('chevron')}</button><button data-action="activity" data-id="subscriptions">${icon('saved')}Subscriptions${icon('chevron')}</button></div>`);}

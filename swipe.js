@@ -1,5 +1,6 @@
 import { swipeMotion, swipePaging } from './swipe-motion.js';
 import { swipeTrade } from './swipe-trade.js';
+import { feedTitle, feedPresentation, feedReturn, feedTerms } from './flow.js';
 // Social discovery stays separate from order review and wallet approval.
 export function swipeUI(c){
   const {S,$,api,esc,icon,logo,avatar,usd,age,mediaCard,safeURL,token,navigate,notify}=c;
@@ -7,7 +8,8 @@ export function swipeUI(c){
   const cache=new Map(),positions=new Map(),playheads=new Map();
   const quick=swipeTrade({...c,releaseInteraction:()=>{busy=false;}});
   const cacheKey=()=>(S.boot.me?.id||'guest')+':'+S.boot.activeFeed+':'+S.mode+':'+S.boot.watches.join(',');
-  const validTab=t=>['spot','perps','prediction'].includes(t)?t:'spot';
+  const swipeTabs=['spot','perps','prediction','algorithms'];
+  const validTab=t=>swipeTabs.includes(t)?t:'spot';
   S.swipeTab=validTab(new URLSearchParams(location.search).get('market'));
   const context=p=>p?{post:p.id,feed:S.boot.activeFeed}:null;
   const asset=p=>token(p?.asset)||p?.assetInfo;
@@ -40,6 +42,7 @@ export function swipeUI(c){
     return `<div class="r-swipe-caption"><div class="r-swipe-copy" id="swipe-copy-${index}" tabindex="0">${esc(p.text.replace(/(?:^|\n)\s*https:\/\/[^\s<>]+\s*$/, '').trim()).replace(/\n/g,'<br>')}</div><button class="r-swipe-expand" data-action="swipe-expand" data-id="${index}" aria-controls="swipe-copy-${index}" aria-expanded="false" hidden>Read more</button></div>`;
   }
   function actions(item,index){
+    if(item.kind==='algorithm')return `<button class="r-swipe-direction skip" data-action="swipe-order" data-id="${index}" data-side="skip">Skip</button><button class="r-swipe-direction buy" data-action="algorithm-preview" data-id="${esc(item.feed.id)}">${item.feed.access?'Preview · '+(Number(item.feed.priceRaw)?'Open':'Free'):'Preview · '+esc(item.feed.price)+' USDC'}</button>`;
     const button=(side,label,style)=>`<button class="r-swipe-direction ${style} ${style==='buy'&&hasTicket(item)?'quick-selected':''}" data-action="swipe-order" data-id="${index}" data-side="${side}" aria-label="${label} in this card. Wallet approval required.">${style==='sell'||style==='skip'?icon('back'):''}<span>${label}</span>${style==='buy'?icon('arrow'):''}</button>`;
     if(item.kind==='spot')return item.asset?button('sell','Sell','sell')+button('buy','Buy','buy'):button('skip','Skip','skip')+button('discussion','Discuss','discussion');
     if(item.kind==='perps')return item.market.open?button('short','Short','sell')+button('long','Long','buy'):'<span class="r-swipe-unavailable">Market closed</span>';
@@ -49,6 +52,7 @@ export function swipeUI(c){
   function choice(index,direction){
     const item=items[index];if(!item)return null;
     const right=direction==='right';
+    if(item.kind==='algorithm')return {side:right?'preview':'skip',label:right?'Preview':'Skip'};
     if(item.kind==='spot')return item.asset?{side:right?'buy':'sell',label:right?'Buy':'Sell'}:{side:right?'discussion':'skip',label:right?'Discuss':'Skip'};
     if(item.kind==='perps')return item.market.open?{side:right?'long':'short',label:right?'Long':'Short'}:null;
     return right?(eligible(item.pool)?{side:'predict',label:'Predict price'}:null):{side:'skip',label:'Skip'};
@@ -64,11 +68,18 @@ export function swipeUI(c){
     return `<div class="r-swipe-ticket-preview" aria-hidden="true" inert><div class="r-quick-fields">${fields}${extra}</div><div class="r-quick-summary"><div><span>${p?'Prediction':perp?'Size':'Receive'}</span><b>— ${esc(p?'USD':t.symbol)}</b></div><small>&nbsp;</small></div></div>`;
   }
   function card(item,index){
+    if(item.kind==='algorithm')return algorithmCard(item,index);
     const p=item.post,t=item.asset,m=item.market,pool=item.pool;
     const visual=p?.media?`<div class="r-swipe-media">${mediaCard(p.media,p.author.name).replace(/<video\b([^>]*?)\bsrc=/,'<video$1data-src=')}</div>`:t&&!p?`<div class="r-swipe-art">${artwork(t,index===active)}<span>${esc(t.symbol)}</span></div>`:'';
     const identity=t?`<div class="r-swipe-market"><div>${artwork(t)}<span><b>${esc(t.symbol)}${m?'<small> Perp</small>':''}</b><small>${esc(m?m.venue+' · '+(m.venue==='LeverUp'?'USDC':'AUSD'):pool?'Castora · Price prediction':t.venue||'Monad · Spot')}</small></span></div><div class="r-swipe-price" data-swipe-metrics>${stats(t,m)}</div></div>`:'';
     const poolInfo=pool?`<div class="r-swipe-pool"><div><span>Pool #${pool.id}</span><b>${esc(state(pool))}</b></div><div><span>Stake</span><b>${esc(pool.stake)} ${esc(pool.stakeAsset)}</b></div><div><span>${state(pool)==='Open'?'Closes':'Snapshot'}</span><time datetime="${new Date((state(pool)==='Open'?pool.close:pool.snapshot)*1000).toISOString()}">${esc(when(state(pool)==='Open'?pool.close:pool.snapshot))}</time></div><small>${pool.feeBps/100}% fee · ${pool.predictions} entries</small></div>`:'';
     return `<article class="r-swipe-card ${p?.media?'has-media':''} ${hasTicket(item)?'has-quick-ticket':''}" data-swipe-index="${index}" data-kind="${item.kind}" ${p?`data-swipe-post="${esc(p.id)}"`:''} aria-label="${esc(p?p.author.name+' post':pool?'Prediction pool '+pool.id:t.symbol+' perpetual')}" aria-roledescription="slide"><div class="r-swipe-intent" aria-hidden="true"></div><div class="r-swipe-content">${p?author(p):''}${visual}${p?postContent(p,index):`<div class="r-swipe-market-heading"><h1>${esc(t?.name||t?.symbol||pool?.asset||'Market')}</h1><p>${m?'Perpetual · Monad':'Price prediction · Monad'}</p></div>`}${poolInfo}<div class="r-swipe-engagement">${p?source(p):''}<div class="r-swipe-social">${p?`<button data-action="swipe-like" data-id="${esc(p.id)}" class="${p.liked?'liked':''}" aria-label="${p.liked?'Unlike':'Like'} post">${icon('heart')}<span>${p.likes||''}</span></button><button data-action="reply" data-id="${esc(p.id)}" aria-label="Reply to post">${icon('chat')}<span>${p.replies||''}</span></button><button data-action="share" data-id="${esc(p.id)}" aria-label="Copy post link">${icon('share')}</button>`:''}</div></div></div><footer>${identity}<div data-swipe-ticket data-kind="${item.kind}">${ticketPreview(item)}</div><div class="r-swipe-directions">${actions(item,index)}</div></footer></article>`;
+  }
+  function algorithmCard(item,index){
+    const f=item.feed,r=f.research,roi=feedReturn(f),wallet=r?.wallet;
+    const t=r?.tokens?.[0],art=t?logo(t,index===active):icon(feedPresentation(f).icon);
+    const result=roi==null?'':`<div class="sa-result"><strong class="${roi>=0?'positive':'negative'}">${roi>0?'+':''}${roi.toLocaleString('en-US',{maximumFractionDigits:1})}%</strong><small>Sampled wallet ROI · closed trades</small><b>${Number(r.pnlMON)>0?'+':''}${Number(r.pnlMON).toLocaleString('en-US',{maximumFractionDigits:2})} MON realized</b></div>`;
+    return `<article class="r-swipe-card sa-card" data-kind="algorithm" data-swipe-index="${index}" aria-label="${esc(feedTitle(f))} algorithm" aria-roledescription="slide"><div class="r-swipe-intent" aria-hidden="true"></div><div class="r-swipe-content"><div class="sa-identity"><span class="sa-art">${art}</span><span><small>Algorithm</small><h1>${esc(feedTitle(f))}</h1><p>${wallet?esc(wallet.slice(0,6)+'…'+wallet.slice(-4)):'@'+esc(f.creator?.handle||'rally')}</p></span></div>${result}<p class="sa-description">${esc(feedPresentation(f).description)}</p>${wallet?'<p class="sa-note">Wallet results, not algorithm returns.</p>':''}<button class="sa-details" data-action="algorithm-preview" data-id="${esc(f.id)}">${wallet?'See closed trades':'See feed preview'}${icon('chevron')}</button></div><footer><div class="sa-terms"><b>${esc(feedTerms(f))}</b><small>${Number(f.priceRaw)?'Manual renewal':'No payment needed'}</small></div><div class="r-swipe-directions">${actions(item,index)}</div></footer></article>`;
   }
   function media(el,selected){
     el.querySelectorAll('video').forEach(v=>{
@@ -166,13 +177,15 @@ export function swipeUI(c){
   async function render(refresh=false){
     dispose();request=new AbortController();const seq=generation,tab=S.swipeTab=validTab(S.swipeTab),host=$('#page');
     active=refresh?0:(positions.get(key())??0);items=[];
-    if(!$('#swipe-deck'))host.innerHTML=(c.homeHeader?.()||'')+`<section class="r-swipe"><header class="r-swipe-head"><button class="r-icon-button" data-action="swipe-exit" aria-label="Exit swipe mode">${icon('back')}</button><div class="r-swipe-tabs" role="group" aria-label="Swipe market"><span class="r-swipe-tab-pill" aria-hidden="true"></span>${[['spot','Spot'],['perps','Perps'],['prediction','Prediction']].map(([id,name])=>`<button data-action="swipe-tab" data-id="${id}">${name}</button>`).join('')}</div><button class="r-theme-button" data-action="theme" aria-label="Switch theme">${icon(document.documentElement.dataset.theme==='dark'?'sun':'moon')}</button></header><div id="swipe-deck" class="r-swipe-deck" tabindex="0" aria-label="Swipe feed. Up or down for posts. Left or right to choose an order side."></div><div class="r-swipe-progress"><span id="swipe-position" aria-live="polite"></span><span id="swipe-status"></span><button data-action="swipe-refresh" aria-label="Refresh swipe feed">${icon('refresh')}</button></div><div class="r-swipe-step"><button class="r-icon-button previous" data-action="swipe-prev" aria-label="Previous card">${icon('down')}</button><button class="r-icon-button" data-action="swipe-next" aria-label="Next card">${icon('down')}</button></div></section>`;
-    const tabs=$('.r-swipe-tabs');tabs.style.setProperty('--tab-index',['spot','perps','prediction'].indexOf(tab));tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===tab)));
-    $('#swipe-position').textContent='';$('#swipe-status').textContent=tab==='spot'?S.boot.feeds.find(f=>f.id===S.boot.activeFeed)?.name||'Latest':tab==='perps'?'Monad · Venue prices':'Castora · Price predictions';
+    if(!$('#swipe-deck'))host.innerHTML=(c.homeHeader?.()||'')+`<section class="r-swipe"><header class="r-swipe-head"><button class="r-icon-button" data-action="swipe-exit" aria-label="Exit swipe mode">${icon('back')}</button><div class="r-swipe-tabs" role="group" aria-label="Swipe market"><span class="r-swipe-tab-pill" aria-hidden="true"></span>${[['spot','Spot'],['perps','Perps'],['prediction','Prediction'],['algorithms','Algorithms']].map(([id,name])=>`<button data-action="swipe-tab" data-id="${id}">${name}</button>`).join('')}</div><button class="r-theme-button" data-action="theme" aria-label="Switch theme">${icon(document.documentElement.dataset.theme==='dark'?'sun':'moon')}</button></header><div id="swipe-deck" class="r-swipe-deck" tabindex="0" aria-label="Swipe feed. Up or down for posts. Left or right to choose an order side."></div><div class="r-swipe-progress"><span id="swipe-position" aria-live="polite"></span><span id="swipe-status"></span><button data-action="swipe-refresh" aria-label="Refresh swipe feed">${icon('refresh')}</button></div><div class="r-swipe-step"><button class="r-icon-button previous" data-action="swipe-prev" aria-label="Previous card">${icon('down')}</button><button class="r-icon-button" data-action="swipe-next" aria-label="Next card">${icon('down')}</button></div></section>`;
+    const tabs=$('.r-swipe-tabs');tabs.style.setProperty('--tab-index',swipeTabs.indexOf(tab));tabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===tab)));
+    $('#swipe-position').textContent='';$('#swipe-status').textContent=tab==='spot'?S.boot.feeds.find(f=>f.id===S.boot.activeFeed)?.name||'Latest':tab==='algorithms'?'Algorithms':tab==='perps'?'Monad · Venue prices':'Castora · Price predictions';
     $('#swipe-deck').setAttribute('aria-busy','true');$('[data-action=swipe-refresh]').disabled=true;$('#swipe-deck').innerHTML='<div class="r-swipe-skeleton" role="status" aria-label="Loading feed"><div class="skeleton-author"><i></i><span></span></div><div class="skeleton-art"></div><div class="skeleton-lines"><i></i><i></i><i></i><i></i></div><div class="skeleton-foot"><i></i><i></i></div></div>';
     try{
       const saved=cache.get(key());
-      if(!refresh&&saved&&Date.now()-saved.time<(tab==='spot'?60000:30000)){
+      if(tab==='algorithms'){
+        S.swipeCursor=null;items=[...S.boot.feeds].sort((a,b)=>Number(!!b.research?.wallet)-Number(!!a.research?.wallet)||Number(b.research?.pnlMON||0)-Number(a.research?.pnlMON||0)).map(feed=>({kind:'algorithm',feed}));
+      }else if(!refresh&&saved&&Date.now()-saved.time<(tab==='spot'?60000:30000)){
         items=[...saved.items];S.swipeCursor=saved.cursor;
       }else if(tab==='spot'){
         const d=await api('/api/posts?'+postQuery(),undefined,{signal:request.signal});if(seq!==generation||S.view!=='swipe')return;merge(d.posts);S.swipeCursor=d.cursor;items=d.posts.map(p=>({kind:'spot',post:p,asset:asset(p)}));save(tab,{items:[...items],cursor:d.cursor});
@@ -184,7 +197,7 @@ export function swipeUI(c){
         items=d.pools.map(pool=>({kind:'prediction',pool,asset:pool.predictionReviewed?token(pool.assetId):{symbol:'?',name:'Unreviewed asset'},post:null}));save(tab,{items:[...items],cursor:null});
       }
       active=Math.min(active,Math.max(0,items.length-1));
-      if(items.length){mount();if(tab==='spot')refreshMetrics(seq);}else $('#swipe-deck').innerHTML=`<div class="r-swipe-loading"><b>No ${tab==='spot'?'posts':tab==='perps'?'markets':'pools'} yet</b><button class="r-btn" data-action="swipe-refresh">Refresh</button></div>`;
+      if(items.length){mount();if(tab==='spot')refreshMetrics(seq);}else $('#swipe-deck').innerHTML=`<div class="r-swipe-loading"><b>No ${tab==='spot'?'posts':tab==='algorithms'?'algorithms':tab==='perps'?'markets':'pools'} yet</b><button class="r-btn" data-action="swipe-refresh">Refresh</button></div>`;
     }catch(e){if(e.name!=='AbortError'&&seq===generation&&S.view==='swipe')$('#swipe-deck').innerHTML=`<div class="r-swipe-loading"><b>Couldn't load ${tab==='spot'?'feed':'markets'}</b><p>${esc(e.message)}</p><button class="r-btn" data-action="swipe-refresh">Retry</button></div>`;}finally{if(seq===generation&&S.view==='swipe'){$('#swipe-deck').setAttribute('aria-busy','false');$('[data-action=swipe-refresh]').disabled=false;}}
   }
   async function order(index,side,gesture=false){
@@ -194,6 +207,7 @@ export function swipeUI(c){
     busy=true;pause();
     try{
       if(side==='discussion')await c.openPost(item.post.id);
+      else if(item.kind==='algorithm'&&side==='preview')await c.previewAlgorithm(item.feed.id);
       else if(item.kind==='spot'&&item.asset&&['buy','sell'].includes(side))await quick.act(side,gesture);
       else if(item.kind==='perps'&&item.market.open&&['long','short'].includes(side))await quick.act(side,gesture);
       else if(item.pool&&side==='predict'){if(!eligible(item.pool)){notify('This pool is no longer open');return;}await quick.act(side,gesture);}
@@ -204,7 +218,8 @@ export function swipeUI(c){
   async function handle(action,id,el){
     if(!action.startsWith('swipe-'))return false;
     if(quick.locked&&['swipe-exit','swipe-tab','swipe-refresh','swipe-prev','swipe-next'].includes(action))return true;
-    if(action==='swipe-enter'){
+    if(action==='swipe-algorithms'){S.swipeReturn=S.view;S.swipeReturnKey=history.state?.key;S.swipeTab='algorithms';await navigate('swipe');entryKey=history.state?.key;}
+    else if(action==='swipe-enter'){
       const cards=S.view==='home'?[...document.querySelectorAll('#timeline [data-post]')]:[],byId=new Map(S.posts.map(p=>[p.id,p])),posts=cards.map(el=>byId.get(el.dataset.post)).filter(Boolean);
       const nearest=c.readingAnchor?.()||posts[0]?.id;
       if(posts.length)save('spot',{items:posts.map(p=>({kind:'spot',post:p,asset:asset(p)})),cursor:S.cursor});
