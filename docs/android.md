@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.7.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.8.apk)
 
 ## Interaction and data
 
@@ -22,7 +22,7 @@ The Meta and xAI marks use bundled PNG renderings of the original SVGs listed in
 
 The system splash screen shows Rally branding and exits with a short fade into the first native frame. It never waits for an API response or an artificial minimum duration. Day/night resources and system-bar contrast follow the chosen theme. Reduced motion skips the splash fade and uses Android's duration scale for Compose transitions.
 
-Tab selection uses one moving indicator, and destination transitions use a small offset and fade. The purchase sheet keeps its action separate from the scrollable body and above the keyboard; chart space collapses while typing. Short trade sheets prioritize amount and order controls over charts, and secondary token statistics remain in the browsing view. Close actions animate the token sheet out before removing it. Chart paths and fills are cached for the current data and bounds; crosshair movement redraws without rebuilding that geometry and selects observations by their actual timestamps.
+Tab selection uses one moving indicator, and destination transitions use a small offset and fade. The purchase sheet keeps its action separate from the scrollable body and above the keyboard; chart space collapses while typing. Short trade sheets prioritize amount and order controls over charts, and secondary token statistics remain in the browsing view. Close actions animate the token sheet out before removing it. Chart paths are cached for the current data and bounds; crosshair movement redraws without rebuilding that geometry and selects observations by their actual timestamps.
 
 Moving indicators, pressed controls, scrolling lists, pagers and sheets use Compose's `preferredFrameRate(FrameRateCategory.High)` during redraws. Card translations, press scaling and the segmented indicator update through graphics layers without relaying out their content for every animation frame. [Android's adaptive refresh guidance](https://developer.android.com/develop/ui/views/animations/adaptive-refresh-rate) describes the system-controlled vote: compatible displays may use their supported high rates, including 144 Hz where available. The app does not force 144 Hz, cap all screens at 60 Hz or keep a continuous rendering loop running while idle. Device hardware, Android version, thermal limits and power settings determine the actual rate. A 60 Hz emulator does not establish physical-device 144 fps performance.
 
@@ -63,7 +63,7 @@ cd android
 ./gradlew :app:assembleRelease :app:testDebugUnitTest :app:lintRelease
 ```
 
-Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.4.7 (code 20) uses the existing release certificate, allowing upgrades from the earlier APKs. Release shrinking removes SDK debug/info log calls so OAuth callback codes and relay URIs are not written to logcat.
+Release signing reads `RALLY_ANDROID_KEYSTORE` and `RALLY_ANDROID_STORE_PASSWORD` from the build environment, with alias `rally`. Signing material is not stored in source or application assets. Version 0.4.8 (code 21) uses the existing release certificate, allowing upgrades from the earlier APKs. Release shrinking removes SDK debug/info log calls so OAuth callback codes and relay URIs are not written to logcat.
 
 `/.well-known/assetlinks.json` associates the release certificate with app entry paths and `/native-return`. API, download and consent URLs remain outside those app links. Certificate changes require reviewing the domain association and upgrade path.
 
@@ -131,3 +131,9 @@ An unauthenticated, bounded public HTTP client loads the immutable catalog. Sche
 ## Retail algorithm discovery
 
 Version 0.4.7 starts Algorithms with four public wallets and three live feeds, with explicit controls to show the full lists. Research playbooks follow in the same scroll, with Memes, Momentum, Yield and 1Y return lanes. Source filters are collapsed initially. Playbook links open native Memes, Spot or Perps markets. Wallet records remain sampled closed-trade results, separate from hypothetical published factor years.
+
+## Price lines
+
+Version 0.4.8 uses an unfilled Rally-purple line for observed prices, with a dot at the latest point. Sparse and single-observation histories remain visible. The cached path retains actual observation times and values; no prices or trades are inserted into quiet intervals. Cached reads and drag scrubbing keep their existing bounded paths.
+
+A valid quote observed within the last two minutes can display as a single point while history loads or when the chosen period has no history. Its caption distinguishes a quote from historical observations. Stale, invalid and future quotes are rejected. Period controls sit directly below the chart, ahead of the holder list.

@@ -61,6 +61,13 @@ data class PostReaction(val liked: Boolean,val likes: Int,val pending: Boolean=f
 fun Post.withReaction(value: PostReaction?)=if(value==null)this else copy(liked=value.liked,likes=value.likes)
 data class Page(val items: List<JSONObject> = emptyList(), val cursor: String? = null, val total: Int = 0, val loading: Boolean = false, val error: String? = null, val at: Long = 0)
 data class ChartPoint(val time: Long, val value: Float)
+fun referenceChart(asset: Asset,now: Long=System.currentTimeMillis()/1000): JSONObject? {
+    val price=asset.price ?: return null
+    if(asset.stale || !price.isFinite() || price<=0 || !price.toFloat().isFinite() || asset.time<=0 || now-asset.time !in 0..120)return null
+    // A real quote is one observed point, never a fabricated historical line.
+    val points=JSONArray().put(JSONObject().put("time",asset.time).put("value",price))
+    return JSONObject().put("asset",asset.id).put("points",points).put("reference",asset.raw.string("priceSource","Reference quote")).put("quoteOnly",true).put("fetchedAt",asset.time)
+}
 fun chartPoints(j: JSONObject) = j.objects("points").mapNotNull { val v=it.number("value"); val t=it.optLong("time"); if(v != null && v > 0 && v.toFloat().isFinite() && t > 0 && t<=System.currentTimeMillis()/1000+300) ChartPoint(t,v.toFloat()) else null }.distinctBy { it.time }.sortedBy { it.time }.takeLast(600)
 fun nadChart(j: JSONObject,token: String,days: Int): JSONObject {
     require(j.string("token").equals(token,true)) { "Chart token identity changed" }

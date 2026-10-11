@@ -4,6 +4,18 @@ import org.junit.Test
 import org.junit.Assert.*
 
 class ModelsTest {
+    @Test fun quoteOnlyChartPreservesItsActualIdentityPriceAndTimestamp() {
+        val now=System.currentTimeMillis()/1000
+        val asset=Asset.parse(JSONObject().put("id","0x1").put("price",.002536).put("referenceAt",now-10).put("priceSource","Fixture quote"))
+        val chart=referenceChart(asset,now)!!
+        assertTrue(chart.optBoolean("quoteOnly"));assertEquals(asset.id,chart.string("asset"));assertEquals("Fixture quote",chart.string("reference"))
+        val points=chartPoints(chart);assertEquals(1,points.size);assertEquals(asset.time,points.single().time);assertEquals(asset.price!!.toFloat(),points.single().value,0f)
+    }
+    @Test fun staleMissingInvalidAndFutureQuotesCannotBecomeChartHistory() {
+        val now=System.currentTimeMillis()/1000
+        val asset=Asset.parse(JSONObject().put("id","0x1").put("price",1).put("referenceAt",now))
+        listOf(asset.copy(price=null),asset.copy(price=0.0),asset.copy(price=Double.NaN),asset.copy(stale=true),asset.copy(time=0),asset.copy(time=now-121),asset.copy(time=now+1)).forEach { assertNull(referenceChart(it,now)) }
+    }
     @Test fun shortSlowSwipeKeepsTheCurrentCard() { assertEquals(2,swipeTargetPage(2,6,-50f,400f,-100f)) }
     @Test fun quickFlickMovesOneCardInTheFingerDirection() {
         assertEquals(3,swipeTargetPage(2,6,-40f,400f,-1800f))

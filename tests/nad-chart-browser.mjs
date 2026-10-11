@@ -4,6 +4,7 @@ import {spawn} from 'node:child_process';
 import fs from 'node:fs/promises';
 import {chromium} from 'playwright';
 import {fileURLToPath} from 'node:url';
+import {observeChartRenderer} from './chart-observer.mjs';
 const root=fileURLToPath(new URL('..',import.meta.url)),origin='http://127.0.0.1:33218';
 const evidence=process.env.RALLY_EVIDENCE||'/tmp/rally-chart-evidence';await fs.mkdir(evidence,{recursive:true});
 const server=spawn(process.env.RALLY_PYTHON||'python3',['scripts/preview.py'],{cwd:root,env:{...process.env,RALLY_PREVIEW_PORT:'33218'},stdio:['ignore','ignore','pipe']});
@@ -27,6 +28,7 @@ try{
   await context.addInitScript(theme=>localStorage.setItem('rally-theme',theme),theme);page.on('pageerror',e=>errors.push(e.message));
   await context.route('**/*',async r=>{
    const q=r.request(),u=new URL(q.url());if(u.origin!==origin)return r.abort();assert.equal(q.method(),'GET','No writes allowed');
+   if(await observeChartRenderer(r))return;
    let body;
    if(u.pathname==='/api/nadfun/tokens')body={tokens:[token],total:1,fetchedAt:now};
    else if(u.pathname==='/api/nadfun/references')body={tokens:[token]};
@@ -42,6 +44,10 @@ try{
   const buy=page.locator('.r-market-buy');
   try{await buy.waitFor({timeout:15000});}catch(e){console.error(JSON.stringify({url:page.url(),errors,body:(await page.locator('body').innerText()).slice(0,2000)}));await page.screenshot({path:evidence+'/failure.png'});throw e;}
   await buy.click();await page.locator('#nad-chart canvas').first().waitFor();
+  const observed=await page.evaluate(()=>window.chartSeriesObserved);
+  assert(observed.length>0);assert(observed.every(s=>s.type==='line'),'Basic price charts must use real line series');
+  assert.deepEqual(observed.at(-1).points,candles.map(({time,close})=>({time,value:close})),'Keep actual closes and sparse observation times');
+  assert.equal(await page.locator('#nad-chart').getAttribute('data-series'),'line');
   const chartRequest=requests.find(r=>r.kind==='chart'),identity=requests.find(r=>r.kind==='token');assert(chartRequest.at<identity.at+300,'Chart must start alongside identity');
   await page.locator('.r-holder').first().waitFor();
   assert.equal(await page.locator('.r-holder').first().locator('small').count(),0,'Unnamed address must appear only once');
@@ -68,7 +74,7 @@ try{
   });
   const start=Date.now();await buy.click();await page.locator('#nad-chart canvas').first().waitFor();await page.waitForFunction(()=>window.chartPaintMs!=null);const {paintMs,firstFrameMs,setupMs}=await page.evaluate(()=>({paintMs:window.chartPaintMs,firstFrameMs:window.chartFirstFrameMs,setupMs:window.chartSetupMs}));
   const reopenMs=Date.now()-start;assert.equal(requests.filter(r=>r.kind==='chart').length,before,'Reopen must reuse the snapshot');
-  assert(paintMs<100,'Warm chart must not wait for a 650ms identity read: '+paintMs);assert.deepEqual(errors,[]);results.push({width,theme,...geometry,reopenMs,setupMs,firstFrameMs,paintMs,chartRequests:before});await context.close();
+  assert(firstFrameMs<=30,'Cached line first frame must be within 30ms: '+firstFrameMs);assert(paintMs<100,'Warm chart must not wait for a 650ms identity read: '+paintMs);assert.deepEqual(errors,[]);results.push({width,theme,...geometry,reopenMs,setupMs,firstFrameMs,paintMs,chartRequests:before});await context.close();
  }
  // A stale snapshot stays on screen while polling, without recreating the chart.
  const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();let updates=0;

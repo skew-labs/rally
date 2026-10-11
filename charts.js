@@ -1,3 +1,4 @@
+import {closingPrices,priceLineOptions,fitPriceLine} from './price-line.js';
 export const money = (n, digits) => '$' + n.toLocaleString('en-US',{minimumFractionDigits:digits ?? (n < .0001 ? 9 : n < 1 ? 5 : 2),maximumFractionDigits:digits ?? (n < .0001 ? 9 : n < 1 ? 5 : 2)});
 export const compact = n => '$' + (n >= 1e12 ? (n/1e12).toFixed(2)+'T' : n >= 1e9 ? (n/1e9).toFixed(2)+'B' : n >= 1e6 ? (n/1e6).toFixed(1)+'M' : (n/1e3).toFixed(1)+'K');
 export const changeText = n => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
@@ -35,7 +36,7 @@ export function spark(a) {
 }
 export function chart(a,state) {
   const tv=provider(a,state)==='tradingview';
-  return `<section class="provider-chart" data-chart-key="${chartKey(a,state)}" aria-label="${a.id} price chart"><div class="provider-toolbar"><div class="provider-tabs">${hasTradingView(a)?`<button data-action="chart-provider" data-id="tradingview" class="${tv?'selected':''}" aria-pressed="${tv}">TradingView</button>`:''}<button data-action="chart-provider" data-id="coingecko" class="${!tv?'selected':''}" aria-pressed="${!tv}">CoinGecko</button></div><span>${a.id} / ${tv?'USDT':'USD'}</span></div>${tv?`<div class="native-chart-tools"><div class="chart-intervals" aria-label="Candle interval">${[['15','15m'],['60','1h'],['240','4h'],['D','1D']].map(([id,label])=>`<button data-action="chart-interval" data-id="${id}" class="${state.chartInterval===id?'selected':''}" aria-pressed="${state.chartInterval===id}">${label}</button>`).join('')}</div><span class="grow"></span><button data-action="chart-fit" aria-label="Reset chart zoom">Reset</button></div><div class="chart-quote"><strong id="chart-price">—</strong><span id="chart-change"></span><small>Bybit · Spot reference</small></div><div class="chart-ohlc" id="chart-ohlc" aria-live="off"></div>`:''}<div id="market-chart" class="chart-embed ${tv?'tradingview-native':'coingecko'}" role="group" aria-label="${a.id} ${tv?'candlestick':'price'} chart"></div><div class="chart-foot">${tv?'<a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts™</a><span id="chart-status" role="status">Loading</span>':`<span>Token price · CoinGecko</span><a href="${coinPage(a.id)}" target="_blank" rel="noopener noreferrer">Open chart ↗</a>`}</div></section>`;
+  return `<section class="provider-chart" data-chart-key="${chartKey(a,state)}" aria-label="${a.id} price chart"><div class="provider-toolbar"><div class="provider-tabs">${hasTradingView(a)?`<button data-action="chart-provider" data-id="tradingview" class="${tv?'selected':''}" aria-pressed="${tv}">TradingView</button>`:''}<button data-action="chart-provider" data-id="coingecko" class="${!tv?'selected':''}" aria-pressed="${!tv}">CoinGecko</button></div><span>${a.id} / ${tv?'USDT':'USD'}</span></div>${tv?`<div class="native-chart-tools"><div class="chart-intervals" aria-label="Price interval">${[['15','15m'],['60','1h'],['240','4h'],['D','1D']].map(([id,label])=>`<button data-action="chart-interval" data-id="${id}" class="${state.chartInterval===id?'selected':''}" aria-pressed="${state.chartInterval===id}">${label}</button>`).join('')}</div><span class="grow"></span><button data-action="chart-fit" aria-label="Reset chart zoom">Reset</button></div><div class="chart-quote"><strong id="chart-price">—</strong><span id="chart-change"></span><small>Bybit · Spot reference</small></div><div class="chart-ohlc" id="chart-ohlc" aria-live="off"></div>`:''}<div id="market-chart" class="chart-embed ${tv?'tradingview-native':'coingecko'}" role="group" aria-label="${a.id} price line chart"></div><div class="chart-foot">${tv?'<a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts™</a><span id="chart-status" role="status">Loading</span>':`<span>Token price · CoinGecko</span><a href="${coinPage(a.id)}" target="_blank" rel="noopener noreferrer">Open chart ↗</a>`}</div></section>`;
 }
 // TradingView Lightweight Charts™ Copyright (c) 2025 TradingView, Inc.
 // https://www.tradingview.com/ — official library, not a custom chart renderer.
@@ -49,7 +50,7 @@ export function disposeChart() {
   activeChart.api?.remove();
   activeChart=null;
 }
-export function fitChart(){activeChart?.api?.timeScale().fitContent();}
+export function fitChart(){if(activeChart?.api&&activeChart.points)fitPriceLine(activeChart.api,activeChart.points);}
 let geckoScript;
 function loadGecko() {
   if (!geckoScript) geckoScript = new Promise((resolve,reject) => {
@@ -86,17 +87,28 @@ export async function mountChart(a,state) {
     host.replaceChildren(widget);
   }catch{failed(host);}
 }
-async function mountTradingView(host,a,interval,dark){
+const historyCache=new Map();
+export function mountPoolPriceChart(a,state){
+  const parent=document.querySelector('#pool-chart');if(!parent)return;
+  parent.innerHTML='<section class="provider-chart"><div class="chart-quote"><strong id="chart-price">—</strong><span id="chart-change"></span><small>Monad pool reference</small></div><div class="chart-ohlc" id="chart-ohlc" aria-live="off"></div><div id="market-chart" class="chart-embed tradingview-native" aria-label="Pool price line chart"></div><div class="chart-foot"><a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts™</a><span id="chart-status" role="status">Loading</span></div></section>';
+  disposeChart();
+  return mountTradingView(parent.querySelector('#market-chart'),a,'D',state.theme==='dark',`/api/market-chart?asset=${encodeURIComponent(a.id)}&kind=spot&period=1D`);
+}
+async function mountTradingView(host,a,interval,dark,requestURL=`/api/chart?asset=${encodeURIComponent(a.id)}&interval=${interval}`){
   const session={controller:new AbortController(),api:null,timer:null};
   activeChart=session;
   const section=host.closest('.provider-chart');
   const status=section.querySelector('#chart-status');
-  const getData=async()=>{
-    const response=await fetch(`/api/chart?asset=${encodeURIComponent(a.id)}&interval=${interval}`,{signal:session.controller.signal});
+  const historyKey=requestURL+'|'+(a.pair||'');
+  const getData=async(force=false)=>{
+    const cached=historyCache.get(historyKey);if(!force&&cached&&!cached.stale&&Date.now()/1000-cached.fetchedAt<120)return cached;
+    const response=await fetch(requestURL,{signal:session.controller.signal});
     if(!response.ok)throw new Error('Chart data unavailable');
     const data=await response.json();
-    if(data.asset!==a.id||data.interval!==interval||!data.candles?.length)throw new Error('Invalid chart data');
-    return data;
+    if(data.asset!==a.id||data.interval&&data.interval!==interval)throw new Error('Invalid chart identity');
+    if(data.pool&&a.pair&&data.pool.toLowerCase()!==a.pair.toLowerCase())throw new Error('Chart pool changed');
+    const points=data.points||closingPrices(data.candles||[]);if(!points.length)throw new Error('No chart observations');
+    const normalized={...data,points};historyCache.delete(historyKey);historyCache.set(historyKey,normalized);while(historyCache.size>16)historyCache.delete(historyCache.keys().next().value);return normalized;
   };
   try{
     const [lib,data]=await Promise.all([loadTradingView(),getData()]);
@@ -105,37 +117,36 @@ async function mountTradingView(host,a,interval,dark){
     const api=session.api=lib.createChart(host,{
       autoSize:true,
       layout:{background:{type:lib.ColorType.Solid,color:dark?'#111214':'#ffffff'},textColor:dark?'#969aa5':'#687080',fontFamily:'Inter, sans-serif',fontSize:11,attributionLogo:true},
-      grid:{vertLines:{color:dark?'#1b1e24':'#f1f3f6'},horzLines:{color:dark?'#1f2228':'#edf0f4'}},
-      rightPriceScale:{borderVisible:false,scaleMargins:{top:.08,bottom:.23}},
+      grid:{vertLines:{visible:false},horzLines:{color:dark?'#1f2228':'#edf0f4'}},
+      rightPriceScale:{borderVisible:false,scaleMargins:{top:.12,bottom:.12}},
       timeScale:{borderVisible:false,timeVisible:interval!=='D',secondsVisible:false,rightOffset:4},
       crosshair:{mode:lib.CrosshairMode.Normal},
       handleScroll:{vertTouchDrag:false},localization:{locale:'en-US'}
     });
-    const last=data.candles.at(-1),precision=last.close<.0001?9:last.close<1?5:2;
-    const price=api.addSeries(lib.CandlestickSeries,{upColor:'#55c7a0',downColor:'#e6828e',borderVisible:false,wickUpColor:'#55c7a0',wickDownColor:'#e6828e',priceFormat:{type:'price',precision,minMove:10**-precision}});
-    const volume=api.addSeries(lib.HistogramSeries,{priceFormat:{type:'volume'},priceScaleId:'volume',lastValueVisible:false,priceLineVisible:false});
-    api.priceScale('volume').applyOptions({scaleMargins:{top:.83,bottom:0},visible:false});
-    let previousTime=0,latestCandle=last;
+    const last=data.points.at(-1),precision=last.value<.0001?9:last.value<1?5:2;
+    const price=api.addSeries(lib.LineSeries,priceLineOptions(precision));
+    let previousTime=0,latestPoint=last;
     const ohlc=section.querySelector('#chart-ohlc');
-    const showCandle=c=>{ohlc.textContent=`O ${c.open.toFixed(precision)}   H ${c.high.toFixed(precision)}   L ${c.low.toFixed(precision)}   C ${c.close.toFixed(precision)}`;};
+    const showPoint=p=>{ohlc.textContent=money(p.value,precision)+' · '+new Date(Number(p.time)*1000).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});};
     const paint=(next,initial=false)=>{
-      const candles=next.candles;
-      const volumePoint=c=>({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(85,199,160,.24)':'rgba(230,130,142,.24)'});
-      if(initial){price.setData(candles);volume.setData(candles.map(volumePoint));api.timeScale().fitContent();}
-      else for(const c of candles.filter(c=>c.time>=previousTime)){price.update(c);volume.update(volumePoint(c));}
-      latestCandle=candles.at(-1);previousTime=latestCandle.time;
-      section.querySelector('#chart-price').textContent=money(latestCandle.close,precision);
-      const move=(latestCandle.close/latestCandle.open-1)*100;
-      const change=section.querySelector('#chart-change');change.textContent=changeText(move);change.className=changeClass(move);change.title='Current candle change';
-      showCandle(latestCandle);
+      const points=next.points;
+      price.applyOptions({pointMarkersVisible:points.length===1,pointMarkersRadius:3});
+      session.points=points;
+      if(initial){price.setData(points);fitPriceLine(api,points);}
+      else for(const p of points.filter(p=>p.time>=previousTime))price.update(p);
+      latestPoint=points.at(-1);previousTime=latestPoint.time;
+      section.querySelector('#chart-price').textContent=money(latestPoint.value,precision);
+      const move=points[0].value>0?(latestPoint.value/points[0].value-1)*100:0;
+      const change=section.querySelector('#chart-change');change.textContent=changeText(move);change.className=changeClass(move);change.title='Chart range change';
+      showPoint(latestPoint);
       status.textContent=`Updated ${new Date(next.fetchedAt*1000).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
-      host.dataset.candles=String(candles.length);
+      host.dataset.points=String(points.length);host.dataset.series='line';
     };
     paint(data,true);
-    api.subscribeCrosshairMove(p=>showCandle(p.seriesData.get(price)||latestCandle));
+    api.subscribeCrosshairMove(p=>{const point=p.seriesData.get(price);showPoint(point?{time:p.time,value:point.value}:latestPoint);});
     const refresh=async()=>{
       if(!host.isConnected||activeChart!==session)return;
-      if(!document.hidden){try{paint(await getData());}catch(error){if(error.name!=='AbortError')status.textContent='Update paused · Retry shortly';}}
+      if(!document.hidden){try{paint(await getData(true));}catch(error){if(error.name!=='AbortError')status.textContent='Update paused · Retry shortly';}}
       if(activeChart===session)session.timer=setTimeout(refresh,30000);
     };
     session.timer=setTimeout(refresh,30000);

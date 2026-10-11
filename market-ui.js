@@ -1,4 +1,5 @@
 import {mountHolders} from './wallet-ui.js';
+import {priceLineOptions,fitPriceLine} from './price-line.js';
 let renderer;
 const library=()=>renderer ||= import(location.origin+'/assets/lightweight-charts-5.2.1.mjs').catch(e=>{renderer=null;throw e;});
 
@@ -36,8 +37,8 @@ export function marketUI(c){
         const [data,L]=await Promise.all([readChart(new URLSearchParams({asset:pool?String(asset.chartMarket):id,kind:pool?'perps':kind,period}),state.controller.signal),library()]);
         if(sequence!==state.sequence||S.modal!==instance||!host.isConnected)return;
         state.resize?.disconnect();state.theme?.disconnect();state.chart?.remove();host.replaceChildren();
-        const chart=state.chart=L.createChart(host,{width:host.clientWidth,height:host.clientHeight,layout:{...theme(),fontFamily:'-apple-system,BlinkMacSystemFont,Inter,sans-serif',attributionLogo:true},grid:{vertLines:{visible:false},horzLines:{visible:false}},rightPriceScale:{visible:false},timeScale:{borderVisible:false,timeVisible:period==='1D',secondsVisible:false},crosshair:{mode:L.CrosshairMode.Normal,vertLine:{color:'#aaa',labelVisible:false},horzLine:{visible:false}},handleScroll:{mouseWheel:false,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},handleScale:{mouseWheel:false,pinch:true,axisPressedMouseMove:false}});
-        const line=chart.addSeries(L.AreaSeries,{lineColor:'#9178ff',topColor:'rgba(145,120,255,.18)',bottomColor:'rgba(145,120,255,0)',lineWidth:2,priceLineVisible:false,lastValueVisible:false});line.setData(data.points);chart.timeScale().fitContent();
+        const chart=state.chart=L.createChart(host,{width:host.clientWidth,height:host.clientHeight,layout:{...theme(),fontFamily:'-apple-system,BlinkMacSystemFont,Inter,sans-serif',attributionLogo:true},grid:{vertLines:{visible:false},horzLines:{visible:false}},rightPriceScale:{visible:false},timeScale:{borderVisible:false,timeVisible:period==='1D',secondsVisible:false},localization:{locale:'en-US'},crosshair:{mode:L.CrosshairMode.Normal,vertLine:{color:'#aaa',labelVisible:false},horzLine:{visible:false}},handleScroll:{mouseWheel:false,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},handleScale:{mouseWheel:false,pinch:true,axisPressedMouseMove:false}});
+        const line=chart.addSeries(L.LineSeries,{...priceLineOptions(),pointMarkersVisible:data.points.length===1,pointMarkersRadius:3,lastValueVisible:false});line.setData(data.points);host.dataset.series='line';fitPriceLine(chart,data.points);
         const label=()=>`${data.stale?'Stale · ':''}${new Date(data.lastObservation*1000).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`;
         caption.innerHTML=`<span>${esc(data.reference)}</span><span data-chart-observation>${esc(label())}</span><a href="${esc(data.sourceURL)}" target="_blank" rel="noopener noreferrer">${esc(data.source)}</a>`;
         chart.subscribeCrosshairMove(p=>{const v=p.seriesData.get(line);if(v&&p.time)caption.querySelector('[data-chart-observation]').textContent=usd(v.value)+' · '+new Date(Number(p.time)*1000).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});else caption.querySelector('[data-chart-observation]').textContent=label();});

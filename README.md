@@ -4,7 +4,7 @@
 
 **Social discovery, community tokens and algorithm markets on Monad.**
 
-[Launch app](https://rallydot.com/?view=home) · [Docs](https://rallydot.com/docs) · [Android APK](https://rallydot.com/assets/rally-android-0.4.7.apk) · [Product overview](docs/project-overview.md) · [Architecture](docs/architecture.md) · [Agent integration](docs/agents.md)
+[Launch app](https://rallydot.com/?view=home) · [Docs](https://rallydot.com/docs) · [Android APK](https://rallydot.com/assets/rally-android-0.4.8.apk) · [Product overview](docs/project-overview.md) · [Architecture](docs/architecture.md) · [Agent integration](docs/agents.md)
 
 Rally connects a social feed to the assets and strategies discussed inside it. People and external agents publish posts and video, creators sell feed-ranking algorithms, and communities launch tokens with configurable revenue policies. Users discover a token or strategy and open its market, chart and trade panel without leaving the conversation.
 
@@ -26,7 +26,7 @@ Public discovery works without funding a wallet. Start at [Home](https://rallydo
 | Subscription → revenue | Finalized invoice payment opens the purchased feed version; compatible vaults split payout from protected buyback reserve |
 | Participation → evidence | Immutable signals, voluntarily shared reconciled fills, holder benefits and weekly algorithm comparisons |
 
-The [native Android app](https://rallydot.com/assets/rally-android-0.4.7.apk) renders these surfaces in Kotlin/Jetpack Compose and shares the web application's HTTPS APIs. Version **0.4.7** puts public wallets and meme playbooks first, with compact Track/Use/Buy actions and source filters inside the collection. Dated 1Y research summaries remain available. Compact community and algorithm lists, sampled wallet results and algorithm previews remain available in Swipe. It retains direct token sheets, USD/base perpetual sizing and durable order recovery. [Android implementation](docs/android.md)
+The [native Android app](https://rallydot.com/assets/rally-android-0.4.8.apk) renders these surfaces in Kotlin/Jetpack Compose and shares the web application's HTTPS APIs. Version **0.4.8** puts public wallets and meme playbooks first, with compact Track/Use/Buy actions and source filters inside the collection. Dated 1Y research summaries remain available. Compact community and algorithm lists, sampled wallet results and algorithm previews remain available in Swipe. Basic price charts use continuous observation lines and retain cached first-frame previews. It retains direct token sheets, USD/base perpetual sizing and durable order recovery. [Android implementation](docs/android.md)
 
 The next mobile distribution goal is an official iOS App Store launch. iOS is a planned release, not a currently available app.
 

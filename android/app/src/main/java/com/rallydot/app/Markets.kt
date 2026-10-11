@@ -170,7 +170,7 @@ import kotlin.math.abs
     val scope=rememberCoroutineScope()
     val focus=androidx.compose.ui.platform.LocalFocusManager.current
     var period by rememberSaveable(asset.key) { mutableStateOf("1D") }
-    var chart by remember(asset.key) { mutableStateOf(vm.cachedChart(asset,period)) }
+    var chart by remember(asset.key) { mutableStateOf(vm.cachedChart(asset,period)?.takeIf { chartPoints(it).isNotEmpty() } ?: referenceChart(asset)) }
     var chartError by remember(asset.key) { mutableStateOf<String?>(null) }
     var chartLoading by remember(asset.key) { mutableStateOf(true) }
     var chartPeriod by remember(asset.key) { mutableStateOf(period) }
@@ -194,9 +194,10 @@ import kotlin.math.abs
     LaunchedEffect(asset.key,period) {
         chartError=null;chartLoading=true
         try {
-            chart=vm.chart(asset,period)
+            val history=vm.chart(asset,period)
+            chart=history.takeIf { chartPoints(it).isNotEmpty() } ?: referenceChart(asset) ?: history
             chartPeriod=period
-            if(chartPoints(chart!!).size<2)chartError="No chart history yet"
+            if(chartPoints(chart!!).isEmpty())chartError="No chart history yet"
         } catch(e:CancellationException) { throw e } catch(e:Exception) { chartError=if(e is ApiFailure)e.message else "Chart unavailable" } finally { chartLoading=false }
     }
     LaunchedEffect(asset.key,side,amount,trade) {
@@ -235,20 +236,20 @@ import kotlin.math.abs
                 Column(Modifier.weight(1f,fill=false).highRefresh().verticalScroll(rememberScrollState()).padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(if(compactTrade)8.dp else 16.dp)) {
                     if(!keyboard && !compactTrade) { if(trade)Fact("Reference price",money(asset.price)) else MarketPrice(asset,scrubbing) }
                     if(!compactTrade && !trade)Box(Modifier.fillMaxWidth().animatedHeight(graphHeight).clipToBounds()) {
-                        if(points.size>1) {
+                        if(points.isNotEmpty()) {
                             PriceChart(points,{scrubbing.value=it})
                             if(chartLoading)LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
                         }
                         else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { if(chartError!=null)Text(chartError!!,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) else CircularProgressIndicator(Modifier.size(24.dp),strokeWidth=2.dp) }
                     }
-                    if(!trade && asset.kind=="spot")TokenHolders(vm,asset)
                     if(!trade)Segmented(if(asset.raw.optBoolean("nadfun"))listOf("1D","7D") else listOf("1D","7D","1M"),period,{period=it})
                     if(!keyboard && !trade) {
-                        chart?.let { Text(it.string("reference")+" · $chartPeriod"+if(chartLoading)" · Updating…" else if(it.optBoolean("stale") || chartError!=null)" · Last known" else "",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
-                        if(chartError!=null && points.size>1)Text(chartError!!,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        chart?.let { Text(it.string("reference")+if(it.optBoolean("quoteOnly"))if(chartLoading)" · Loading history" else " · No recent history" else " · $chartPeriod"+if(chartLoading)" · Updating…" else if(it.optBoolean("stale") || chartError!=null)" · Last known" else "",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+                        if(chartError!=null && points.isNotEmpty())Text(chartError!!,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         if(asset.cap!=null)Fact("Market cap", "$"+compact(asset.cap))
                         if(asset.raw.number("liquidity")!=null)Fact("Liquidity",money(asset.raw.number("liquidity")))
                     }
+                    if(!trade && asset.kind=="spot")TokenHolders(vm,asset)
                     if(asset.kind=="prediction") { Fact("Entry stake",asset.raw.string("stake")+" "+asset.raw.string("stakeAsset"));Fact("Status",asset.raw.string("state").replace('_',' ')) }
                     if(trade) {
                         val quantity=asset.kind=="perps" && asset.venue in listOf("Perpl","Drake")
@@ -315,10 +316,10 @@ import kotlin.math.abs
 }
 @Composable fun Fact(label: String,value: String) { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(label,Modifier.weight(1f),maxLines=2,overflow=TextOverflow.Ellipsis,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium);Text(value,style=MaterialTheme.typography.bodyMedium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(start=12.dp).weight(1f),textAlign=androidx.compose.ui.text.style.TextAlign.End) } }
 @Composable fun PriceChart(points: List<ChartPoint>,onScrub: (ChartPoint?)->Unit) {
-    val color=if(points.last().value>=points.first().value)Buy else Sell
+    val color=Color(0xFF9178FF)
     val pointer=remember(points) { mutableStateOf<Offset?>(null) }
     val scrub by rememberUpdatedState(onScrub)
-    Box(Modifier.fillMaxSize().semantics { contentDescription="Price chart, ${points.size} observations" }.pointerInput(points) {
+    Box(Modifier.fillMaxSize().semantics { contentDescription="Price line chart, ${points.size} observations" }.pointerInput(points) {
         detectDragGestures(onDragEnd={pointer.value=null;scrub(null)},onDragCancel={pointer.value=null;scrub(null)}) { change,_ ->
             change.consume();pointer.value=change.position
             scrub(nearestChartPoint(points,change.position.x/size.width))
@@ -327,13 +328,11 @@ import kotlin.math.abs
         val low=points.minOf { it.value };val high=points.maxOf { it.value }
         val range=(high-low).takeIf { it>0 } ?: (abs(high)*.01f).coerceAtLeast(.0000001f)
         val start=points.first().time;val duration=(points.last().time-start).coerceAtLeast(1)
-        val offsets=points.map { Offset((it.time-start).toFloat()/duration*size.width,size.height-12-(it.value-low)/range*(size.height-24).coerceAtLeast(1f)) }
+        val offsets=points.map { Offset(if(points.size==1)size.width/2 else (it.time-start).toFloat()/duration*size.width,if(high==low)size.height/2 else size.height-12-(it.value-low)/range*(size.height-24).coerceAtLeast(1f)) }
         val line=Path().apply { offsets.forEachIndexed { i,p->if(i==0)moveTo(p.x,p.y) else lineTo(p.x,p.y) } }
-        val fill=Path().apply { addPath(line);lineTo(size.width,size.height);lineTo(0f,size.height);close() }
-        val gradient=Brush.verticalGradient(listOf(color.copy(alpha=.14f),color.copy(alpha=0f)))
         onDrawBehind {
-            drawPath(fill,gradient)
             drawPath(line,color,style=androidx.compose.ui.graphics.drawscope.Stroke(width=2.dp.toPx(),cap=StrokeCap.Round,join=StrokeJoin.Round))
+            drawCircle(color,2.5.dp.toPx(),offsets.last())
             pointer.value?.let { p->drawLine(color.copy(alpha=.3f),Offset(p.x,0f),Offset(p.x,size.height),1.dp.toPx()) }
         }
     })
