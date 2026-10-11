@@ -63,9 +63,12 @@ try{
   await page.locator('.r-checkout-presets button').first().click();assert.equal(await page.locator('#nad-order-form input[name=amount]').inputValue(),'1');
   await page.locator('[data-action=nad-close]').last().click();await page.locator('.r-nad-panel').waitFor({state:'detached'});
   const before=requests.filter(r=>r.kind==='chart').length;
-  const start=Date.now();await buy.click();await page.locator('#nad-chart canvas').first().waitFor();
+  await page.evaluate(()=>{
+   window.chartPaintMs=null;window.chartFirstFrameMs=null;window.chartSetupMs=null;document.addEventListener('click',e=>{if(!e.target.closest('.r-market-buy'))return;const at=performance.now();const watch=new MutationObserver(()=>{if(document.querySelector('#nad-chart canvas')){watch.disconnect();window.chartSetupMs=performance.now()-at;requestAnimationFrame(()=>{window.chartFirstFrameMs=performance.now()-at;requestAnimationFrame(()=>window.chartPaintMs=performance.now()-at);});}});watch.observe(document.querySelector('#trade-root'),{childList:true,subtree:true});},{once:true,capture:true});
+  });
+  const start=Date.now();await buy.click();await page.locator('#nad-chart canvas').first().waitFor();await page.waitForFunction(()=>window.chartPaintMs!=null);const {paintMs,firstFrameMs,setupMs}=await page.evaluate(()=>({paintMs:window.chartPaintMs,firstFrameMs:window.chartFirstFrameMs,setupMs:window.chartSetupMs}));
   const reopenMs=Date.now()-start;assert.equal(requests.filter(r=>r.kind==='chart').length,before,'Reopen must reuse the snapshot');
-  assert.deepEqual(errors,[]);results.push({width,theme,...geometry,reopenMs,chartRequests:before});await context.close();
+  assert(paintMs<100,'Warm chart must not wait for a 650ms identity read: '+paintMs);assert.deepEqual(errors,[]);results.push({width,theme,...geometry,reopenMs,setupMs,firstFrameMs,paintMs,chartRequests:before});await context.close();
  }
  // A stale snapshot stays on screen while polling, without recreating the chart.
  const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();let updates=0;
@@ -79,6 +82,11 @@ try{
   return body?r.fulfill({contentType:'application/json',body:JSON.stringify(body)}):r.continue();
  });
  await page.goto(origin+'/?view=home&section=markets&tab=memes');await page.locator('.r-market-buy').click();await page.locator('#nad-chart canvas').first().waitFor();
+ await sleep(100);assert.equal(updates,1,'A stale venue response must not trigger another immediate background read');
+ await page.locator('[data-action=nad-close]').last().click();await page.locator('.r-nad-panel').waitFor({state:'detached'});
+ await page.locator('.r-market-buy').click();await page.locator('#nad-chart canvas').first().waitFor();
+ await page.waitForFunction(()=>!document.querySelector('#nad-chart')?.dataset.preview);
+ assert.equal(updates,1,'Rapid reopening must share the stale response and its pending refresh');
  await page.evaluate(()=>window.firstChartCanvas=document.querySelector('#nad-chart canvas'));
  await page.waitForFunction(()=>document.querySelector('#nad-chart-status')?.textContent==='nad.fun data');
  assert.equal(updates,2);assert(await page.evaluate(()=>window.firstChartCanvas===document.querySelector('#nad-chart canvas')));

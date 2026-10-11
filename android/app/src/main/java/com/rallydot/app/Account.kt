@@ -63,11 +63,7 @@ import org.json.JSONObject
     Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=20.dp,vertical=18.dp).heightIn(min=24.dp),verticalAlignment=Alignment.CenterVertically) { Icon(icon,null,tint=MaterialTheme.colorScheme.onSurfaceVariant);Text(label,Modifier.weight(1f).padding(horizontal=14.dp));Icon(Icons.Outlined.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant) }
 }
 @Composable fun AlgorithmsScreen(vm: RallyViewModel,onAlgorithm: (JSONObject)->Unit) {
-    var section by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("Marketplace") }
-    Column(Modifier.fillMaxSize()) {
-        Segmented(listOf("Marketplace","Library · 100"),section,{section=it},Modifier.padding(horizontal=16.dp,vertical=8.dp))
-        Box(Modifier.weight(1f)) { if(section=="Marketplace")AlgorithmList(vm,onAlgorithm) else AlgorithmReferenceLibrary() }
-    }
+    UnifiedAlgorithms(vm,onAlgorithm)
 }
 @Composable fun AgentsScreen(state: AppState) {
     val brands=listOf(Triple("Codex","OpenAI","agent-openai.svg"),Triple("Claude","Anthropic","agent-claude.png"),Triple("Hermes","Nous Research","agent-hermes.png"),Triple("Muse","Meta","agent-meta.svg"),Triple("Grok Bot","xAI","agent-grok.svg"))

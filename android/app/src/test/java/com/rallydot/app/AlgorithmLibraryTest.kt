@@ -16,4 +16,6 @@ class AlgorithmLibraryTest {
     @Test fun rejectExternalArtwork(){val data=catalog();data.getJSONArray("items").getJSONObject(0).put("icon","https://tracker.example/icon.png");assertThrows(IllegalArgumentException::class.java){validateAlgorithmReferences(data)}}
     @Test fun rejectUnsafeSource(){val data=catalog();data.getJSONArray("items").getJSONObject(0).put("sourceURL","javascript:alert(1)");assertThrows(IllegalArgumentException::class.java){validateAlgorithmReferences(data)}}
     @Test fun rejectDuplicateReferences(){val data=catalog();data.getJSONArray("items").getJSONObject(1).put("id","rally-ref-001");assertThrows(IllegalArgumentException::class.java){validateAlgorithmReferences(data)}}
+    @Test fun rejectExternalDarkLogo(){val data=catalog();data.getJSONArray("items").getJSONObject(0).put("brandIconDark","https://tracker.example/icon.png");assertThrows(IllegalArgumentException::class.java){validateAlgorithmReferences(data)}}
+    @Test fun rejectPartialAnnualRecord(){val data=catalog();data.getJSONArray("items").getJSONObject(0).put("performance1Y",JSONObject().put("basis","published_factor").put("months",11).put("returnPct",50));assertThrows(IllegalArgumentException::class.java){validateAlgorithmReferences(data)}}
 }

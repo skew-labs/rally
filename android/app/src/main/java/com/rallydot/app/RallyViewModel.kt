@@ -26,6 +26,7 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
     private val connectionWake=Channel<Unit>(Channel.CONFLATED)
     private var walletJob: Job?=null
     private val chartReads=linkedMapOf<String,Pair<Long,Deferred<JSONObject>>>()
+    private val chartSnapshots=linkedMapOf<String,Pair<Long,JSONObject>>()
     private val assetReads=linkedMapOf<String,Pair<Long,Deferred<Asset?>>>()
     val wallet=NativeWallet(application,api) { refreshBoot() }
     private val pendingOrders=DurableOrders(application)
@@ -53,7 +54,7 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         chartReads[key]?.takeIf { System.currentTimeMillis()-it.first<20000 && !it.second.isCancelled }?.let { return it.second }
         chartReads.remove(key)?.second?.cancel()
         val pending=viewModelScope.async(start=CoroutineStart.LAZY) {
-            if(asset.raw.optBoolean("nadfun")) {
+            val result=if(asset.raw.optBoolean("nadfun")) {
                 val candles=api.get("/api/nadfun/chart?token="+Uri.encode(asset.id)+"&interval="+if(period=="1D")"15" else "60")
                 nadChart(candles,asset.id,if(period=="1D")1 else 7)
             } else {
@@ -61,14 +62,18 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
                 val id=if(asset.kind=="prediction")asset.raw.optJSONObject("assetInfo")?.string("chartMarket") ?: asset.id else asset.id
                 api.get("/api/market-chart?asset="+Uri.encode(id)+"&kind="+(if(asset.kind=="prediction")"perps" else asset.kind)+"&period=$period")
             }
+            chartSnapshots.remove(key);chartSnapshots[key]=System.currentTimeMillis() to result
+            while(chartSnapshots.size>8)chartSnapshots.remove(chartSnapshots.keys.first())
+            result
         }
         chartReads[key]=System.currentTimeMillis() to pending
         while(chartReads.size>6)chartReads.remove(chartReads.keys.first())?.second?.cancel()
         return pending
     }
+    fun cachedChart(asset: Asset,period: String): JSONObject?=chartSnapshots[asset.key+":"+period]?.takeIf { System.currentTimeMillis()-it.first<20_000 }?.second
     fun warmChart(asset: Asset) { chartRead(asset,"1D").start() }
     suspend fun chart(asset: Asset,period: String): JSONObject=withContext(Dispatchers.Main.immediate) { chartRead(asset,period).await() }
-    private fun clearCharts() { chartReads.values.forEach { it.second.cancel() };chartReads.clear();assetReads.values.forEach { it.second.cancel() };assetReads.clear() }
+    private fun clearCharts() { chartReads.values.forEach { it.second.cancel() };chartReads.clear();chartSnapshots.clear();assetReads.values.forEach { it.second.cancel() };assetReads.clear() }
     private val drafts=DraftCache()
     fun draftKey(community: String?)=DraftIdentity(me?.string("id") ?: "guest",community.orEmpty())
     fun draft(key: DraftIdentity)=drafts.get(key)

@@ -40,8 +40,10 @@ A compatible community revenue vault can divide algorithm-sale proceeds between 
 
 Phones show compact rows with token artwork, sampled wallet ROI when available, and **Get** or **Buy**. Open **Swipe → Algorithms** to browse one algorithm at a time. **Preview** opens its existing feed preview and price; closing it returns to the same swipe position. A swipe never purchases a subscription. The Android app uses the same catalog and access checks.
 
-## Strategy library
+## Strategy methods
 
-Open **Algorithms → Library** to explore 100 public research references, with institution logos in Rally’s card and list design. Search by method or author, filter by source, and tap a row to read the rule and its original source. **Save** keeps a shortlist on this device.
+**Algorithms** brings live feeds and 100 strategy methods into one searchable collection. Search a wallet, strategy or source, choose a source/category and tap a row for its rule and original research. **Save** keeps a shortlist on this device.
 
-Library entries are research, not subscribed feeds or trading bots, and show no live returns. Method and source attribution appear inside the detail view. Logos identify the cited research or documentation; they do not imply a partnership. Return to **Marketplace** to choose or purchase a live feed.
+Rows show a **1Y model** when a complete published factor year is available. Tap for the exact period, universe and calculation basis. These hypothetical excess-return research figures exclude fees and are separate from Rally trading returns. A dash means there is no complete published year; short wallet samples are never annualized.
+
+Live feeds keep their Get/Buy actions. Research methods can be read and saved without requesting a payment or order. Source attribution sits in the detail footer; logos identify the original material and do not imply a partnership.

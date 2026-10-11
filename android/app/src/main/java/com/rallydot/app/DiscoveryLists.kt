@@ -36,7 +36,7 @@ fun communityReference(c: JSONObject,now: Long=System.currentTimeMillis()/1000):
     if(t.optBoolean("stale") || now-t.optLong("verifiedAt")>120)return null
     return t.optJSONObject("stats")?.number("referenceMarketCapUSDC")
 }
-private fun algorithmOwner(f: JSONObject): String {
+fun algorithmOwner(f: JSONObject): String {
     val wallet=f.optJSONObject("research")?.string("wallet").orEmpty()
     return if(wallet.length>12)wallet.take(6)+"…"+wallet.takeLast(4) else "@"+(f.optJSONObject("creator")?.string("handle","rally") ?: "rally")
 }

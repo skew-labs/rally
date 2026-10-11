@@ -170,7 +170,7 @@ import kotlin.math.abs
     val scope=rememberCoroutineScope()
     val focus=androidx.compose.ui.platform.LocalFocusManager.current
     var period by rememberSaveable(asset.key) { mutableStateOf("1D") }
-    var chart by remember(asset.key) { mutableStateOf<JSONObject?>(null) }
+    var chart by remember(asset.key) { mutableStateOf(vm.cachedChart(asset,period)) }
     var chartError by remember(asset.key) { mutableStateOf<String?>(null) }
     var chartLoading by remember(asset.key) { mutableStateOf(true) }
     var chartPeriod by remember(asset.key) { mutableStateOf(period) }

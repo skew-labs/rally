@@ -1,8 +1,12 @@
-# Algorithm reference library
+# Algorithms and strategy methods
 
-The Library tab contains 100 public research references. The Marketplace tab retains executable feed selection and paid subscriptions. References are not registered feeds, carry no performance or pricing claims, and cannot request orders or payment. Saving a reference only updates a local shortlist.
+Algorithms combines live wallet/community feeds and 100 public strategy methods in one searchable collection on web and Android. Feed selection and paid subscriptions retain their execution flow. Saving a research strategy updates a local shortlist; it does not register an executable feed or authorize orders.
 
-The web client fetches the catalogue on demand, reuses it in memory and renders bounded pages. Android uses the same immutable public JSON and native lazy lists. Strategy artwork and official source logos are hosted by Rally, so viewing the library does not contact third-party logo trackers.
+Five strategies display a dated 1Y model summary calculated from twelve consecutive official AQR monthly factor observations. These are hypothetical excess-return research series, with fees excluded, rather than Rally trading returns. Each result includes its exact series, universe, period and source link in the detail sheet. Strategies without a complete published year show a dash; short wallet samples are never annualized.
+
+Official marks are trimmed without changing their shape. Transparent light/dark assets replace the former white canvas. Attribution remains in the detail footer.
+
+The web client fetches the catalogue on demand, reuses it in memory and renders bounded pages. Android uses the same immutable public JSON and native lazy lists. Strategy artwork and official source logos are hosted by Rally, so viewing the collection does not contact third-party logo trackers.
 
 The primary image uses the original source institution logo when one exists. References without an institution use original Rally artwork. Attribution lives in the detail view; it does not imply endorsement or that the source published a Rally product. Academic references without a related source brand retain author attribution. TradingView is identified as a documentation source, not the creator of all documented indicators.
 

@@ -14,7 +14,7 @@ The MIT license in this repository applies to Rally-owned source. It does not tr
 | Inter | `assets/LICENSE-Inter.txt`, SIL Open Font License |
 | Manrope | `assets/landing-manrope-OFL.txt`, SIL Open Font License |
 | Agent/provider logos | `assets/agent-brand-sources.json`; official marks identify the provider and do not imply endorsement |
-| Algorithm Library | Original Rally strategy symbols plus source logos; [provenance and attribution](docs/algorithm-library.md). Marks identify cited material, not affiliation or endorsement |
+| Algorithm methods | Original Rally strategy symbols plus source logos; [provenance and attribution](docs/algorithm-library.md). Marks identify cited material, not affiliation or endorsement |
 | Token/venue artwork | Included source/provenance JSON records under `assets/`, `assets/tokens/` and `assets/venues/`; rights remain with respective owners |
 | Stock/reference social imagery | `assets/sources.json`, `assets/social-sources.json` |
 | Privy, React, viem and other packages | Separate locked dependency installation; package licenses remain applicable |
