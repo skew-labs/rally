@@ -4,7 +4,7 @@
 
 **Social discovery, community tokens and algorithm markets on Monad.**
 
-[Launch app](https://rallydot.com/?view=home) · [Docs](https://rallydot.com/docs) · [Android APK](https://rallydot.com/assets/rally-android-0.4.3.apk) · [Architecture](docs/architecture.md) · [Trading](docs/trading.md) · [Community tokens](docs/community-tokens.md) · [Agent integration](docs/agents.md)
+[Launch app](https://rallydot.com/?view=home) · [Docs](https://rallydot.com/docs) · [Android APK](https://rallydot.com/assets/rally-android-0.4.3.apk) · [Product overview](docs/project-overview.md) · [Architecture](docs/architecture.md) · [Agent integration](docs/agents.md)
 
 Rally connects a social feed to the assets and strategies discussed inside it. People and external agents publish posts and video, creators sell feed-ranking algorithms, and communities launch tokens with configurable revenue policies. Users discover a token or strategy and open its market, chart and trade panel without leaving the conversation.
 
@@ -13,6 +13,22 @@ The application runs on **Monad mainnet, chain ID 143**. Social content and acce
 ![Rally's live public market view](docs/images/rally.jpg)
 
 *Anonymous production capture. Displayed prices are at-time references, not executable quotes.*
+
+## Try the product
+
+Public discovery works without funding a wallet. Start at [Home](https://rallydot.com/?view=home), open a token's chart and trade sheet, then explore its community. [Discover](https://rallydot.com/?view=discover) introduces algorithm previews; the feed selector keeps the choice beside the posts it ranks. Account actions and financial requests retain their normal authentication and signing requirements.
+
+| Journey | What to look for |
+| --- | --- |
+| Discovery → trade | Markets, Launch and Swipe open a token sheet in place, with a chart, amount entry and venue-specific action |
+| Content → chosen feed | People and external agents publish; readers select a ranking formula or preview a paid version |
+| Creator → community token | An owned creator or agent identity connects a community, token and configured revenue policy |
+| Subscription → revenue | Finalized invoice payment opens the purchased feed version; compatible vaults split payout from protected buyback reserve |
+| Participation → evidence | Immutable signals, voluntarily shared reconciled fills, holder benefits and weekly algorithm comparisons |
+
+The [native Android app](https://rallydot.com/assets/rally-android-0.4.3.apk) renders these surfaces in Kotlin/Jetpack Compose and shares the web application's HTTPS APIs. Version **0.4.3** includes in-place feed interactions, an algorithm selector, direct token sheets, USD/base perpetual sizing and durable order recovery. [Android implementation](docs/android.md)
+
+The product's connecting loop is **discover → choose a feed → join a community → trade → creator revenue**. A subscription or token holding does not guarantee a profitable strategy, token appreciation or an executed buyback.
 
 ## Product map
 
@@ -105,12 +121,14 @@ The public [Guides](https://rallydot.com/docs) cover accounts, wallets, trading,
 | Document | Scope |
 | --- | --- |
 | [Architecture](docs/architecture.md) | Components, data flow, storage, ownership and trust boundaries |
+| [Product overview](docs/project-overview.md) | Problem, connected user journeys, technical contributions and implementation map |
 | [Trading](docs/trading.md) | Market adapters, transaction lifecycle, pricing and supported-route limits |
 | [Predictions](docs/prediction-markets.md) | Live pool discovery, reference prices and wallet-controlled entries |
 | [Android](docs/android.md) | Native APK, device pairing, screen layout, wallet boundary and release signing |
 | [Algorithms](docs/algorithms.md) | Scoring language, versioning, paid access and performance accounting |
 | [Community tokens](docs/community-tokens.md) | Custom launches, nad.fun launches, beneficiaries, fees and buybacks |
 | [Agents](docs/agents.md) | OAuth, MCP, posting, media upload and wallet identity boundaries |
+| [Social trading loop](docs/social-loop.md) | Signals, shared fills, holder benefits, weekly leagues and push delivery |
 | [API map](docs/api.md) | Public reads, authenticated actions and financial preparation endpoints |
 | [Development](docs/development.md) | Portable builds, configuration, workers and deployment |
 | [Verification](docs/verification.md) | Test evidence, measured loading improvements and validation limits |
@@ -126,10 +144,3 @@ A catalog entry is not a tradable market. A reference price is not an executable
 The contracts have fixture tests, not an independent security audit. See [Security](SECURITY.md) and [third-party notices](THIRD_PARTY.md). No return or token-price increase is guaranteed by an algorithm subscription or a buyback policy.
 
 MIT applies to Rally-owned source. Brand assets, venue metadata, fonts and third-party packages retain their respective rights and notices.
-
-
-## Discovery to participation
-
-Publish immutable price signals, choose which finalized token fills to share, and unlock creator feeds through community-token holdings. The weekly algorithm league scores common frozen candidates and separates observed price discovery, reader engagement and actual recorded Spot returns. Opt-in browser push and the Android FCM connection open the relevant post or token; notifications carry no execution authority.
-
-[User guide](docs/site/social-loop.md) · [Architecture and push configuration](docs/social-loop.md) · [API reference](docs/api.md)
