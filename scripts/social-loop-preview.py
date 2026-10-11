@@ -32,6 +32,8 @@ with tempfile.TemporaryDirectory(prefix='rally-social-loop-') as directory:
     s.write('INSERT INTO members VALUES(?,?)',('creator','qa-community'))
     draft={'name':'QA Token','symbol':'TEST','imageURI':'/assets/community-rally.png','buybackBps':2000,'burnBps':10000}
     s.write('INSERT INTO creator_tokens(owner,wallet,draft,state,token,vault,pair,community,stats,verified) VALUES(?,?,?,?,?,?,?,?,?,?)',('creator',OTHER,s.dump(draft),'live',TOKEN,'0x'+'1'*40,'0x'+'2'*40,'qa-community','{}',s.now()))
+    import community_tokens
+    community_tokens.register_asset('creator')
     s.write('INSERT INTO community_onboarding VALUES(?,?,?)',('creator','configured',s.now()))
     s.write('INSERT INTO feeds(id,owner,name,weights,assets,created,price_raw,version,recipient,algorithm_version) VALUES(?,?,?,?,?,?,?,?,?,?)',('qa-feed','creator','QA algorithm','[100,0,0]','[]',s.now(),'1000000',1,OTHER,'qa-version'))
     s.write('INSERT INTO algorithms VALUES(?,?,?,?)',('qa-algo','creator','QA algorithm',s.now()))

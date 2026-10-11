@@ -10,7 +10,11 @@ The social feed is managed by Rally's application. A connected wallet does not p
 
 ## Join a community
 
-Open **Communities**, choose a community and join its discussion. A community can link a paired token; open the token card to inspect its market.
+Open **Communities** to browse token and discussion cards. **Active** sorts by visible posts in the last 24 hours, then the most recent post. **Members** sorts by joined accounts. Search by community name or token ticker, or filter to **Tokens** and **Joined**.
+
+Tap a card to open its Feed. **Join** adds the community to your memberships; **Open** returns to a community you have joined. Paired tokens show their cached pool market cap and let you open **Buy** directly. Inside a token community, **Buy** and **Sell** open the trading panel without leaving the conversation. Price references disappear when stale; they are not executable quotes.
+
+The **Algorithms** tab shows that creator's feeds with their actual access price. Tap a card to preview, **Get** to use a free feed, or **Buy** to open the existing subscription checkout.
 
 Community membership, token ownership and paid algorithm access are separate. Owning a token does not automatically unlock every feed or confer equity in its creator.
 

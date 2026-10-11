@@ -604,7 +604,7 @@ def bootstrap(who,include_markets=True):
     privy=privy_auth.status(user)
     token_status=community_tokens.status(user)
     return {'communityToken':token_status,'auth':{'privy':privy},'loginMethods':['wallet','password']+(['privy'] if privy['enabled'] else []),'passwordAccount':bool(user and one('SELECT pw FROM accounts WHERE id=?',(user,))['pw']),'unread':social.notices(who)['unread'] if who else 0,'me':profile(user,user) if user else None,'wallet':one('SELECT wallet FROM accounts WHERE id=?',(user,))['wallet'] if user else None,
-        'communities':[{**c,'tokenOwner':(one("SELECT owner FROM creator_tokens WHERE community=? AND state='live'",(c['id'],)) or {}).get('owner'),'members':one('SELECT count(*) n FROM members WHERE community=?',(c['id'],))['n'],'joined':bool(user and one('SELECT 1 FROM members WHERE user_id=? AND community=?',(user,c['id'])))} for c in rows('SELECT * FROM communities')],
+        'communities':__import__('community_discovery').catalog(user),
         'feeds':[settlement.view(f,user) for f in rows('SELECT * FROM feeds ORDER BY created') if social.visible(user,f['owner'])],
         'people':[profile(p['id'],user) for p in rows("SELECT id FROM accounts WHERE kind IN ('person','agent','service') ORDER BY created DESC LIMIT 50") if social.visible(user,p['id'])][:30],
         'watches':[x['asset'] for x in rows('SELECT asset FROM watches WHERE user_id=?',(user or '',))],

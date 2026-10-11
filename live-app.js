@@ -12,6 +12,7 @@ import { marketUI } from './market-ui.js';
 import { tokenArtwork, venueArtwork } from './market-logos.js';
 import { authUI, walletAccounts, ensureMonad, checkedWalletLoginProof } from './auth-ui.js';
 import { communityTokenUI } from './community-token.js';
+import { communityMarketUI } from './community-market.js';
 import { creatorUI } from './creator-ui.js';
 import { launchpadUI } from './launchpad.js';
 import { experienceUI } from './experience.js';
@@ -66,6 +67,7 @@ const params = new URLSearchParams(location.search);
 const marketTabs=['memes','spot','perps','prediction','stocks','rwa','venues'];
 const S = {view:params.get('view')||'home',mode:'for-you',marketTab:params.get('tab')||'memes',nadMode:params.get('phase')==='dex'?'dex':params.get('sort')==='latest'?'new':'cap',filter:'',boot:null,tokens:[],posts:[],cursor:null,chart:{theme:document.documentElement.dataset.theme||'light',chartProvider:'tradingview',chartInterval:'60'},trade:null,modal:null,provider:null,busy:false};
 const reactionRequests=new Map();
+const communityRequests=new Set();
 const Mobile=mobileUI({state:S,closeModal,closeTrade});
 S.homeSection=params.get('section')==='feed'?'feed':'markets';
 S.algorithmTools=params.get('tools')==='1';
@@ -103,7 +105,7 @@ document.addEventListener('play',e=>{const v=e.target;if(v.tagName!=='VIDEO')ret
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseMedia();});
 const socialScope=()=>JSON.stringify([S.boot?.me?.id||'guest',S.boot?.activeFeed,S.boot?.watches||[]]);
 const cacheableSocial=()=>S.view!=='saved'&&!Number(S.boot?.feeds.find(f=>f.id===S.boot.activeFeed)?.priceRaw);
-const uiState=()=>Object.fromEntries(['mode','marketTab','nadMode','filter','watchOnly','communityTab','profileTab','communityFilter','feedFilter','feedQuery','homeSection','discoverQuery','discoverScope','leaderKind'].map(k=>[k,S[k]]));
+const uiState=()=>Object.fromEntries(['mode','marketTab','nadMode','filter','watchOnly','communityTab','profileTab','communityFilter','communityQuery','communitySort','feedFilter','feedQuery','homeSection','discoverQuery','discoverScope','leaderKind'].map(k=>[k,S[k]]));
 function bounded(map,key,value,limit){map.delete(key);map.set(key,value);while(map.size>limit)map.delete(map.keys().next().value);}
 function invalidateSocial(){socialReads.clear();routeSnapshots.clear();}
 async function readSocial(path,signal){
@@ -183,17 +185,14 @@ function rail(){
 }
 function discoveryLinks(){return `<section class="r-market-strip" aria-label="New Monad tokens"><div class="r-live-tokens" id="home-market-tokens"><button data-nav="launchpad">Browse launches ${icon('arrow')}</button></div></section>`;}
 async function loadLaunchPreview(){try{await N.catalog();rail();}catch{}}
-function communityMark(c){const t=S.boot.communityToken?.token?.community===c.id?S.boot.communityToken.token:S.boot.people.find(p=>p.communityToken?.community===c.id)?.communityToken;if(t?.logoURI)return `<img class="r-community-mark" src="${esc(safeURL(t.logoURI))}" alt="">`;return c.id==='monad'?`<img class="r-community-mark" src="${esc(safeURL('/assets/MON.png'))}" alt="">`:`<span class="r-community-mark" aria-hidden="true">${esc(initials(c))}</span>`;}
+function communityMark(c){const t=c.token||(S.boot.communityToken?.token?.community===c.id?S.boot.communityToken.token:S.boot.people.find(p=>p.communityToken?.community===c.id)?.communityToken);if(t?.logoURI)return `<img class="r-community-mark" src="${esc(safeURL(t.logoURI))}" alt="">`;return c.id==='monad'?`<img class="r-community-mark" src="${esc(safeURL('/assets/MON.png'))}" alt="">`:`<span class="r-community-mark" aria-hidden="true">${esc(initials(c))}</span>`;}
 function communityCover(c){return `<div class="r-community-cover ${c.id==='monad'?'monad':'studio'}">${c.id==='monad'?`<img src="${esc(safeURL('/assets/MON.png'))}" alt="">`:`<span>${esc(c.name)}</span>`}</div>`;}
 function communityHeader(c){
- const paired=G.communityToken(c.id),tabs=paired?[['posts','Discussion'],['media','Media'],['agents','Agents'],['algorithms','Algorithms'],['revenue','Revenue'],['about','About']]:[['posts','Discussion'],['media','Media'],['markets','Markets'],['about','About']];
- return `<div class="r-page-head"><button class="r-back-link" data-nav="communities">${icon('chevron')}Communities</button></div>${paired?G.communityHeader(c):`<section class="r-community-header">${communityCover(c)}<div class="r-community-identity"><div><h1>${esc(c.name)}</h1><p>${esc(c.description)}</p><small>${Number(c.members).toLocaleString('en-US')} members</small></div><button class="r-btn ${c.joined?'subtle':'primary'}" data-action="join" data-id="${esc(c.id)}">${c.joined?'Joined':'Join'}</button></div></section>`}<div class="r-tabs r-community-tabs ${paired?'cr-community-tabs':''}">${tabs.map(([id,label])=>`<button data-action="community-section" data-id="${id}" class="${(S.communityTab||'posts')===id?'active':''}" aria-pressed="${(S.communityTab||'posts')===id}">${label}</button>`).join('')}</div>`;
+ const paired=G.communityToken(c.id),tabs=paired?[['posts','Feed'],['algorithms','Algorithms'],['media','Media'],['agents','Agents'],['revenue','Revenue'],['about','About']]:[['posts','Feed'],['media','Media'],['markets','Markets'],['about','About']];
+ return `<div class="r-page-head"><button class="r-back-link" data-nav="communities">${icon('chevron')}Communities</button></div>${CX.header(c)}<div class="r-tabs r-community-tabs ${paired?'cr-community-tabs':''}">${tabs.map(([id,label])=>`<button data-action="community-section" data-id="${id}" class="${(S.communityTab||'posts')===id?'active':''}" aria-pressed="${(S.communityTab||'posts')===id}">${label}</button>`).join('')}</div>`;
 }
 function profileHeader(p){return pageHeader('Profile')+`<section class="r-profile-banner"><div class="r-profile-identity"><div><h1>${esc(p.name)}</h1><p>@${esc(p.handle)}${p.kind==='agent'?'<span class="r-profile-kind">Agent</span>':''}</p></div>${avatar(p)}</div>${p.bio?`<p class="r-profile-bio">${esc(p.bio)}</p>`:''}${p.operator?`<small class="r-profile-operator">Operated by @${esc(p.operator.handle)}</small>`:''}<div class="r-profile-footer"><span>${Number(p.followers).toLocaleString('en-US')} followers</span>${p.id===S.boot.me?.id?'<button class="r-btn" data-action="edit-profile">Edit profile</button>':`<button class="r-btn ${p.following?'subtle':'primary'}" data-action="follow" data-id="${esc(p.id)}">${p.following?'Following':'Follow'}</button>`}</div>${G.publicToken(p)}${L.profile(p)}</section><div class="r-tabs r-profile-tabs">${[['posts','Posts'],['media','Media'],['feeds','Feeds']].map(([id,label])=>`<button data-action="profile-section" data-id="${id}" class="${(S.profileTab||'posts')===id?'active':''}" aria-pressed="${(S.profileTab||'posts')===id}">${label}</button>`).join('')}</div>`;}
-function renderCommunities(){
-  const list=S.boot.communities.filter(c=>S.communityFilter!=='joined'||c.joined);
-  $('#page').innerHTML=pageHeader('Communities')+`<div class="r-tabs"><button data-action="community-filter" data-id="all" class="${S.communityFilter!=='joined'?'active':''}">Discover</button><button data-action="community-filter" data-id="joined" class="${S.communityFilter==='joined'?'active':''}">Joined</button></div><div class="r-community-directory">${list.map(c=>`<article class="r-community-card"><button class="r-community-preview" data-action="community" data-id="${esc(c.id)}">${communityCover(c)}<span class="r-community-card-info"><b>${esc(c.name)}</b><span>${esc(c.description)}</span></span></button><div class="r-community-card-foot"><small>${Number(c.members).toLocaleString('en-US')} members</small><button class="r-btn ${c.joined?'subtle':''}" data-action="join" data-id="${esc(c.id)}">${c.joined?'Joined':'Join'}</button></div></article>`).join('')||empty('No joined communities','','<button class="r-btn" data-action="community-filter" data-id="all">Browse communities</button>')}</div>`;
-}
+function renderCommunities(){CX.directory();}
 function paintSocialTimeline(){
   const host=$('#timeline');if(!host)return;
   const composer=$('#page .r-composer-launch');if(composer)composer.hidden=S.view==='community'&&!!S.communityTab&&S.communityTab!=='posts';
@@ -310,7 +309,7 @@ async function hydrateMarkets(){
  marketHydration=api('/api/markets').then(m=>{S.tokens=[...new Map([...S.tokens,...m.tokens].map(t=>[t.id,t])).values()];S.marketData=m;refreshPriceSurfaces();return m;}).finally(()=>{marketHydration=null;});
  return marketHydration;
 }
-async function boot(compact=false){S.boot=await api('/api/bootstrap'+(compact?'?markets=0':''));if(S.boot.marketData){S.tokens=S.boot.marketData.tokens;S.marketData=S.boot.marketData;}try{const guest=JSON.parse(localStorage.getItem('rally:guest-watches')||'[]');if(!S.boot.me){S.boot.watches=Array.isArray(guest)?guest:[];const chosen=localStorage.getItem('rally:guest-feed');if(S.boot.feeds.some(f=>f.id===chosen&&f.access))S.boot.activeFeed=chosen;}}catch{}updateShell();rail();}
+async function boot(compact=false){S.boot=await api('/api/bootstrap'+(compact?'?markets=0':''));if(S.boot.marketData){S.tokens=S.boot.marketData.tokens;S.marketData=S.boot.marketData;}const communityAssets=S.boot.communities.flatMap(c=>c.token?[c.token.asset,c.token.quoteAsset].filter(Boolean):[]),merged=new Map(S.tokens.map(t=>[t.id,t]));for(const t of communityAssets)merged.set(t.id,{...merged.get(t.id),...t});S.tokens=[...merged.values()];try{const guest=JSON.parse(localStorage.getItem('rally:guest-watches')||'[]');if(!S.boot.me){S.boot.watches=Array.isArray(guest)?guest:[];const chosen=localStorage.getItem('rally:guest-feed');if(S.boot.feeds.some(f=>f.id===chosen&&f.access))S.boot.activeFeed=chosen;}}catch{}updateShell();rail();}
 async function navigate(view){
  if(!S.boot)await bootReady;
  await Mobile.dismissForNavigation();
@@ -470,6 +469,7 @@ async function handle(action,id,el){
   if(!S.boot)await bootReady;
   if(!S.marketData&&(action==='compose'||action==='compose-reply'||['trade','search-trade','market-detail'].includes(action)&&!token(id)||action==='market-tab'&&id==='rwa'||action==='watch-filter'))await hydrateMarkets();
   if(await SocialLoop.handle(action,id,el))return;
+  if(await CX.handle(action,id,el))return;
   if(await E.handle(action,id,el))return;
   if(await U.handle(action,id,el))return;
   if(await G.handle(action,id,el))return;
@@ -498,7 +498,13 @@ async function handle(action,id,el){
   else if(action==='community-filter'){S.communityFilter=id;renderCommunities();rememberUI();}
   else if(action==='community-section'||action==='profile-section'){if(action==='community-section')S.communityTab=id;else S.profileTab=id;document.querySelectorAll(action==='community-section'?'.r-community-tabs button':'.r-profile-tabs button').forEach(b=>{b.classList.toggle('active',b.dataset.id===id);b.setAttribute('aria-pressed',String(b.dataset.id===id));});paintSocialTimeline();rememberUI();}
   else if(action==='follow')needAccount(async()=>{const p=S.boot.people.find(p=>p.id===id)||await api('/api/profile?id='+encodeURIComponent(id));await api('/api/follow',{id,active:!p.following});await boot();render();});
-  else if(action==='join')needAccount(async()=>{await api('/api/join',{id,active:!S.boot.communities.find(c=>c.id===id)?.joined});await boot();render();});
+  else if(action==='join')needAccount(async()=>{
+   const community=S.boot.communities.find(c=>c.id===id);if(!community||communityRequests.has(id))return;
+   communityRequests.add(id);const view=S.view,openedCommunity=S.community,buttons=[...document.querySelectorAll('[data-action=join]')].filter(b=>b.dataset.id===id);
+   buttons.forEach(b=>{b.disabled=true;b.setAttribute('aria-busy','true');});
+   try{await api('/api/join',{id,active:!community.joined});await boot(true);if(S.view===view&&S.community===openedCommunity)await render();}
+   finally{communityRequests.delete(id);buttons.filter(b=>b.isConnected).forEach(b=>{b.disabled=false;b.removeAttribute('aria-busy');});}
+  });
   else if(action==='like'||action==='save')needAccount(async()=>{
    const owner=S.boot.me.id,key=owner+'|'+id+'|'+action;if(reactionRequests.has(key))return;
    const request={};reactionRequests.set(key,request);let p,before;
@@ -567,12 +573,13 @@ window.addEventListener('popstate',async e=>{
  catch(error){if(error.name!=='AbortError')notify(error.message);}
 });
 async function checkNewPosts(){if(document.hidden||S.modal||S.view==='community'&&S.communityTab&&S.communityTab!=='posts'||S.view==='profile'&&S.profileTab&&S.profileTab!=='posts'||!['home','community','profile'].includes(S.view)||!$('#timeline')||S.mode==='following'&&!S.boot.me)return;const view=S.view;const q=new URLSearchParams({mode:view==='home'?S.mode:'for-you',feed:S.boot.activeFeed,observe:'0'});if(!S.boot.me)q.set('watch',S.boot.watches.join(','));if(view==='community')q.set('community',S.community);if(view==='profile')q.set('author',S.profile);try{const d=await api('/api/posts?'+q);if(S.view!==view||!$('#timeline'))return;const fresh=d.posts.filter(p=>!S.posts.some(x=>x.id===p.id&&Number(x.feedAt||x.created)>=Number(p.feedAt||p.created))).length;let banner=$('#new-posts');if(fresh&&!banner){$('#timeline').insertAdjacentHTML('afterbegin','<button id="new-posts" class="r-new-posts" data-action="refresh-feed"></button>');banner=$('#new-posts');}if(banner){if(fresh)banner.textContent=fresh+(fresh===1?' new post':' new posts')+' · Refresh';else banner.remove();}}catch{}}
-function refreshPriceSurfaces(){rail();document.querySelectorAll('.r-post-asset').forEach(el=>{const t=token(el.dataset.id);if(!t)return;$('.r-asset-price>b',el).innerHTML=priceHTML(t.price);const move=$('.r-asset-price>small',el);move.textContent=pct(t.change);move.className=(t.change||0)>=0?'positive':'negative';});if(S.trade){const t=token(S.trade.originAsset||S.trade.asset);const host=$('.r-trade-price');if(t&&host){$('h2',host).textContent=usd(t.price);const move=$('span',host);move.className=(t.change||0)>=0?'positive':'negative';move.innerHTML=pct(t.change)+' <small>24h</small>';}}}
+function refreshPriceSurfaces(){rail();CX.refreshPrices();document.querySelectorAll('.r-post-asset').forEach(el=>{const t=token(el.dataset.id);if(!t)return;$('.r-asset-price>b',el).innerHTML=priceHTML(t.price);const move=$('.r-asset-price>small',el);move.textContent=pct(t.change);move.className=(t.change||0)>=0?'positive':'negative';});if(S.trade){const t=token(S.trade.originAsset||S.trade.asset);const host=$('.r-trade-price');if(t&&host){$('h2',host).textContent=usd(t.price);const move=$('span',host);move.className=(t.change||0)>=0?'positive':'negative';move.innerHTML=pct(t.change)+' <small>24h</small>';}}}
 const Q=checkoutUI({S,$,token,trade,closeModal,invalidateQuote,logo,perplAsset:market=>F.perplAsset(market)});
 const F=financeUI({S,$,api,esc,icon,usd,age,modal,closeModal,needAccount,walletReady,receipt,notify,boot,navigate,pageHeader,empty,loading,safeURL,token,logo,activity:()=>J.openActivity(),trade,spotPending,resumeSpot,recordSpot:recordOrder,originCard:context=>J.originCard(context),checkout:Q});
 const WalletUX=walletUI({S,$,api,esc,icon,usd,pct,age,modal,notify,pageHeader,empty,logo,token,connect:connectWallet,submit:(plan,ui)=>F.submitInline(plan,ui)});
 const N=nadfunUI({launchPanel:t=>L.tokenPanel(t),S,$,api,esc,icon,logo,usd,age,modal,needAccount,walletReady,notify,navigate,pageHeader,empty,loading,finance:F,composer,originCard:context=>J.originCard(context),checkout:Q,closeModal,closeTrade,pauseMedia});
 const C=communityUI({S,$,api,esc,icon,avatar,age,modal,closeModal,notify,boot,navigate,pageHeader,postCard,loading,empty,needAccount,render,logo,personRow,token});
+const CX=communityMarketUI({S,$,esc,icon,logo,trade,empty});
 const M=marketUI({S,$,api,esc,usd,priceHTML,volumeHTML,age,logo,token,modal,trade,finance:F});
 const J=journeyUI({S,$,api,esc,icon,avatar,token,logo,safeURL,postCard,pageHeader,empty,loading,boot,navigate,notify,modal,closeModal,closeTrade,age,finance:F});
 const P=feedUI({S,$,esc,icon,safeURL,scope:socialScope});
@@ -587,7 +594,7 @@ async function start(){
  clearInterval(refreshTimer);clearInterval(S.feedTimer);clearInterval(S.mediaTimer);shell();$('#page').innerHTML=loading();
  S.community=params.get('id');S.profile=params.get('id');S.feed=params.get('id');S.post=params.get('id')||params.get('post');S.nadToken=params.get('id')||params.get('token');
  try{
-  const memeStart=(S.view==='explore'||S.view==='home'&&S.homeSection==='markets')&&S.marketTab==='memes',compact=['discover','feeds','algorithms','feed'].includes(S.view)||memeStart;
+  const memeStart=(S.view==='explore'||S.view==='home'&&S.homeSection==='markets')&&S.marketTab==='memes',compact=['discover','feeds','algorithms','feed','communities','community'].includes(S.view)||memeStart;
   if(S.view==='discover')E.prime();else if(memeStart)N.catalog(S.nadMode==='dex'?'dex':'',S.nadMode==='cap'?'cap':'latest').catch(()=>{});
   bootReady=boot(compact);await bootReady;await render();const authResumed=await U.resume();S.mediaTimer=setInterval(refreshMedia,4000);
   // Venue outages cannot delay the social feed or account authorization screen.
@@ -603,7 +610,7 @@ async function start(){
   restore();S.feedTimer=setInterval(()=>{checkNewPosts();C.poll().catch(()=>{});J.poll().catch(()=>{});N.poll().catch(()=>{});L.poll().catch(()=>{});},12000);
   if(['/connect-native','/native-wallet'].includes(location.pathname)){await nativeLink({S,api,$,esc,notify,trade,finance:F,nad:N,launch:L,needAccount,boot,auth:U});return true;}
   if(S.view!=='launch')await T.onboard();
-  let refreshing=false;refreshTimer=setInterval(async()=>{if(document.hidden||refreshing||S.view==='swipe')return;refreshing=true;try{const m=await api('/api/markets');S.tokens=[...new Map([...S.tokens,...m.tokens].map(t=>[t.id,t])).values()];S.marketData=m;refreshPriceSurfaces();if((S.view==='explore'||S.view==='home'&&S.homeSection==='markets')&&['spot','rwa'].includes(S.marketTab))($('#market-list [data-spot-market]')?M.patchSpot():marketList());}catch{}finally{refreshing=false;}},20000);
+  let refreshing=false;refreshTimer=setInterval(async()=>{if(document.hidden||refreshing||S.view==='swipe')return;refreshing=true;try{const m=await api('/api/markets');S.tokens=[...new Map([...S.tokens,...m.tokens].map(t=>[t.id,t])).values()];S.marketData=m;refreshPriceSurfaces();if((S.view==='explore'||S.view==='home'&&S.homeSection==='markets')&&['spot','rwa'].includes(S.marketTab))($('#market-list [data-spot-market]')?M.patchSpot():marketList());}catch{}finally{refreshing=false;CX.refreshPrices();}},20000);
  }catch(e){$('#page').innerHTML=empty('Rally is reconnecting',esc(e.message),'<button class="r-btn" data-action="retry-start">Retry</button>');$('[data-action=retry-start]').onclick=start;}
 }
 start();
