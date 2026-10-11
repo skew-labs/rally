@@ -12,6 +12,7 @@ from eth_abi import encode, decode
 from eth_utils import keccak
 import service as s
 import venues as v
+from nad_chart_cache import ChartCache
 
 ROOT=s.ROOT/'config/nadfun'
 WMON='0x3bd359c1119da7da1d913d1c4d2b7c461115433a'
@@ -21,7 +22,8 @@ FILES={'v1':{'curve':'curveAbi.json','lens':'lensAbi.json','router':'routerAbi.j
 MANIFEST=json.loads((ROOT/'pins.json').read_text())
 API_LOCK=threading.Lock();API_AT=0;API_RETRY_AT=0;SYNC_LOCK=threading.Lock();DRAFT_LOCK=threading.Lock();SYNC_ERROR=None
 ABIS={};TRANSFER='0x'+keccak(text='Transfer(address,address,uint256)').hex()
-CHARTS={};CHART_LOCK=threading.Lock()
+CHART_CACHE=ChartCache(s.STATE/'nad-charts.json')
+API_CONDITION=threading.Condition(API_LOCK);API_WAITERS=[];API_BUSY=False
 MARKET_REFERENCES={};MARKET_REFERENCE_LOCK=threading.Lock()
 REFERENCE_HEALTH={}
 
@@ -142,12 +144,25 @@ class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs):return None
 def api(path,data=None,mime=None):
     """Respect the unauthenticated external API limit; never spoof Origin."""
-    global API_AT,API_RETRY_AT
-    with API_LOCK:
-        if time.monotonic()<API_RETRY_AT:raise s.Problem('nad.fun is cooling down. Try again shortly.',503,'nad_api_backoff')
-        remaining=7.5-(time.monotonic()-API_AT)
-        if remaining>0:time.sleep(remaining)
-        API_AT=time.monotonic()
+    global API_AT,API_RETRY_AT,API_BUSY
+    # Chart clicks precede bulk discovery; old requests age into the same lane.
+    # Keep the same 7.5s spacing and one upstream request at a time.
+    ticket=(time.monotonic(),object(),path.startswith('/trade/chart/'))
+    with API_CONDITION:
+        API_WAITERS.append(ticket);API_CONDITION.notify_all()
+        try:
+            while True:
+                now=time.monotonic()
+                if now<API_RETRY_AT:raise s.Problem('nad.fun is cooling down. Try again shortly.',503,'nad_api_backoff')
+                remaining=7.5-(now-API_AT)
+                first=min(API_WAITERS,key=lambda x:(not(x[2] or now-x[0]>=30),x[0]))
+                if not API_BUSY and first is ticket and remaining<=0:
+                    API_AT=now;API_BUSY=True;break
+                if now-ticket[0]>60:raise s.Problem('nad.fun is busy. Try again shortly.',503,'nad_api_queue')
+                API_CONDITION.wait(timeout=min(1,max(.05,remaining)))
+        finally:
+            API_WAITERS.remove(ticket)
+    try:
         body=data if isinstance(data,bytes) else s.dump(data).encode() if data is not None else None
         request=Request('https://api.nad.fun'+path,data=body,headers={'User-Agent':'Rally/1.0','Accept':'application/json',**({'Content-Type':mime or 'application/json'} if body is not None else {})})
         try:
@@ -160,9 +175,11 @@ def api(path,data=None,mime=None):
             if e.code==429:
                 try:delay=float(e.headers.get('Retry-After','30'))
                 except (TypeError,ValueError,AttributeError):delay=30
-                API_RETRY_AT=time.monotonic()+max(5,min(120,delay)) if math.isfinite(delay) else time.monotonic()+30
+                with API_CONDITION:API_RETRY_AT=time.monotonic()+max(5,min(120,delay)) if math.isfinite(delay) else time.monotonic()+30
             raise s.Problem('nad.fun is busy. Try again shortly.',503,'nad_api_'+str(e.code))
         except Exception:raise s.Problem('nad.fun data is unavailable. Try again.',503,'nad_api_unavailable')
+    finally:
+        with API_CONDITION:API_BUSY=False;API_CONDITION.notify_all()
 
 def storage_url(url):
     p=urlsplit(str(url or ''))
@@ -472,16 +489,9 @@ def simulate_creation(p,block='latest'):
     if token!=p['summary']['token'] or out!=0:raise s.Problem('Token creation result differs from the reviewed address',409,'nad_creation_mismatch')
 
 def chart(token,interval='60'):
-    info=token_info(token,False)
     if interval not in {'1','5','15','60','240','1D'}:raise s.Problem('Invalid chart interval')
-    key=info['address']+':'+interval
-    with CHART_LOCK:
-        cached=CHARTS.get(key)
-        if cached and s.now()-cached['fetchedAt']<90:return cached
-        result=_chart(info,interval)
-        if len(CHARTS)>100:CHARTS.clear()
-        CHARTS[key]=result
-        return result
+    info=token_info(token,False)
+    return CHART_CACHE.get(info['address'],interval,lambda:_chart(info,interval))
 
 def _chart(info,interval):
     result=api('/trade/chart/'+info['address']+'?'+urlencode({'resolution':interval,'from':s.now()-86400*7,'to':s.now(),'countback':200,'chart_type':'price_usd'}))
