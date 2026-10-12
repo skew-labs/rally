@@ -42,7 +42,7 @@ export function motionUI(){
   if(old&&withMotion&&allowed()&&Math.abs(old.x-current.x)>.5)animate(shape,[{transform:`translateX(${old.x-current.x}px) scaleX(${old.width/current.width})`},{transform:'none'}],{duration:190,easing:ease});
  }
  function sections(withMotion=true){
-  const host=document.querySelector('.rx-home-tabs');glider(host,host?.querySelector('[aria-current=page]'),'sections',false,withMotion);
+  const host=document.querySelector('.rx-home-tabs');underline(host,host?.querySelector('[aria-current=page]'),'sections',withMotion);
   for(const selector of ['.r-tabs','.r-community-tabs','.r-profile-tabs','.r-prediction-filters']){
    const tabs=document.querySelector('#page '+selector),target=tabs?.querySelector('button.active,button[aria-pressed=true]');
    if(tabs&&target&&tabs.scrollWidth>tabs.clientWidth){const t=target.getBoundingClientRect(),h=tabs.getBoundingClientRect();if(t.x<h.x||t.right>h.right)tabs.scrollTo({left:tabs.scrollLeft+t.x-h.x-(tabs.clientWidth-t.width)/2,behavior:withMotion&&allowed()?'smooth':'instant'});}

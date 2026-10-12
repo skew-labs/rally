@@ -1,6 +1,7 @@
 package com.rallydot.app
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.*
@@ -23,6 +24,7 @@ import org.json.JSONObject
 @Composable fun ProfileScreen(vm: RallyViewModel,openBrowser: (String)->Unit,onExtra: (String)->Unit,onAsset: (String)->Unit={}) {
     val state by vm.state.collectAsStateWithLifecycle();val me=state.boot?.optJSONObject("me")
     var editing by remember { mutableStateOf(false) }
+    var toolsOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     if(editing && me!=null)ProfileEditor(me,{fields,photo->vm.saveProfile(fields,photo)},{editing=false;vm.message("Profile saved")},{editing=false})
     LaunchedEffect(me?.string("id")) { editing=false }
     LaunchedEffect(state.boot?.string("wallet")) { vm.loadPortfolio() }
@@ -59,9 +61,16 @@ import org.json.JSONObject
             }
         }
         item { Surface(shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface) { Column {
-            listOf(Triple("Wallet",Icons.Outlined.AccountBalanceWallet,"Wallet"),Triple("Algorithms",Icons.Outlined.Layers,"Algorithms"),Triple("Agents",Icons.Outlined.Hub,"Agents"),Triple("Activity",Icons.Outlined.History,"Activity")).forEach { (label,icon,destination)->OptionRow(label,icon,{onExtra(destination)}) }
-            if(me!=null){OptionRow("Notifications",Icons.Outlined.Notifications,{onExtra("Notifications")});OptionRow("Share trades",Icons.Outlined.Share,{onExtra("Share trades")});OptionRow("Signal record",Icons.Outlined.ShowChart,{onExtra("Signal record")});OptionRow("Token benefits",Icons.Outlined.Verified,{onExtra("Token benefits")});OptionRow("Weekly league",Icons.Outlined.EmojiEvents,{onExtra("Weekly league")})}
-            if(me!=null)OptionRow("Sign out",Icons.Outlined.Logout,{vm.signOut()})
+            listOf(Triple("Wallet",Icons.Outlined.AccountBalanceWallet,"Wallet"),Triple("Algorithms",Icons.Outlined.Layers,"Algorithms"),Triple("Activity",Icons.Outlined.History,"Activity")).forEach { (label,icon,destination)->OptionRow(label,icon,{onExtra(destination)}) }
+            Row(Modifier.fillMaxWidth().clickable {toolsOpen=!toolsOpen}.padding(horizontal=20.dp,vertical=16.dp).heightIn(min=24.dp),verticalAlignment=Alignment.CenterVertically) {
+                Icon(Icons.Outlined.MoreHoriz,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("More tools",Modifier.weight(1f).padding(horizontal=14.dp))
+                Icon(if(toolsOpen)Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,if(toolsOpen)"Collapse tools" else "Expand tools",tint=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            AnimatedVisibility(toolsOpen) {Column {
+                OptionRow("Agents",Icons.Outlined.Hub,{onExtra("Agents")})
+                if(me!=null){OptionRow("Notifications",Icons.Outlined.Notifications,{onExtra("Notifications")});OptionRow("Share trades",Icons.Outlined.Share,{onExtra("Share trades")});OptionRow("Signal record",Icons.Outlined.ShowChart,{onExtra("Signal record")});OptionRow("Token benefits",Icons.Outlined.Verified,{onExtra("Token benefits")});OptionRow("Weekly league",Icons.Outlined.EmojiEvents,{onExtra("Weekly league")});OptionRow("Sign out",Icons.Outlined.Logout,{vm.signOut()})}
+            }}
         } } }
         item { Text("Rally for Android · ${BuildConfig.VERSION_NAME}",Modifier.fillMaxWidth(),textAlign=androidx.compose.ui.text.style.TextAlign.Center,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
     }

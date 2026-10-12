@@ -27,13 +27,17 @@ try{
    d.communityToken={token:t};d.communities.push({id:t.community,name:t.name,members:1,joined:true,token:t});d.passwordAccount=true;
    await r.fulfill({response,json:d});
   });
-  await p.route('**/api/launchpad/tokens?*',r=>r.fulfill({json:{tokens:[],communityTokens:[],total:0}}));
+  await p.route('**/api/launchpad/tokens?*',r=>r.fulfill({json:{tokens:Array.from({length:6},(_,i)=>({id:'qa-token-'+i,name:'QA Token '+i,symbol:'QA'+i,marketCap:10000,price:0.01,progressBps:2300,logoURI:'/assets/MON.png'})),communityTokens:[],total:6}}));
   await p.goto(origin+'/?view=account');await p.locator('.r-account-identity').waitFor();await settle(p);
+  assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  if(width===390||width===1440)await p.screenshot({path:`${out}/profile-${width}-${theme}.png`});
   const identity=await p.locator('.r-account-identity').evaluate(e=>{
    const title=e.querySelector('h2'),bio=e.querySelector('.r-account-bio'),photo=e.querySelector('.r-avatar'),button=e.querySelector('button');
    return {titleHeight:title.getBoundingClientRect().height,lineHeight:parseFloat(getComputedStyle(title).lineHeight),bioTop:bio.getBoundingClientRect().top,photoBottom:photo.getBoundingClientRect().bottom,buttonBottom:button.getBoundingClientRect().bottom};
   });
   assert(identity.titleHeight<=identity.lineHeight*2+1);assert(identity.bioTop>=Math.max(identity.photoBottom,identity.buttonBottom));
+  assert(await p.locator('.r-profile-tools').getAttribute('open')===null);
+  await p.locator('.r-profile-tools summary').click();assert(await p.getByRole('button',{name:'Agent connections'}).isVisible());
   await p.locator('.r-profile-settings summary').click();
   const rows=p.locator('.r-profile-settings>button,.r-profile-settings>a');
   for(const row of await rows.all()){assert((await bounds(row)).height>=44);assert(await row.locator('.icon').count()>=1);}
@@ -53,16 +57,20 @@ try{
   }
   await p.getByRole('button',{name:'Remove',exact:true}).click();assert(await p.locator('#profile-photo-remove').isHidden());
   await p.getByRole('button',{name:'Close dialog',exact:true}).click();await p.locator('.r-profile-editor').waitFor({state:'detached'});
-  await p.goto(origin+'/?view=launchpad');await p.locator('.cr-community-entry-actions').waitFor();await settle(p);
+  await p.goto(origin+'/?view=launchpad');await p.locator('.lp-token-row').first().waitFor();await settle(p);
+  assert.equal(await p.locator('.lp-token-row').count(),6);
+  assert((await bounds(p.locator('.lp-token-row').first())).y<460,'A token appears without scrolling');
+  await p.screenshot({path:`${out}/launch-list-${width}-${theme}.png`});
+  await p.getByRole('button',{name:'Launch tools',exact:true}).click();await p.locator('.cr-community-entry-actions').waitFor();await settle(p);
   for(const button of await p.locator('.cr-community-entry-actions>button').all()){
-   const data=await button.evaluate(e=>{const r=e.getBoundingClientRect(),label=e.querySelector('span'),range=document.createRange();range.selectNodeContents(label);const rects=[...range.getClientRects()];return {height:r.height,left:r.left,right:r.right,lines:new Set(rects.map(x=>Math.round(x.y))).size,labelLeft:rects[0].left,labelRight:rects.at(-1).right,scroll:e.scrollWidth,client:e.clientWidth};});
+   await button.scrollIntoViewIfNeeded();const data=await button.evaluate(e=>{const r=e.getBoundingClientRect(),label=e.querySelector('span'),range=document.createRange();range.selectNodeContents(label);const rects=[...range.getClientRects()];return {height:r.height,left:r.left,right:r.right,lines:new Set(rects.map(x=>Math.round(x.y))).size,labelLeft:rects[0].left,labelRight:rects.at(-1).right,scroll:e.scrollWidth,client:e.clientWidth};});
    assert(data.lines===1&&data.height>=44&&data.labelLeft>=data.left&&data.labelRight<=data.right&&data.scroll<=data.client+1,'Launch actions must not split words or clip labels');
   }
   assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await p.screenshot({path:`${out}/launch-${width}-${theme}.png`});
   await p.locator('.cr-community-entry-actions [data-id=algorithms]').click();
   await p.locator('.cr-community-section h2').filter({hasText:'Algorithms'}).waitFor();
-  assert.deepEqual(errors,[]);results.push({width,theme,profile:true,shortViewport:width<=600,launchLabelsOneLine:true,algorithmNavigation:true,reducedMotion:theme==='dark'});await c.close();
+  assert.deepEqual(errors,[]);results.push({width,theme,profile:true,shortViewport:width<=600,launchLabelsOneLine:true,algorithmNavigation:true,launchListVisible:true,toolsOnDemand:true,reducedMotion:theme==='dark'});await c.close();
  }
  await fs.writeFile(out+'/browser.json',JSON.stringify({results,walletActions:0},null,2));console.log(JSON.stringify({cases:results.length,walletActions:0}));
 }finally{await browser?.close();server.kill('SIGTERM');}

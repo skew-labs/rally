@@ -349,3 +349,85 @@ html .r-asset-modal .r-mini-chart{min-height:240px}
  .r-profile-edit-footer{padding-bottom:calc(16px + env(safe-area-inset-bottom))}
 }
 @media(prefers-reduced-motion:reduce){html .r-market-table tbody tr,html .r-profile-settings summary .icon{transition:none}}
+
+/* Trading-first hierarchy: continuous lists, secondary tools on demand. */
+html .rx-home-head{padding:20px 24px 0;gap:8px}
+html .rx-home-head .rx-home-brand{font-size:27px;letter-spacing:-1.4px;font-weight:700}
+html .rx-home-tabs{position:relative;background:none;border:0;border-radius:0;padding:0;gap:20px;max-width:none;width:100%;justify-content:flex-start;overflow:visible}
+html .rx-home-tabs>button{flex:0 1 auto;border-radius:0;padding:12px 2px;min-height:48px;font-size:15px;font-weight:500;background:none!important;color:var(--muted)}
+html .rx-home-tabs>button[aria-current=page]{color:var(--text)}
+html .rx-home-tabs>.r-motion-underline{height:2px;bottom:0;border-radius:2px;background:var(--brand)}
+html .rx-home-head+.r-tabs{padding-top:4px}
+html .lp-focused{padding:12px 24px 24px}
+.lp-focused-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.lp-focused-head h2{font-size:19px;font-weight:600;letter-spacing:-.4px;margin:0}
+.lp-focused-head>div{display:flex;align-items:center;gap:6px}
+html .lp-focused-head .lp-primary{min-height:44px;padding:10px 16px;font-size:13px;gap:6px}
+html .lp-focused .lp-tools{display:flex;gap:12px;margin:0 0 8px}
+html .lp-focused .lp-search{min-width:0;flex:1;min-height:44px;border:0;border-radius:12px;background:var(--soft);padding:0 12px}
+html .lp-focused .lp-search input{min-width:0;width:100%;font-size:14px}
+html .lp-focused #lp-sort{max-width:116px;min-width:0;border:0;background:none;font-size:13px;padding:8px 4px;min-height:44px}
+html .lp-focused .lp-filters{gap:4px;margin:0;align-items:center;flex-wrap:nowrap;overflow-x:auto}
+html .lp-focused .lp-filters>button{padding:8px 12px;min-height:44px;font-size:13px;white-space:nowrap;border:0;background:none;color:var(--muted)}
+html .lp-focused .lp-filters>button[aria-pressed=true]{background:var(--soft);color:var(--text);border-radius:10px}
+html .lp-focused .lp-filters>.r-icon-button{margin-left:auto;padding:8px}
+.lp-list-label{display:flex;justify-content:space-between;padding:16px 0 8px;font-size:11px;color:var(--muted)}
+html .lp-token-list{display:flex;flex-direction:column;gap:0}
+html .lp-token-list .lp-skeleton{min-height:82px;height:82px;border-radius:0;border:0;border-bottom:1px solid var(--line)}
+html .lp-token-row{display:block;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:0;background:none;min-width:0;overflow:visible;box-shadow:none}
+html .lp-token-row .lp-token-open{display:flex;align-items:center;gap:12px;width:100%;min-width:0;min-height:88px;padding:12px 0;background:none;text-align:left}
+html .lp-token-row .lp-art{width:44px;height:44px;min-width:44px;border-radius:50%;flex:none}
+html .lp-token-row .lp-token-open>.lp-row-identity{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+html .lp-token-row .lp-token-open b{font-size:14px;font-weight:550;line-height:1.3}
+html .lp-token-row .lp-token-open small{font-size:12px;line-height:1.3;color:var(--muted)}
+.lp-row-identity :is(b,small,.lp-row-phase){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lp-row-phase{font-size:10px;line-height:1.4;color:var(--muted)}
+html .lp-token-row .lp-token-open>.lp-row-value{flex:0 1 132px;min-width:0;display:flex;flex-direction:column;gap:4px;text-align:right;font-variant-numeric:tabular-nums}
+html .lp-row-value :is(b,small){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html .lp-token-row .lp-token-open>.icon{width:16px;height:16px;flex:none;color:var(--muted)}
+html .lp-row-community{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;min-height:44px;margin-left:56px;padding:6px 0;max-width:calc(100% - 56px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lp-row-community .icon{width:15px;height:15px;flex:none}
+html .lp-management-modal{width:min(520px,100%)}
+html .lp-tools-menu .cr-community-entry{margin:0 0 16px;padding:16px;border-radius:16px}
+html .lp-tools-menu .lp-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:0;margin:0 0 16px;border:0;gap:6px;overflow:visible}
+html .lp-tools-menu .lp-tabs :is(a,button){padding:12px;font-size:13px;min-height:48px;border-radius:10px;background:var(--soft);white-space:normal;text-align:left}
+html .lp-tools-menu .lp-network-filters{flex-wrap:wrap;margin:0}
+html .lp-tools-menu summary,html .r-profile-tools summary,html .cr-allocation-detail summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;list-style:none;cursor:pointer;font-size:13px;color:var(--muted)}
+html :is(.lp-tools-menu,.r-profile-tools,.cr-allocation-detail) summary::-webkit-details-marker{display:none}
+html :is(.r-profile-tools,.cr-allocation-detail) summary>.icon{width:18px;flex:none;transition:transform 160ms ease}
+html :is(.r-profile-tools,.cr-allocation-detail)[open] summary>.icon{transform:rotate(90deg)}
+html .cr-allocation-detail{padding:0 20px}html .cr-allocation-detail .cr-allocation{margin:0;padding-bottom:12px}
+html .r-account-options>.r-profile-tools{border-bottom:1px solid var(--line)}
+html .r-account-options .r-profile-tools summary{font-size:14px;min-height:58px;color:var(--text)}
+html .r-account-options .r-profile-tools>button{padding-inline:12px}
+html .r-market-table .r-btn.primary.small{background:var(--soft);color:#0055dd;border-color:transparent}
+@media(hover:hover){html .lp-token-row:hover{background:var(--soft)}html .lp-token-row .lp-token-open:hover{background:none}}
+@media(max-width:760px){
+ html .rx-home-head{padding:0 16px;gap:0}
+ html .rx-home-head>div{display:none}
+ html .rx-home-tabs{gap:0;justify-content:space-between}
+ html .rx-home-tabs>button{flex:1;font-size:14px;min-height:48px;padding:12px 4px}
+ html .lp-focused{padding:14px 16px 20px}
+ html .lp-focused-head h2{font-size:18px}
+ html .lp-focused-head{margin-bottom:12px}
+ html .lp-token-row .lp-token-open{gap:10px}
+ html .lp-token-row .lp-token-open>.lp-row-value{flex-basis:100px}
+ html .lp-token-row .lp-token-open>.icon{display:none}
+ html .lp-focused .lp-tools{gap:6px}
+ html .lp-focused #lp-sort{max-width:98px;font-size:12px}
+ html .lp-focused .lp-filters>button{padding-inline:9px;font-size:12px}
+ html .lp-focused .lp-filters>.r-icon-button{min-width:40px}
+}
+@media(prefers-reduced-motion:reduce){html :is(.r-profile-tools,.cr-allocation-detail) summary>.icon{transition:none}}
+
+html .lp-filter-status:not([hidden]){display:block;min-height:44px;padding:8px 0;font-size:12px;color:var(--brand)}
+/* Desktop already has the brand in its rail; the content header is navigation. */
+@media(min-width:761px){
+ html .rx-home-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px;padding-top:8px}
+ html .rx-home-head>div{display:contents}
+ html .rx-home-head h1{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ html .rx-home-head .rx-head-actions{grid-column:2;grid-row:1}
+ html .rx-home-head .rx-home-tabs{grid-column:1;grid-row:1;margin-top:0}
+}
+
+html[data-theme=dark] .r-market-table .r-btn.primary.small{color:#8cb8ff}

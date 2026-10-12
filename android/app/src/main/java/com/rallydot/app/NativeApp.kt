@@ -129,7 +129,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                     Column(Modifier.fillMaxSize().padding(padding)) {
                         if(data.order.blocksOrder && asset==null && algorithm==null && !launching)Box(Modifier.padding(horizontal=20.dp,vertical=6.dp).clickable { extra="Wallet" }) { OrderStatus(vm,compact=true) }
                         data.bootError?.let { Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically) { Text(it,Modifier.weight(1f),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall);TextButton(onClick={vm.bootstrap()}) { Text("Retry") } } }
-                        if(tab==0 && extra==null)Segmented(listOf("Markets","Launch","Swipe","Feed"),home,{home=it},Modifier.padding(horizontal=20.dp,vertical=8.dp))
+                        if(tab==0 && extra==null)HomeSections(home,{home=it})
                         val destination=extra ?: "$tab:${if(tab==0)home else community.orEmpty()}"
                         LaunchedEffect(destination,accountId) {
                             val stateKey="$accountId/$destination"
@@ -182,6 +182,22 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
         if(data.walletOpen)WalletLoginSheet(vm,{vm.showWallet(false)},openBrowser)
         if(launching)LaunchSheet(vm,{launching=false})
         if(composing)ComposeSheet(vm,community,{composing=false})
+    }
+}
+@Composable fun HomeSections(selected: String,onSelect: (String)->Unit) {
+    val options=listOf("Markets","Launch","Swipe","Feed")
+    val haptic=LocalHapticFeedback.current
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal=20.dp)) {
+        val cell=maxWidth/options.size
+        val position=animateDpAsState(cell*options.indexOf(selected).coerceAtLeast(0),tween(180),label="home section")
+        Row(Modifier.fillMaxWidth()) {
+            options.forEach { label->
+                Box(Modifier.weight(1f).heightIn(min=48.dp).clickable(role=Role.Tab){if(selected!=label){haptic.performHapticFeedback(HapticFeedbackType.SegmentTick);onSelect(label)}}.semantics { this.selected=selected==label }.padding(vertical=14.dp),contentAlignment=Alignment.Center) {
+                    Text(label,fontSize=14.sp,maxLines=1,fontWeight=if(label==selected)FontWeight.Medium else FontWeight.Normal,color=if(label==selected)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        Box(Modifier.align(Alignment.BottomStart).width(cell).height(2.dp).graphicsLayer {translationX=position.value.toPx()}.padding(horizontal=16.dp).background(Violet,RoundedCornerShape(2.dp)))
     }
 }
 @Composable fun Segmented(options: List<String>,selected: String,onSelect: (String)->Unit,modifier: Modifier=Modifier,accent: Color?=null) {
