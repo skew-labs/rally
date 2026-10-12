@@ -22,13 +22,19 @@ try {
    if(u.pathname==='/api/nadfun/references')data={tokens:[token]};
    if(u.pathname==='/api/nadfun/token')data=token;
    if(u.pathname==='/api/token-holders')data={asset:id,indexed:true,total:1,fetchedAt:now,holders:[{address:'0x'+'1'.repeat(40),amount:'890567000'}]};
+   if(u.pathname==='/api/market-chart')data={asset:id,kind:'spot',freshRead:true,period:u.searchParams.get('period'),interval:u.searchParams.get('interval'),points:[{time:now-3600,value:.002},{time:now,value:.0021}],candles:[{time:now-3600,open:.002,high:.0022,low:.0019,close:.0021}],reference:'Fixture price',source:'Fixture',sourceURL:'https://example.com',lastObservation:now};
    if(u.pathname==='/api/market-ticks') { assert.equal(u.searchParams.get('asset'),id);assert.equal(u.searchParams.get('kind'),'spot');reads++;const n=reads;data={asset:id,kind:'spot',epoch:'real-observations',cursor:n,source:'nad.fun USD reference',stale:false,observationType:'price_update',points:[{id:n,time:now+n,value:.002+n*.00001}]}; }
    return data?r.fulfill({json:data}):r.continue();
   });
   await page.goto(origin+'/?view=home&section=markets&tab=memes');await page.locator('.r-market-buy').click();
+  await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.series==='line');
+  await page.locator('[data-action=nad-live-mode][data-id=candles]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.series==='candles');
+  await page.locator('[data-action=nad-live-mode][data-id=history]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.series==='line');
   await page.locator('[data-action=nad-live-mode][data-id=line]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.series==='live-line');
   await page.waitForFunction(()=>Number(document.querySelector('#nad-chart')?.dataset.points)>=2);
   await page.locator('[data-action=nad-live-mode][data-id=ticks]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.series==='ticks');
+  await page.locator('[data-action=nad-tick-window][data-id="120"]').click();
+  assert.equal(await page.locator('#nad-chart').getAttribute('data-tick-window'),'120');
   const bounds=await page.evaluate(()=>{const host=document.querySelector('#nad-chart'),canvas=host.querySelector('canvas'),panel=document.querySelector('.r-nad-content');return {pageOverflow:document.documentElement.scrollWidth>innerWidth+1,panelOverflow:panel.scrollWidth>panel.clientWidth+1,chartOverflow:canvas.getBoundingClientRect().right>host.getBoundingClientRect().right+1,points:Number(host.dataset.points),selected:[...document.querySelectorAll('[data-action=nad-live-mode]')].filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.id),caption:document.querySelector('#nad-chart-status').textContent};});
   assert.deepEqual(bounds.selected,['ticks']);
   assert(!bounds.pageOverflow&&!bounds.panelOverflow&&!bounds.chartOverflow);assert(bounds.caption.includes('nad.fun USD reference'));

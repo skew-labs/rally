@@ -265,3 +265,10 @@ html .nad-identity .r-token-art{--token-size:56px;border-radius:14px}
 .r-mini-mode-tabs button{flex:1;min-width:0;font-weight:500}
 .r-mini-range-tabs button{flex:0 1 56px;min-height:32px;font-size:12px}
 .r-mini-chart canvas{max-width:100%}
+.r-chart-setting-label{font-size:11px;color:var(--muted);align-self:center;white-space:nowrap;margin-right:4px}
+.r-mini-mode-tabs,.r-mini-range-tabs,.r-chart-live-modes,.nad-chart-toolbar .nad-filters{align-items:center;flex-wrap:wrap}
+.r-mini-mode-tabs button{padding-inline:10px}
+.r-mini-range-tabs button{min-height:40px}
+.nad-chart-section .r-chart-live-modes{padding:10px 16px 0}
+.nad-chart-section .r-chart-live-modes button{flex:1;min-width:0;padding-inline:8px}
+.r-mini-periods button:focus-visible,.r-chart-live-modes button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

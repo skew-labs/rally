@@ -9,7 +9,7 @@ const evidence=process.env.RALLY_EVIDENCE||'/tmp/rally-hourly';await fs.mkdir(ev
 const server=spawn(process.env.RALLY_PYTHON||'python3',['scripts/preview.py'],{cwd:root,env:{...process.env,RALLY_PREVIEW_PORT:'33223'},stdio:'ignore'});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),hour=Math.floor(Date.now()/3600000)*3600,id='0x'+'a'.repeat(40);
 const candles=Array.from({length:25},(_,i)=>({time:hour-(24-i)*3600,open:100+i,high:104+i,low:98+i,close:102+i}));
-const modules=new Map(await Promise.all(['market-ui.js','price-line.js','holder-ui.js','provider-chart.js','live-price.js'].map(async p=>['/'+p,await fs.readFile(root+'/'+p,'utf8')])));
+const modules=new Map(await Promise.all(['market-ui.js','chart-settings.js','price-line.js','holder-ui.js','provider-chart.js','live-price.js'].map(async p=>['/'+p,await fs.readFile(root+'/'+p,'utf8')])));
 const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/live.css"><link rel="stylesheet" href="/market.css"><style>body{margin:0}.r-asset-modal{display:block;margin:8px auto;width:min(640px,calc(100% - 16px));max-height:none}button{font:inherit}</style></head><body><main id="root"></main></body></html>';
 const results=[];let browser;
 try {
@@ -28,7 +28,7 @@ try {
     return r.fulfill({json:{asset:u.searchParams.get('asset'),kind,interval:hourly?'1h':undefined,period:u.searchParams.get('period'),candles:bars,points:bars.map(b=>({time:b.time,value:b.close})),source:'Read-only fixture',reference:'Fixture OHLC',sourceURL:'https://example.com',freshRead:true,cached:false,fetchedAt:hour,lastObservation:hour}});
    }
    if(u.pathname==='/api/token-holders')return r.fulfill({json:{asset:id,holders:[],indexed:true,total:0}});
-   if(u.pathname==='/api/market-ticks')return r.fulfill({json:{asset:u.searchParams.get('asset'),kind,epoch:'fixture',cursor:1,points:[{id:1,time:hour,value:126}],source:'Fixture ticks',observationType:'price_update'}});
+   if(u.pathname==='/api/market-ticks')return r.fulfill({json:{asset:u.searchParams.get('asset'),kind,epoch:'fixture',cursor:1,points:Array.from({length:160},(_,i)=>({id:i+1,time:hour-160+i,value:126+i/100})),source:'Fixture ticks',observationType:'price_update'}});
    return r.continue();
   });
   await page.goto(origin+'/hourly-fixture');
@@ -38,9 +38,11 @@ try {
    const api=async(path,_,options)=>{const r=await fetch(path,options);if(!r.ok)throw Error('Unavailable');return r.json();};
    const ui=marketUI({S,$:s=>document.querySelector(s),api,esc:s=>String(s??'').replaceAll('<','&lt;'),usd:v=>'$'+v,priceHTML:String,volumeHTML:String,age:()=>'',logo:()=>'',token:()=>asset,
     modal:(title,body,cls)=>{S.modal?.cleanup?.();document.querySelector('#root').innerHTML='<div class="'+cls+'">'+body+'</div>';S.modal={};},trade:()=>{throw Error('No trading');},finance:{perplAsset:()=>({symbol:'BTC',name:'Bitcoin'}),handle:()=>{throw Error('No trading');}}});
-   window.closeFixture=()=>{S.modal.cleanup();S.modal=null;document.querySelector('#root').replaceChildren();};ui.details(kind==='spot'?id:'1',kind);
+   window.openFixture=()=>ui.details(kind==='spot'?id:'1',kind);window.closeFixture=()=>{S.modal.cleanup();S.modal=null;document.querySelector('#root').replaceChildren();};ui.details(kind==='spot'?id:'1',kind);
   },{theme,kind,id});
-  if(kind==='spot')await page.locator('[data-mini-candles]').click();
+  await page.waitForFunction(()=>document.querySelector('.r-mini-chart')?.dataset.series==='line');
+  assert.equal(await page.locator('[data-mini-history]').getAttribute('aria-pressed'),'true');
+  await page.locator('[data-mini-candles]').click();
   await page.waitForFunction(()=>document.querySelector('.r-mini-chart')?.dataset.series==='candles');
   assert.deepEqual(await page.evaluate(()=>window.chartSeriesObserved.at(-1).points),candles);
   const created=await page.evaluate(()=>window.chartCreateCount);
@@ -54,10 +56,27 @@ try {
   assert(!metrics.overflow);assert(metrics.chartWidth<=width);
   await page.screenshot({path:`${evidence}/${kind}-${width}-${theme}.png`});
   await page.locator('[data-mini-history]').click();
-  if(kind==='spot')await page.locator('[data-mini-line]').click();
+
   await page.waitForFunction(()=>document.querySelector('.r-mini-chart')?.dataset.series==='line');
   await page.locator('[data-mini-candles]').click();await page.waitForFunction(()=>document.querySelector('.r-mini-chart')?.dataset.series==='candles');
-  await page.locator('[data-mini-live="ticks"]').click();await page.locator('.r-live-price-canvas').count();
+  await page.locator('[data-mini-live="ticks"]').click();
+  await page.waitForFunction(()=>document.querySelector('.r-mini-chart')?.dataset.series==='ticks');
+  await page.locator('[data-mini-window="120"]').click();
+  assert.equal(await page.locator('.r-mini-chart').getAttribute('data-visible-points'),'120');
+  await page.locator('[data-mini-window="30"]').click();
+  assert.equal(await page.locator('.r-mini-chart').getAttribute('data-visible-points'),'30');
+  await page.evaluate(()=>{window.closeFixture();window.openFixture();});
+  await page.waitForFunction(()=>document.querySelector('.r-mini-chart')?.dataset.series==='ticks');
+  assert.equal(await page.locator('[data-mini-window="30"]').getAttribute('aria-pressed'),'true');
+  await page.locator('[data-mini-history]').click();
+  await page.waitForFunction(()=>document.querySelector('.r-mini-chart')?.dataset.series==='line');
+  await page.locator('[data-mini-live="line"]').click();
+  await page.waitForFunction(()=>document.querySelector('.r-mini-chart')?.dataset.series==='live-line');
+  assert.equal(await page.locator('[data-mini-history]').getAttribute('aria-pressed'),'true');
+  await page.locator('[data-mini-period="1D"]').click();
+  await page.waitForFunction(()=>document.querySelector('.r-mini-chart')?.dataset.series==='line');
+  assert.equal(await page.locator('[data-mini-live="line"]').getAttribute('aria-pressed'),'false');
+
   await page.evaluate(()=>window.closeFixture());const before=reads;await sleep(150);assert.equal(reads,before);
   assert.deepEqual(errors,[]);results.push({width,theme,kind,...metrics,reads,incrementalUpdate:true,writes:0});await context.close();
  }

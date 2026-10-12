@@ -15,7 +15,7 @@ try{
  browser=await chromium.launch({headless:true});
  for(const width of [320,390,768,1440])for(const theme of ['light','dark']){
   const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),reads=[],errors=[];let providerReads=0;
-  await context.addInitScript(theme=>localStorage.setItem('rally-theme',theme),theme);page.on('pageerror',e=>errors.push(e.message));
+  await context.addInitScript(theme=>{if(window===window.top)localStorage.setItem('rally-theme',theme);},theme);page.on('pageerror',e=>errors.push(e.message));
   await context.route('**/*',async r=>{
    const q=r.request(),u=new URL(q.url());assert.equal(q.method(),'GET','No financial writes');
    if(u.hostname==='www.geckoterminal.com'){assert(u.pathname.includes('/monad/tokens/'+id));providerReads++;return r.fulfill({contentType:'text/html',body:'<!doctype html><body>Provider embed fixture</body>'});}
@@ -29,13 +29,13 @@ try{
    return body?r.fulfill({json:body}):r.continue();
   });
   await page.goto(origin+'/?view=home&section=markets&tab=memes');await page.locator('.r-market-buy').waitFor();
-  await page.locator('.r-market-buy').click();await page.locator('#nad-chart iframe').waitFor();
+  await page.locator('.r-market-buy').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.series==='line');assert.equal(reads.length,1);await page.locator('[data-action=nad-live-mode][data-id=provider]').click();await page.locator('#nad-chart iframe').waitFor();
   const frame=page.locator('#nad-chart iframe');assert.match(await frame.getAttribute('src'),new RegExp('/monad/tokens/'+id));assert.equal(await frame.getAttribute('sandbox'),'allow-scripts allow-same-origin');
-  assert.equal(new URL(await frame.getAttribute('src')).searchParams.get('resolution'),'1m');assert.equal(reads.length,0);await page.locator('[data-action=nad-interval][data-id="240"]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart iframe')?.src.includes('resolution=4h'));
-  await page.locator('[data-action=nad-chart-line]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.series==='line');assert.equal(reads.length,1);
+  assert.equal(new URL(await frame.getAttribute('src')).searchParams.get('resolution'),'1h');assert.equal(reads.length,1);await page.locator('[data-action=nad-interval][data-id="240"]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart iframe')?.src.includes('resolution=4h'));
+  await page.locator('[data-action=nad-chart-line]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.series==='line');assert.equal(reads.length,2);
   await page.locator('[data-action=nad-chart-retry]').count();
   const geometry=await page.evaluate(()=>({pageOverflow:document.documentElement.scrollWidth>innerWidth+1,panelOverflow:document.querySelector('.r-nad-content').scrollWidth>document.querySelector('.r-nad-content').clientWidth+1}));assert(!geometry.pageOverflow&&!geometry.panelOverflow);
-  await page.locator('[data-action=nad-line-period][data-id="7D"]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.interval==='7D');assert.equal(reads.length,2,'Every line interval must perform a fresh provider read');
+  await page.locator('[data-action=nad-line-period][data-id="7D"]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.interval==='7D');assert.equal(reads.length,3,'Every line interval must perform a fresh provider read');
   await page.screenshot({path:`${evidence}/provider-${width}-${theme}.png`});assert.deepEqual(errors,[]);results.push({width,theme,...geometry,providerReads,freshReads:reads.length,writes:0});await context.close();
  }
  // A third-party coin script never receives Rally's origin, storage or wallet.

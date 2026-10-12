@@ -169,7 +169,9 @@ import kotlin.math.abs
     val sheet=rememberModalBottomSheetState(skipPartiallyExpanded=true)
     val scope=rememberCoroutineScope()
     val focus=androidx.compose.ui.platform.LocalFocusManager.current
-    var period by rememberSaveable(asset.key) { mutableStateOf("1D") }
+    val context=LocalContext.current
+    val chartPrefs=remember { context.getSharedPreferences("rally_chart_v1",android.content.Context.MODE_PRIVATE) }
+    var period by rememberSaveable(asset.key) { mutableStateOf(chartPrefs.getString("period","1D").takeIf { it in listOf("1D","7D","1M") } ?: "1D") }
     var chart by remember(asset.key) { mutableStateOf(vm.cachedChart(asset,period)?.takeIf { chartPoints(it).isNotEmpty() } ?: referenceChart(asset)) }
     var chartError by remember(asset.key) { mutableStateOf<String?>(null) }
     var chartRetry by remember(asset.key) { mutableIntStateOf(0) }
@@ -178,8 +180,12 @@ import kotlin.math.abs
     var trade by rememberSaveable(asset.key) { mutableStateOf(asset.raw.has("nativeSide")) }
     val provider=remember(asset.key) { providerTarget(asset) }
     var providerInterval by rememberSaveable(asset.key) { mutableStateOf("1m") }
-    var providerDisabled by rememberSaveable(asset.key) { mutableStateOf(false) }
-    var chartMode by rememberSaveable(asset.key) { mutableStateOf(if(asset.kind=="perps")"1h" else "History") }
+    var providerDisabled by rememberSaveable(asset.key) { mutableStateOf(true) }
+    val supportsCandles=asset.kind!="prediction" && !(asset.raw.optBoolean("nadfun")&&!asset.raw.optBoolean("graduated"))
+    var chartMode by rememberSaveable(asset.key) { mutableStateOf(savedChartMode(chartPrefs.getString("mode",null),supportsCandles)) }
+    var tickWindow by rememberSaveable { mutableIntStateOf(savedTickWindow(chartPrefs.getInt("window",60))) }
+    fun rememberChart() { chartPrefs.edit().putString("mode",chartMode).putString("period",period).putInt("window",tickWindow).apply() }
+    fun selectChart(mode:String) { chartMode=mode;providerDisabled=true;rememberChart() }
     var hourly by remember(asset.key) { mutableStateOf<JSONObject?>(null) }
     var selectedCandle by remember(asset.key) { mutableStateOf<HourCandle?>(null) }
     val candles=remember(hourly) { hourly?.let(::hourlyCandles).orEmpty() }
@@ -281,7 +287,14 @@ import kotlin.math.abs
                 if(trade && asset.kind!="prediction" && !compactHeader)direction(Modifier.padding(horizontal=20.dp).padding(bottom=if(compactTrade)8.dp else 16.dp))
                 Column(Modifier.weight(1f,fill=false).highRefresh().verticalScroll(rememberScrollState()).padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(if(compactTrade)8.dp else 16.dp)) {
                     if(!keyboard && !compactTrade) { if(trade)Fact("Reference price",money(asset.price)) else if(chartMode in listOf("Live","Ticks") && ticks.isNotEmpty())Text(money(scrubbing.value?.value?.toDouble() ?: ticks.last().value),style=MaterialTheme.typography.headlineMedium) else MarketPrice(asset,scrubbing) }
-                    if(!trade)Segmented(if(asset.kind=="prediction" || asset.raw.optBoolean("nadfun")&&!asset.raw.optBoolean("graduated"))listOf("History","Live","Ticks") else listOf("1h","History","Live","Ticks"),chartMode,{chartMode=it;scrubbing.value=null;selectedCandle=null})
+                    if(!trade) {
+                        Segmented(if(supportsCandles)listOf("Line","Candles","Ticks") else listOf("Line","Ticks"),if(chartMode=="1h")"Candles" else if(chartMode=="Ticks")"Ticks" else "Line",{selectChart(when(it){"Candles"->"1h";"Ticks"->"Ticks";else->"History"});scrubbing.value=null;selectedCandle=null})
+                        if(chartMode=="Ticks")Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                            Text("Updates",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.padding(end=12.dp))
+                            Box(Modifier.weight(1f)) { Segmented(listOf("30","60","120"),tickWindow.toString(),{tickWindow=it.toInt();rememberChart()}) }
+                        }
+                        if(chartMode in listOf("History","Live") && providerDisabled)Segmented((if(asset.raw.optBoolean("nadfun")&&!asset.raw.optBoolean("graduated"))listOf("1D","7D") else listOf("1D","7D","1M"))+"Live",if(chartMode=="Live")"Live" else period,{if(it=="Live")selectChart("Live") else {period=it;selectChart("History")};scrubbing.value=null})
+                    }
                     if(!trade && chartMode=="History" && provider!=null&&!providerDisabled)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                         Text("CoinGecko · "+if(provider.token!=null)"Monad token" else "Spot reference",Modifier.weight(1f),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         TextButton(onClick={providerDisabled=true}) { Text("Price line") }
@@ -293,7 +306,7 @@ import kotlin.math.abs
                             if(chartLoading && candles.isNotEmpty())LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
                         }
                         else if(chartMode!="History") {
-                            if(ticks.isNotEmpty())LivePriceChart(ticks,chartMode=="Ticks",{scrubbing.value=it},tickEpoch)
+                            if(ticks.isNotEmpty())LivePriceChart(ticks,chartMode=="Ticks",{scrubbing.value=it},tickEpoch,tickWindow)
                             else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { Text(if(ticksDelayed)"Price updates delayed" else "Waiting for price updates…",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
                         }
                         else if(provider!=null&&!providerDisabled)ProviderPriceChart(provider,MaterialTheme.colorScheme.surface.luminance()<.5f,providerInterval,{providerDisabled=true})
@@ -304,7 +317,7 @@ import kotlin.math.abs
                         else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { if(chartError!=null)Text(chartError!!,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) else CircularProgressIndicator(Modifier.size(24.dp),strokeWidth=2.dp) }
                     }
                     if(!trade && chartMode=="1h") {
-                        Segmented(listOf("1D","7D","1M"),period,{period=it})
+                        Segmented(listOf("1D","7D","1M"),period,{period=it;rememberChart()})
                         selectedCandle?.let { b->
                             Text("O ${money(b.open)}  H ${money(b.high)}\nL ${money(b.low)}  C ${money(b.close)}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -312,7 +325,7 @@ import kotlin.math.abs
                         if(chartError!=null)TextButton(onClick={chartRetry++},enabled=!chartLoading) { Text("Retry chart") }
                     }
                     if(!trade && chartMode=="History" && provider?.token!=null&&!providerDisabled)Segmented(listOf("1m","15m","1h","4h"),providerInterval,{providerInterval=it})
-                    if(!trade && chartMode=="History" && (provider==null||providerDisabled))Segmented(if(asset.raw.optBoolean("nadfun"))listOf("1D","7D") else listOf("1D","7D","1M"),period,{period=it})
+                    if(!trade && chartMode=="History" && provider!=null&&providerDisabled)TextButton(onClick={providerDisabled=false;scrubbing.value=null}) { Text("Open CoinGecko chart") }
                     if(!keyboard && !trade) {
                         if(chartMode in listOf("Live","Ticks"))Text(tickSource+(if(ticksDelayed)" · Last known" else "")+(ticks.lastOrNull()?.let { " · "+java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.US).format(java.util.Date(it.time*1000)) } ?: ""),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         if(chartMode=="History" && (provider==null||providerDisabled))chart?.let { Text(it.string("reference")+if(it.optBoolean("quoteOnly"))if(chartLoading)" · Loading history" else " · No recent history" else " · $chartPeriod"+if(chartLoading)" · Updating…" else if(it.optBoolean("stale") || chartError!=null)" · Last known" else "",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }

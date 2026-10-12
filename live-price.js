@@ -7,14 +7,15 @@ export function mergeTicks(previous,data,epoch){
 }
 export const easeTick=t=>1-(1-Math.min(1,Math.max(0,t)))**3;
 
-export function livePriceChart(host,{mode='line',onObservation=()=>{}}={}){
+export function livePriceChart(host,{mode='line',windowSize=60,onObservation=()=>{}}={}){
   const canvas=document.createElement('canvas');canvas.className='r-live-price-canvas';canvas.setAttribute('role','img');host.replaceChildren(canvas);
   const ctx=canvas.getContext('2d'),motion=matchMedia('(prefers-reduced-motion: reduce)');
   let points=[],frame=0,start=0,progress=1,width=0,height=0,geometry=null,disposed=false,pointer=null,frames=0,drawMs=0;
   const price=v=>v.toLocaleString('en-US',{maximumSignificantDigits:7});
   function layout(){
     if(!width||!height||!points.length){geometry=null;return;}
-    const visible=points.slice(-60),minimum=Math.min(...visible.map(p=>p.value)),high=Math.max(...visible.map(p=>p.value)),span=Math.max(high-minimum,high*.0005,1e-9),low=(minimum+high-span)/2,pad=18;
+    const visible=points.slice(-windowSize),minimum=Math.min(...visible.map(p=>p.value)),high=Math.max(...visible.map(p=>p.value)),span=Math.max(high-minimum,high*.0005,1e-9),low=(minimum+high-span)/2,pad=18;
+    host.dataset.visiblePoints=String(visible.length);host.dataset.tickWindow=String(windowSize);
     const previous=geometry,sy=previous?span/previous.span:1,ty=previous?(height-pad)*(1-sy)-(low-previous.low)/previous.span*(height-pad*2):0;
     const last=visible.at(-1),first=visible[0],seconds=Math.max(30,last.time-first.time),count=Math.max(12,visible.length-1),plotWidth=width-18;
     const offsets=visible.map((p,i)=>({x:mode==='ticks'?plotWidth*(1-(visible.length-1-i)/count):plotWidth*(1-(last.time-p.time)/seconds),y:height-pad-(p.value-low)/span*(height-pad*2),p}));
@@ -40,16 +41,17 @@ export function livePriceChart(host,{mode='line',onObservation=()=>{}}={}){
   canvas.onpointermove=e=>{pointer=e.clientX-canvas.getBoundingClientRect().left;cancelAnimationFrame(frame);frame=0;progress=1;draw();};canvas.onpointerleave=()=>{pointer=null;draw();onObservation(points.at(-1));};
   size();
   return {
-    setMode(value){mode=value;progress=1;layout();canvas.setAttribute('aria-label',`${mode==='ticks'?'Price ticks':'Live price line'}, ${points.length} actual observations`);host.dataset.series=mode==='ticks'?'ticks':'live-line';draw();},
+    setWindow(value){windowSize=[30,60,120].includes(Number(value))?Number(value):60;cancelAnimationFrame(frame);frame=0;progress=1;geometry=null;layout();draw();},
+    setMode(value){cancelAnimationFrame(frame);frame=0;mode=value;progress=1;layout();canvas.setAttribute('aria-label',`${mode==='ticks'?'Price ticks':'Live price line'}, ${points.length} actual observations`);host.dataset.series=mode==='ticks'?'ticks':'live-line';draw();},
     setData(values,{reset=false}={}){const last=reset?null:points.at(-1),next=values.at(-1);if(reset)geometry=null;points=values.slice(-tickLimit);cancelAnimationFrame(frame);frame=0;layout();canvas.setAttribute('aria-label',`${mode==='ticks'?'Price ticks':'Live price line'}, ${points.length} actual observations`);host.dataset.points=String(points.length);host.dataset.series=mode==='ticks'?'ticks':'live-line';if(next)onObservation(next);progress=last&&next&&last.id!==next.id&&!document.hidden&&!motion.matches?0:1;start=performance.now();draw();if(progress<1)frame=requestAnimationFrame(step);},
     stats:()=>({frames,meanDrawMs:frames?drawMs/frames:0,samples:points.length,animating:!!frame}),
     dispose(){disposed=true;cancelAnimationFrame(frame);resize.disconnect();motion.removeEventListener('change',change);document.removeEventListener('visibilitychange',visibility);canvas.onpointermove=null;canvas.onpointerleave=null;canvas.remove();}
   };
 }
 
-export function streamPrices({host,api,asset,kind,mode='line',onStatus=()=>{}}){
+export function streamPrices({host,api,asset,kind,mode='line',windowSize=60,onStatus=()=>{}}){
   let points=[],epoch,cursor=0,timer,controller,disposed=false,generation=0;
-  const chart=livePriceChart(host,{mode,onObservation:p=>{if(p)onStatus({point:p});}});
+  const chart=livePriceChart(host,{mode,windowSize,onObservation:p=>{if(p)onStatus({point:p});}});
   async function poll(){
     if(disposed||document.hidden||!host.isConnected)return;
     const run=++generation;controller=new AbortController();
@@ -64,5 +66,5 @@ export function streamPrices({host,api,asset,kind,mode='line',onStatus=()=>{}}){
   }
   function visibility(){generation++;clearTimeout(timer);controller?.abort();if(!document.hidden&&!disposed)poll();}
   document.addEventListener('visibilitychange',visibility);poll();
-  return {chart,setMode:chart.setMode,dispose(){disposed=true;clearTimeout(timer);controller?.abort();document.removeEventListener('visibilitychange',visibility);chart.dispose();}};
+  return {chart,setMode:chart.setMode,setWindow:chart.setWindow,dispose(){disposed=true;clearTimeout(timer);controller?.abort();document.removeEventListener('visibilitychange',visibility);chart.dispose();}};
 }

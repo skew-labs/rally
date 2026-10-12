@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.14.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.15.apk)
 
 ## Interaction and data
 
@@ -177,3 +177,7 @@ Version 0.4.14 adds a native editor for display name, username, bio and profile 
 Web and Android apply the canonical save response immediately, retain the draft on errors and reject responses from a previous account. An older bootstrap response cannot overwrite a newer profile save. Account entry on the web no longer waits for the market catalog.
 
 Market rows use a 72 dp minimum footprint at standard text size and expand for larger text. Web token rows also open from their price area; independent Buy and watchlist actions remain separate. Desktop chart sheets are wider, while phone sheets keep Buy/Sell visible. Native hourly charts draw price labels, grid lines and the latest visible close with cached geometry.
+
+## Chart preferences
+
+Version 0.4.15 defaults to a historical line. Chart type (Line, Candles, Ticks) and range are separate controls. Live sits with the line ranges. Ticks use actual price updates and allow a 30, 60 or 120 sample window; these are price observations, not a trade-count aggregation. Preferences persist on the device. CoinGecko is an explicit optional view. Provider OHLC stays available as 1-hour candles for supported spot and perpetual markets.

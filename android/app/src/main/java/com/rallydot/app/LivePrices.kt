@@ -37,14 +37,14 @@ private class TickBounds { var low=0.0;var range=0.0 }
 
 // Frame-clock progress is read only by the draw phase, not by the order sheet.
 // The observed price list remains unchanged while the live edge moves.
-@Composable fun LivePriceChart(points: List<PriceTick>,ticks: Boolean,onScrub: (ChartPoint?)->Unit,epoch: String?=null) {
+@Composable fun LivePriceChart(points: List<PriceTick>,ticks: Boolean,onScrub: (ChartPoint?)->Unit,epoch: String?=null,windowSize: Int=60) {
     val color=Color(0xFF9178FF)
     val progress=remember(epoch) { mutableFloatStateOf(1f) }
     var previous by remember(epoch) { mutableLongStateOf(0) }
     val pointer=remember(epoch) { mutableStateOf<Offset?>(null) }
     val bounds=remember(epoch) { TickBounds() }
     val scrub by rememberUpdatedState(onScrub)
-    LaunchedEffect(points.lastOrNull()?.id,ticks,epoch) {
+    LaunchedEffect(points.lastOrNull()?.id,ticks,epoch,windowSize) {
         val latest=points.lastOrNull()?.id ?: return@LaunchedEffect
         val animate=previous!=0L && previous!=latest && (coroutineContext[MotionDurationScale]?.scaleFactor ?: 1f)>0
         previous=latest
@@ -53,18 +53,18 @@ private class TickBounds { var low=0.0;var range=0.0 }
         val start=withFrameNanos { it }
         while(progress.floatValue<1f)withFrameNanos { frame->progress.floatValue=((frame-start)/220_000_000.0).toFloat().coerceAtMost(1f) }
     }
-    Box(Modifier.fillMaxSize().highRefresh().semantics { contentDescription="${if(ticks)"Price ticks" else "Live price line"}, ${points.size} actual observations" }.pointerInput(points,ticks) {
+    Box(Modifier.fillMaxSize().highRefresh().semantics { contentDescription="${if(ticks)"Price ticks" else "Live price line"}, ${minOf(points.size,savedTickWindow(windowSize))} actual observations, last ${savedTickWindow(windowSize)} updates" }.pointerInput(points,ticks,windowSize) {
         detectDragGestures(onDragEnd={pointer.value=null;scrub(null)},onDragCancel={pointer.value=null;scrub(null)}) { change,_->
             change.consume();pointer.value=change.position;progress.floatValue=1f
             if(points.isNotEmpty()){
-                val visible=points.takeLast(60);val last=visible.last();val duration=max(30L,last.time-visible.first().time);val count=max(12,visible.size-1)
+                val visible=points.takeLast(savedTickWindow(windowSize));val last=visible.last();val duration=max(30L,last.time-visible.first().time);val count=max(12,visible.size-1)
                 val fraction=change.position.x/size.width
                 val point=visible.minBy { p->val x=if(ticks)1-(visible.lastIndex-visible.indexOf(p)).toDouble()/count else 1-(last.time-p.time).toDouble()/duration;abs(x-fraction) }
                 scrub(ChartPoint(point.time,point.value.toFloat()))
             }
         }
     }.drawWithCache {
-        val visible=points.takeLast(60)
+        val visible=points.takeLast(savedTickWindow(windowSize))
         if(visible.isEmpty())return@drawWithCache onDrawBehind { }
         val minimum=visible.minOf { it.value };val high=visible.maxOf { it.value };val range=max(high-minimum,max(high*.0005,1e-9));val low=(minimum+high-range)/2
         val duration=max(30L,visible.last().time-visible.first().time);val count=max(12,visible.size-1)

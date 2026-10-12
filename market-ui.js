@@ -2,6 +2,7 @@ import {mountHolders,warmHolders} from './holder-ui.js';
 import {priceLineOptions,fitPriceLine} from './price-line.js';
 import {providerTarget,mountProviderChart,preconnectProvider} from './provider-chart.js';
 import {streamPrices} from './live-price.js';
+import {chartSettings,saveChartSettings} from './chart-settings.js';
 let renderer;
 const library=()=>renderer ||= import(location.origin+'/assets/lightweight-charts-5.2.1.mjs').catch(e=>{renderer=null;throw e;});
 
@@ -20,22 +21,29 @@ export function marketUI(c){
     const poolPrice=pool?.state==='settled'?pool.settlementPrice:referenceFresh?reference.mark:null;
     modal(esc(asset.symbol),`<div class="r-asset-body"><div class="r-asset-summary">${logo(asset)}<div><b>${esc(asset.name||asset.symbol)}</b><small>${pool?'Castora · Price prediction':kind==='perps'?esc(perp.venue)+' · Perpetual':'Monad · Spot'}</small></div></div><div class="r-asset-price"><strong>${usd(pool?poolPrice:perp?.mark??asset.price)}</strong><span>${pool?(pool.state==='settled'?'Resolved pool price':'Perpl mark · Reference price'):kind==='perps'?esc((perp.stale?'Last known · ':'')+(perp.priceSource||'Venue price')):asset.stale?'Stale pool price':'Pool price'}</span></div><div class="r-mini-periods" role="group" aria-label="Chart period">${['1D','7D','1M'].map(p=>`<button data-mini-period="${p}" aria-pressed="${p==='1D'}">${p}</button>`).join('')}</div><div class="r-mini-chart" aria-label="${esc(asset.symbol)} price chart"><div class="r-chart-loading" role="status">Loading chart…</div></div><div class="r-mini-caption" role="status"></div>${kind==='spot'?'<section id="market-holders" class="r-holders"></section>':''}<div class="r-asset-facts"><span>${pool?'Entry stake':kind==='perps'?'Last trade':'24h volume'}</span><b>${pool?esc(pool.stake+' '+pool.stakeAsset):kind==='perps'?usd(perp.last):asset.volume==null?'—':usd(asset.volume)}</b>${asset.liquidity!=null?`<span>Pool liquidity</span><b>${usd(asset.liquidity)}</b>`:''}<span>Updated</span><b>${age(pool?(pool.state==='settled'?pool.completedAt:reference?.observationAt||0):kind==='perps'?perp.observationAt:asset.fetchedAt||S.marketData?.fetchedAt||0)}</b></div></div><div class="r-asset-actions">${perp&&perp.execution!=='wallet_transactions'?`<span class="r-note">${perp.executionBlocker||'Order adapter under verification.'}</span>${perp.orderAdapter?`<button class="r-btn subtle" data-action="venue-order" data-id="${esc(perp.id)}">Order details</button>`:""}<a class="r-btn subtle" href="${esc(perp.sourceURL)}" target="_blank" rel="noopener noreferrer">Open ${esc(perp.venue)}</a>`:pool?`<button class="r-btn primary" style="grid-column:1/-1" data-mini-trade="buy" ${pool.state==='open'?'':'disabled'}>${pool.state==='open'?'Predict price':pool.state==='settled'?'Settled':'Awaiting settlement'}</button>`:`<button class="r-btn primary" data-mini-trade="buy" ${perp&&!perp.open?'disabled':''}>${kind==='perps'?'Buy / Long':'Buy'}</button><button class="r-btn" data-mini-trade="sell" ${perp&&!perp.open?'disabled':''}>${kind==='perps'?'Sell / Short':'Sell'}</button>`}</div>`, 'r-asset-modal');
     if(kind==='spot')mountHolders({api,esc,age},$('#market-holders'),asset.address||asset.id);
-    const instance=S.modal,host=$('.r-mini-chart'),caption=$('.r-mini-caption'),target=providerTarget(asset,kind==='prediction'?'perps':kind);let providerCleanup,useLine=false,live,chartMode='history',hourlyTimer;
+    const instance=S.modal,host=$('.r-mini-chart'),caption=$('.r-mini-caption'),target=providerTarget(asset,kind==='prediction'?'perps':kind);let providerCleanup,useLine=true,live,chartMode='history',hourlyTimer;
+    const preferences=chartSettings();let tickWindow=preferences.window;
     const state=reading={instance,host,chart:null,controller:null,sequence:0,resize:null,theme:null,line:null,data:null,period:null};
     instance.cleanup=()=>{state.sequence++;clearTimeout(hourlyTimer);document.removeEventListener('visibilitychange',resumeHourly);live?.dispose();providerCleanup?.();state.controller?.abort();state.resize?.disconnect();state.theme?.disconnect();state.chart?.remove();if(reading===state)reading=null;};
-    let selectedPeriod='1D',selectedInterval='1';
+    let selectedPeriod=preferences.period,selectedInterval=preferences.interval;
+    const remember=()=>saveChartSettings('market',{mode:chartMode,period:selectedPeriod,interval:selectedInterval,window:tickWindow});
     const controls=$('.r-mini-periods');
     function periods(){
       controls.hidden=false;const embedded=target?.kind==='pool'&&!useLine;controls.setAttribute('aria-label','Chart view');
-      const modes=`<div class="r-mini-mode-tabs"><button data-mini-candles aria-label="1 hour candles" aria-pressed="${chartMode==='candles'}">1h</button><button data-mini-live="line" aria-pressed="${chartMode==='line'}">Live</button><button data-mini-live="ticks" aria-pressed="${chartMode==='ticks'}">Ticks</button><button data-mini-history aria-pressed="${chartMode==='history'}">History</button></div>`;
-      const ranges=chartMode==='candles'?['1D','7D','1M'].map(p=>`<button data-mini-range="${p}" aria-pressed="${selectedPeriod===p}">${p}</button>`).join(''):chartMode==='history'&&!(target?.kind==='coin'&&!useLine)?(embedded?['1m','15m','1h','4h']:['1D','7D','1M']).map((p,i)=>`<button ${embedded?'data-mini-interval='+['1','15','60','240'][i]:'data-mini-period='+p} aria-pressed="${embedded?selectedInterval===['1','15','60','240'][i]:selectedPeriod===p}">${p}</button>`).join(''):'';
-      controls.innerHTML=modes+(ranges?'<div class="r-mini-range-tabs">'+ranges+'</div>':'');
+      const modes=`<div class="r-mini-mode-tabs" aria-label="Chart type"><button data-mini-history aria-pressed="${['history','line'].includes(chartMode)}">Line</button><button data-mini-candles aria-label="Candles" aria-pressed="${chartMode==='candles'}">Candles</button><button data-mini-live="ticks" aria-pressed="${chartMode==='ticks'}">Ticks</button>${target?`<button data-mini-provider aria-pressed="${chartMode==='provider'}">CoinGecko</button>`:''}</div>`;
+      let ranges='';
+      if(chartMode==='ticks')ranges='<span class="r-chart-setting-label">Updates</span>'+[30,60,120].map(n=>`<button data-mini-window="${n}" aria-pressed="${tickWindow===n}">${n}</button>`).join('');
+      else if(chartMode==='candles')ranges='<span class="r-chart-setting-label">1h candles</span>'+['1D','7D','1M'].map(p=>`<button data-mini-range="${p}" aria-pressed="${selectedPeriod===p}">${p}</button>`).join('');
+      else if(chartMode==='provider')ranges=embedded?['1m','15m','1h','4h'].map((p,i)=>`<button data-mini-interval="${['1','15','60','240'][i]}" aria-pressed="${selectedInterval===['1','15','60','240'][i]}">${p}</button>`).join(''):'';
+      else ranges=['1D','7D','1M'].map(p=>`<button data-mini-period="${p}" aria-pressed="${chartMode==='history'&&selectedPeriod===p}">${p}</button>`).join('')+`<button data-mini-live="line" aria-pressed="${chartMode==='line'}">Live</button>`;
+      controls.innerHTML=modes+(ranges?'<div class="r-mini-range-tabs" aria-label="Chart range">'+ranges+'</div>':'');
+
     }
     const theme=()=>{const dark=document.documentElement.dataset.theme==='dark';return {background:{type:'solid',color:dark?'#19191f':'#ffffff'},textColor:dark?'#a3a3b0':'#797980'};};
     function resumeHourly(){if(chartMode!=='candles')return;if(document.hidden){clearTimeout(hourlyTimer);state.controller?.abort();}else if(chartMode==='candles'&&S.modal===instance)load(selectedPeriod,true,true);}
     document.addEventListener('visibilitychange',resumeHourly);
     async function load(period,candles=false,refresh=false){
-      clearTimeout(hourlyTimer);live?.dispose();live=null;chartMode=candles?'candles':'history';selectedPeriod=period;periods();
+      clearTimeout(hourlyTimer);live?.dispose();live=null;chartMode=candles?'candles':target&&!useLine?'provider':'history';selectedPeriod=period;remember();periods();
       const sequence=++state.sequence;state.controller?.abort();state.controller=new AbortController();
       document.querySelectorAll('[data-mini-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.miniPeriod===period)));
       providerCleanup?.();providerCleanup=null;
@@ -83,11 +91,11 @@ export function marketUI(c){
     }
     function showLive(mode){
       clearTimeout(hourlyTimer);
-      if(live){chartMode=mode;live.setMode(mode);periods();return;}
-      chartMode=mode;periods();state.sequence++;state.controller?.abort();providerCleanup?.();providerCleanup=null;state.resize?.disconnect();state.theme?.disconnect();state.chart?.remove();state.chart=null;state.line=null;
+      if(live){chartMode=mode;live.setMode(mode);remember();periods();return;}
+      chartMode=mode;remember();periods();state.sequence++;state.controller?.abort();providerCleanup?.();providerCleanup=null;state.resize?.disconnect();state.theme?.disconnect();state.chart?.remove();state.chart=null;state.line=null;
       host.style.height='200px';host.removeAttribute('aria-busy');caption.textContent='Waiting for price updates…';
       let latest;
-      live=streamPrices({host,api,asset:pool?String(asset.chartMarket):id,kind:pool?'perps':kind,mode,onStatus:({data,point,error})=>{
+      live=streamPrices({host,api,asset:pool?String(asset.chartMarket):id,kind:pool?'perps':kind,mode,windowSize:tickWindow,onStatus:({data,point,error})=>{
         if(!host.isConnected)return;if(data)latest=data;
         if(point&&!pool){const price=host.closest('.r-asset-modal').querySelector('.r-asset-price');price.querySelector('strong').textContent=usd(point.value);price.querySelector('span').textContent=(latest?.stale?'Last known · ':'')+(latest?.source||'Price update');}
         const stamp=point?new Date(point.time*1000).toLocaleTimeString('en-US',{hour12:false}):'';
@@ -95,20 +103,23 @@ export function marketUI(c){
       }});
     }
     $('.r-asset-modal').onclick=e=>{
-      const b=e.target.closest('[data-mini-candles],[data-mini-range],[data-mini-history],[data-mini-live],[data-mini-interval],[data-mini-period],[data-mini-trade],[data-mini-retry],[data-mini-line]');if(!b)return;
-      if(b.hasAttribute('data-mini-candles'))load(selectedPeriod,true);
+      const b=e.target.closest('[data-mini-provider],[data-mini-window],[data-mini-candles],[data-mini-range],[data-mini-history],[data-mini-live],[data-mini-interval],[data-mini-period],[data-mini-trade],[data-mini-retry],[data-mini-line]');if(!b)return;
+      if(b.hasAttribute('data-mini-provider')){useLine=false;load(selectedPeriod);}
+      else if(b.hasAttribute('data-mini-window')){tickWindow=Number(b.dataset.miniWindow);live?.setWindow(tickWindow);remember();periods();}
+      else if(b.hasAttribute('data-mini-candles')){useLine=true;load(selectedPeriod,true);}
       else if(b.hasAttribute('data-mini-range'))load(b.dataset.miniRange,true);
-      else if(b.hasAttribute('data-mini-history'))load(selectedPeriod);
+      else if(b.hasAttribute('data-mini-history')){useLine=true;load(selectedPeriod);}
       else if(b.hasAttribute('data-mini-live'))showLive(b.dataset.miniLive);
       else if(b.hasAttribute('data-mini-line')){useLine=true;load(selectedPeriod);}
       else if(b.hasAttribute('data-mini-interval')){if(b.dataset.miniInterval!==selectedInterval){selectedInterval=b.dataset.miniInterval;load(selectedPeriod);}}
-      else if(b.hasAttribute('data-mini-period'))load(b.dataset.miniPeriod);
+      else if(b.hasAttribute('data-mini-period')){useLine=true;load(b.dataset.miniPeriod);}
       else if(b.hasAttribute('data-mini-retry'))load(selectedPeriod,chartMode==='candles');
       else if(pool)finance.handle('predict',id);
       else if(kind==='perps')finance.handle(b.dataset.miniTrade==='sell'?'perpl-short':'perpl-order',id);
       else trade(id,null,b.dataset.miniTrade);
     };
-    load('1D',kind==='perps');
+    if(['line','ticks'].includes(preferences.mode))showLive(preferences.mode);
+    else {useLine=preferences.mode!=='provider';load(selectedPeriod,preferences.mode==='candles');}
   }
   function patchSpot(){
     const rows=document.querySelectorAll('[data-spot-market]');
