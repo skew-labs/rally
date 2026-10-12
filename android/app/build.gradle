@@ -7,8 +7,8 @@ android {
         applicationId 'com.rallydot.app'
         minSdk 28
         targetSdk 36
-        versionCode 31
-        versionName '0.4.18'
+        versionCode 32
+        versionName '0.4.19'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     signingConfigs {

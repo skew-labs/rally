@@ -218,9 +218,9 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
         }
     }
 }
-@Composable fun ProfileArtwork(url: String?,label: String,size: Dp=48.dp) = Artwork(url?.takeUnless { it==ORIGIN+"/assets/community-rally.png" || it==ORIGIN+"/assets/favicon.svg" },label,size,character=true)
+@Composable fun ProfileArtwork(url: String?,label: String,size: Dp=48.dp,identity: String,namespace: String="profile") = Artwork(url?.takeUnless { namespace=="profile" && (it==ORIGIN+"/assets/community-rally.png" || it==ORIGIN+"/assets/favicon.svg") },label,size,characterResource=avatarDrawable(identity,namespace))
 @Composable fun TokenArtwork(asset: Asset,size: Dp=40.dp) = Artwork(asset.image,asset.symbol,size,fallbackURL=asset.heroImage)
-@Composable fun Artwork(url: String?,label: String,size: Dp=48.dp,round: Boolean=true,character: Boolean=false,fallbackURL: String?=null) {
+@Composable fun Artwork(url: String?,label: String,size: Dp=48.dp,round: Boolean=true,characterResource: Int?=null,fallbackURL: String?=null) {
     val context=LocalContext.current
     val density=androidx.compose.ui.platform.LocalDensity.current
     val pixels=with(density) { size.roundToPx() }.coerceAtLeast(1)
@@ -236,10 +236,10 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
     }
     var loaded by remember(url,fallbackURL) { mutableStateOf(false) }
     val companyLogo=url?.startsWith(ORIGIN+"/assets/agent-")==true
-    val background=when { companyLogo->Color.White;character->MaterialTheme.colorScheme.secondaryContainer;else->MaterialTheme.colorScheme.surfaceContainer }
+    val background=when { companyLogo->Color.White;characterResource!=null->MaterialTheme.colorScheme.secondaryContainer;else->MaterialTheme.colorScheme.surfaceContainer }
     Box(Modifier.size(size).clip(if(round)CircleShape else RoundedCornerShape(12.dp)).background(background),contentAlignment=Alignment.Center) {
         if(!loaded) {
-            if(character)Image(androidx.compose.ui.res.painterResource(R.drawable.rally_character),label,Modifier.fillMaxSize().graphicsLayer { translationY=size.toPx()*.04f;scaleX=.95f;scaleY=.95f },contentScale=androidx.compose.ui.layout.ContentScale.Fit)
+            if(characterResource!=null)Image(androidx.compose.ui.res.painterResource(characterResource),label,Modifier.fillMaxSize().graphicsLayer { translationY=size.toPx()*.04f;scaleX=.95f;scaleY=.95f },contentScale=androidx.compose.ui.layout.ContentScale.Fit)
             else Text(label.take(3).uppercase(),fontSize=(size.value*.25f).sp,color=if(companyLogo)Color(0xFF727785) else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=FontWeight.Medium)
         }
         if(current!=null)AsyncImage(request,contentDescription=label,onSuccess={loaded=true},onError={loaded=false;failed=true},modifier=Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Crop)

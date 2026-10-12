@@ -1,4 +1,5 @@
 // Community cards share the marketplace's tap-to-open, tap-to-join vocabulary.
+import {avatarAsset} from './avatar-identity.js';
 export function communityMarketUI({S,$,esc,icon,logo,trade,empty}){
  const count=n=>Number(n||0).toLocaleString('en-US');
  const posts=n=>count(n)+' '+(Number(n)===1?'post':'posts');
@@ -21,7 +22,7 @@ export function communityMarketUI({S,$,esc,icon,logo,trade,empty}){
   const t=paired(c);
   if(t)return logo({id:t.address,name:t.name,symbol:t.symbol,logoURI:t.logoURI});
   if(c.id==='monad')return logo({id:'mon',name:c.name,symbol:'MON',logoURI:'/assets/MON.png'});
-  return `<span class="cx-letter-art r-character-avatar" aria-hidden="true"><img src="/assets/rally-character-v1.webp" alt="" width="56" height="56" decoding="async"></span>`;
+  return `<span class="cx-letter-art r-character-avatar" aria-hidden="true"><img src="${avatarAsset(c.id,'community')}" alt="" width="56" height="56" decoding="async"></span>`;
  }
  function card(c){
   const t=paired(c),m=market(c),joined=c.joined;

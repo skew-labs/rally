@@ -50,7 +50,7 @@ import org.json.JSONObject
                 val person=Person.parse(me)
                 Column(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                        ProfileArtwork(person.image,person.name,48.dp)
+                        ProfileArtwork(person.image,person.name,48.dp,identity=person.avatarIdentity)
                         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) { Text(person.name,style=MaterialTheme.typography.titleMedium,maxLines=2,overflow=TextOverflow.Ellipsis);Text("@${person.handle}",style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis,color=MaterialTheme.colorScheme.onSurfaceVariant) }
                         OutlinedButton(onClick={editing=true},contentPadding=PaddingValues(horizontal=14.dp),modifier=Modifier.heightIn(min=48.dp)) { Text("Edit profile",fontSize=12.sp) }
                     }
@@ -109,7 +109,7 @@ import org.json.JSONObject
         item { TextButton(onClick=onLeague){Text("Weekly league")};Text("Realized returns · 30 days",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant) }
         if(page.loading && page.items.isEmpty())item { LoadingRows() }
         if(page.error!=null)item { EmptyState("Rankings unavailable",page.error,"Retry",{vm.load(key,"/api/performance/leaderboard","entries",true)}) }
-        itemsIndexed(page.items,key={_,item->item.string("id")}) { index,item->Row(Modifier.fillMaxWidth().clickable { onAlgorithm(item) }.padding(vertical=16.dp),verticalAlignment=Alignment.CenterVertically) { Text("${index+1}",Modifier.width(32.dp),color=MaterialTheme.colorScheme.onSurfaceVariant);val person=Person.parse(item.optJSONObject("author") ?: JSONObject());ProfileArtwork(person.image,person.name,42.dp);Column(Modifier.weight(1f).padding(start=12.dp)) { Text(item.string("name"),fontWeight=FontWeight.Medium);Text(person.handle,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text(item.optJSONObject("performance")?.number("roi")?.let { String.format(java.util.Locale.US,"%.2f%%",it) } ?: "—",color=Gain) } }
+        itemsIndexed(page.items,key={_,item->item.string("id")}) { index,item->Row(Modifier.fillMaxWidth().clickable { onAlgorithm(item) }.padding(vertical=16.dp),verticalAlignment=Alignment.CenterVertically) { Text("${index+1}",Modifier.width(32.dp),color=MaterialTheme.colorScheme.onSurfaceVariant);val person=Person.parse(item.optJSONObject("author") ?: JSONObject());ProfileArtwork(person.image,person.name,42.dp,identity=person.avatarIdentity);Column(Modifier.weight(1f).padding(start=12.dp)) { Text(item.string("name"),fontWeight=FontWeight.Medium);Text(person.handle,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text(item.optJSONObject("performance")?.number("roi")?.let { String.format(java.util.Locale.US,"%.2f%%",it) } ?: "—",color=Gain) } }
         if(!page.loading && page.items.isEmpty() && page.error==null)item { EmptyState("No verified rankings yet","Rankings use recorded closed trades.") }
     }
 }
@@ -128,7 +128,7 @@ import org.json.JSONObject
         Column(Modifier.fillMaxWidth().heightIn(max=720.dp).padding(horizontal=20.dp,vertical=12.dp)) {
             Column(Modifier.weight(1f,false).verticalScroll(rememberScrollState()).padding(bottom=16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             AlgorithmArtwork(feed,48.dp);Text(algorithmTitle(feed),style=MaterialTheme.typography.headlineSmall)
-            item.optJSONObject("author")?.let { a->val p=Person.parse(a);Row(verticalAlignment=Alignment.CenterVertically) { ProfileArtwork(p.image,p.name,36.dp);Text(p.name,Modifier.padding(start=10.dp),color=MaterialTheme.colorScheme.onSurfaceVariant) } }
+            item.optJSONObject("author")?.let { a->val p=Person.parse(a);Row(verticalAlignment=Alignment.CenterVertically) { ProfileArtwork(p.image,p.name,36.dp,identity=p.avatarIdentity);Text(p.name,Modifier.padding(start=10.dp),color=MaterialTheme.colorScheme.onSurfaceVariant) } }
             val research=feed.optJSONObject("research");val roi=algorithmReturn(feed)
             if(roi!=null) {
                 Text(algorithmPercent(roi),fontSize=36.sp,fontWeight=FontWeight.Medium,color=performanceInk(roi))

@@ -52,7 +52,7 @@ import org.json.JSONObject
             error?.let { Text(it,Modifier.padding(bottom=12.dp),color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodyMedium) }
             Column(Modifier.weight(1f,false).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 Row(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    ProfileArtwork(photo ?: if(removed)null else safeImage(me.string("avatar")),name,72.dp)
+                    ProfileArtwork(photo ?: if(removed)null else safeImage(me.string("avatar")),name,72.dp,identity=me.string("id").ifBlank { me.string("handle") })
                     FlowRow(Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                         TextButton(enabled=!pending,onClick={picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}) { Text("Change photo") }
                         if(photo!=null || !removed && me.string("avatar").isNotBlank())TextButton(enabled=!pending,onClick={photo=null;removed=true}) { Text("Remove") }

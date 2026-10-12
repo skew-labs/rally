@@ -51,7 +51,7 @@ fun algorithmOwner(f: JSONObject): String {
 @Composable fun AlgorithmListRow(feed: JSONObject,creator: Person=discoveryCreator(feed,emptyList()),onOpen: ()->Unit) {
     val roi=algorithmReturn(feed)
     Row(Modifier.fillMaxWidth().heightIn(min=80.dp).clickable(onClick=onOpen).padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-        ProfileArtwork(creator.image,creator.name,36.dp)
+        ProfileArtwork(creator.image,creator.name,36.dp,identity=creator.avatarIdentity)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
             Text(algorithmTitle(feed),fontSize=13.sp,lineHeight=16.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
             Text(creator.name+(feed.optJSONObject("research")?.string("wallet")?.takeIf { it.isNotBlank() }?.let { " · "+it.takeLast(4) } ?: ""),fontSize=10.sp,lineHeight=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -88,7 +88,7 @@ fun algorithmOwner(f: JSONObject): String {
         items(communities,key={it.string("id")},contentType={"community"}) { c->
             val token=c.optJSONObject("token");val image=token?.string("logoURI") ?: if(c.string("id")=="monad")"/assets/MON.png" else c.string("logoURI")
             Row(Modifier.fillMaxWidth().heightIn(min=112.dp).clickable { onCommunity(c.string("id")) }.padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                ProfileArtwork(safeImage(image),c.string("name"),44.dp)
+                ProfileArtwork(safeImage(image),c.string("name"),44.dp,identity=c.string("id"),namespace="community")
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
                     Text(token?.string("symbol") ?: c.string("name"),fontSize=15.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
                     Text(listOfNotNull(token?.string("symbol"),"${c.optInt("members")} members").joinToString(" · "),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)

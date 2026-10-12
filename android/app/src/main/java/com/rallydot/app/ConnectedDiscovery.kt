@@ -20,7 +20,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.json.JSONObject
 import java.util.Locale
 
-fun discoveryCreator(feed: JSONObject,people: List<JSONObject>): Person=Person.parse(people.firstOrNull { it.string("id")==feed.string("owner") } ?: feed.optJSONObject("creator") ?: JSONObject().put("name","Rally").put("handle","rally"))
+fun discoveryCreator(feed: JSONObject,people: List<JSONObject>): Person {
+    val person=Person.parse(people.firstOrNull { it.string("id")==feed.string("owner") } ?: feed.optJSONObject("creator") ?: JSONObject().put("name","Rally").put("handle","rally"))
+    return person.copy(id=person.id.ifBlank { feed.string("owner").ifBlank { person.handle } })
+}
 fun homeAlgorithms(boot: JSONObject?): List<JSONObject> {
     val all=boot?.objects("feeds").orEmpty();val following=boot?.objects("people").orEmpty().filter { it.optBoolean("following") }.map { it.string("id") }.toSet()
     return (all.filter { it.string("id")==boot?.string("activeFeed") && it.string("owner")!="rally" || it.string("owner") in following || (it.number("price") ?: 0.0)>0 && it.optBoolean("access") }+all.filter { !it.optJSONObject("research")?.string("wallet").isNullOrBlank() }+all.filter { it.has("algorithm_version") && !it.isNull("algorithm_version") }).distinctBy { it.string("id") }.take(2)
@@ -49,7 +52,7 @@ fun homeAlgorithms(boot: JSONObject?): List<JSONObject> {
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text(if(following)"Your algorithms" else "Algorithms to watch",Modifier.weight(1f),fontSize=15.sp,lineHeight=19.sp,fontWeight=FontWeight.Medium);TextButton(onClick=onAlgorithms){Text("See all",fontSize=12.sp,lineHeight=15.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)} }
         feeds.forEach { f->AlgorithmListRow(f,discoveryCreator(f,state.boot?.objects("people").orEmpty())) { onAlgorithm(algorithmItem(f)) } }
         if(post!=null)Row(Modifier.fillMaxWidth().clickable { onPost(post) }.padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            ProfileArtwork(post.author.image,post.author.name,28.dp)
+            ProfileArtwork(post.author.image,post.author.name,28.dp,identity=post.author.avatarIdentity)
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) { Text(post.author.name+" · "+if(following)"Following" else "Latest activity",fontSize=10.sp,lineHeight=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis);Text(post.text,fontSize=12.sp,lineHeight=15.sp,maxLines=1,overflow=TextOverflow.Ellipsis) }
             Icon(Icons.Outlined.ChevronRight,null,Modifier.size(16.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
         }

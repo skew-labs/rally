@@ -1,4 +1,5 @@
 import {socialLoopUI} from './social-loop.js';
+import {avatarAsset,profileAvatarAsset} from './avatar-identity.js';
 import {walletUI, mountHolders} from './wallet-ui.js';
 import { chart, mountChart, disposeChart, fitChart, mountPoolPriceChart } from './charts.js';
 import { financeUI } from './finance.js';
@@ -78,11 +79,11 @@ if(S.view==='messages'||!['home','discover','leaderboard','explore','feeds','age
 const token = id => S.tokens.find(t=>t.id===id);
 const initials=p=>{const words=String(p?.name||p?.handle||'').trim().split(/\s+/);return (words.length>1?words[0].slice(0,1)+words.at(-1).slice(0,1):words[0].slice(0,2)).toUpperCase();};
 const avatar = p => {
- const brand=profileBrand(p),rallyChannel=p?.id==='rally'||p?.avatar===rallyAvatar;
+ const brand=profileBrand(p),rallyChannel=p?.avatar===rallyAvatar||p?.id==='rally'&&(!p.avatar||p.avatar==='/assets/favicon.svg');
  const creatorLogo=p?.communityToken?.logoURI&&p.communityToken.owner===p.id?p.communityToken.logoURI:null;
  const art=rallyChannel?null:(p?.avatar||brand?.asset||creatorLogo),name=p?.name||p?.handle||'Account';
  const tone=[...String(p?.id||p?.handle||name)].reduce((n,c)=>(n+c.charCodeAt(0))%4,0);
- return `<span class="r-avatar r-profile-avatar ${brand?'r-agent-brand-avatar':''}" data-avatar-tone="${tone}" ${brand?`data-agent-brand="${brand.id}"`:''} ${rallyChannel?'data-rally-channel="true"':''}>${art?`<img src="${esc(safeURL(art))}" alt="${esc(name)}" width="42" height="42" decoding="async" onload="this.classList.add('is-loaded');this.nextElementSibling.hidden=true" onerror="this.hidden=true;this.nextElementSibling.hidden=false;this.parentElement.classList.add('r-avatar-missing')">`:''}<span class="r-avatar-fallback r-character-avatar" aria-hidden="true"><img src="/assets/rally-character-v1.webp" alt="" width="42" height="42" decoding="async"></span></span>`;
+ return `<span class="r-avatar r-profile-avatar ${brand?'r-agent-brand-avatar':''}" data-avatar-tone="${tone}" ${brand?`data-agent-brand="${brand.id}"`:''} ${rallyChannel?'data-rally-channel="true"':''}>${art?`<img src="${esc(safeURL(art))}" alt="${esc(name)}" width="42" height="42" decoding="async" onload="this.classList.add('is-loaded');this.nextElementSibling.hidden=true" onerror="this.hidden=true;this.nextElementSibling.hidden=false;this.parentElement.classList.add('r-avatar-missing')">`:''}<span class="r-avatar-fallback r-character-avatar" aria-hidden="true"><img src="${profileAvatarAsset(p)}" alt="" width="42" height="42" decoding="async"></span></span>`;
 };
 const logo = (t,eager=false) => {
  const identity=String(t?.id||t?.address||'').toLowerCase(),art=t?.logoThumbURI||tokenArtwork[identity]||t?.logoURI,symbol=String(t?.symbol||'?');
@@ -190,7 +191,7 @@ function rail(){
 }
 function discoveryLinks(){return `<section class="r-market-strip" aria-label="New Monad tokens"><div class="r-live-tokens" id="home-market-tokens"><button data-nav="launchpad">Browse launches ${icon('arrow')}</button></div></section>`;}
 async function loadLaunchPreview(){try{await N.catalog();rail();}catch{}}
-function communityMark(c){const t=c.token||(S.boot.communityToken?.token?.community===c.id?S.boot.communityToken.token:S.boot.people.find(p=>p.communityToken?.community===c.id)?.communityToken);if(t?.logoURI)return `<img class="r-community-mark" src="${esc(safeURL(t.logoURI))}" alt="">`;return c.id==='monad'?`<img class="r-community-mark" src="${esc(safeURL('/assets/MON.png'))}" alt="">`:`<span class="r-community-mark r-character-avatar" aria-hidden="true"><img src="/assets/rally-character-v1.webp" alt="" width="40" height="40"></span>`;}
+function communityMark(c){const t=c.token||(S.boot.communityToken?.token?.community===c.id?S.boot.communityToken.token:S.boot.people.find(p=>p.communityToken?.community===c.id)?.communityToken);if(t?.logoURI)return `<img class="r-community-mark" src="${esc(safeURL(t.logoURI))}" alt="">`;return c.id==='monad'?`<img class="r-community-mark" src="${esc(safeURL('/assets/MON.png'))}" alt="">`:`<span class="r-community-mark r-character-avatar" aria-hidden="true"><img src="${avatarAsset(c.id,'community')}" alt="" width="40" height="40"></span>`;}
 function communityCover(c){return `<div class="r-community-cover ${c.id==='monad'?'monad':'studio'}">${c.id==='monad'?`<img src="${esc(safeURL('/assets/MON.png'))}" alt="">`:`<span>${esc(c.name)}</span>`}</div>`;}
 function communityHeader(c){
  const paired=G.communityToken(c.id),tabs=paired?[['posts','Feed'],['algorithms','Algorithms'],['media','Media'],['agents','Agents'],['revenue','Revenue'],['about','About']]:[['posts','Feed'],['media','Media'],['markets','Markets'],['about','About']];
