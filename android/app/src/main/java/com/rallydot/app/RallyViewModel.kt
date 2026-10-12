@@ -129,10 +129,12 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
     val me get() = mutable.value.boot?.optJSONObject("me")
     init { bootstrap();restoreConnect();viewModelScope.launch { delay(1200);wallet.restore() } }
     fun message(value: String?) { mutable.update { it.copy(message=value) } }
+    private var profileRevision=0L
     private suspend fun refreshBoot(): JSONObject {
-        val version=api.sessionVersion
+        val version=api.sessionVersion;val revision=profileRevision
         val data=api.get("/api/bootstrap?markets=0",true)
         if(version!=api.sessionVersion)throw CancellationException("Account changed")
+        if(revision!=profileRevision && data.optJSONObject("me")?.string("id")==me?.string("id"))data.put("me",me)
         val changed=accountIdentityChanged(mutable.value.boot,data)
         if(changed) { portfolioJob?.cancel();jobs.values.forEach { it.cancel() };jobs.clear();clearCharts();drafts.clear() }
         mutable.update { it.copy(boot=data,bootError=null,portfolio=if(changed)null else it.portfolio,portfolioError=if(changed)null else it.portfolioError,walletPanel=if(changed)null else it.walletPanel,pages=if(changed)emptyMap() else it.pages,reactions=if(changed)emptyMap() else it.reactions) };return data
@@ -214,6 +216,17 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         require(validAmount(amount))
         return if(asset.raw.optBoolean("nadfun")) api.post("/api/nadfun/quote",JSONObject().put("token",asset.id).put("kind",side).put("amount",amount).put("slippage",100))
         else api.post("/api/routes", JSONObject().put("input",if(side=="buy")"MON" else asset.id).put("output",if(side=="buy")asset.id else "MON").put("amount",amount))
+    }
+    suspend fun saveProfile(fields: JSONObject,photo: Uri?=null) {
+        val account=me?.string("id") ?: throw IllegalStateException("Sign in again")
+        val version=api.sessionVersion
+        val body=JSONObject(fields.toString())
+        if(photo!=null)body.put("avatarMedia",api.upload(photo,5*1024*1024,avatar=true).string("id"))
+        if(version!=api.sessionVersion || account!=me?.string("id"))throw CancellationException("Account changed")
+        val saved=api.post("/api/profile",body)
+        if(version!=api.sessionVersion || account!=me?.string("id") || saved.string("id")!=account)throw CancellationException("Account changed")
+        profileRevision++;api.clearCache()
+        mutable.update { it.copy(boot=JSONObject(it.boot.toString()).put("me",saved),pages=emptyMap()) }
     }
     fun action(path: String,body: JSONObject,key: String?=null,done: (JSONObject)->Unit = {}) {
         if(me==null) { showWallet();return }

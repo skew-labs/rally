@@ -298,7 +298,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.response({'client':client['name'],'scopes':sorted(scopes)})
         if path.startswith('/media/'):
             ident,_,suffix=path.removeprefix('/media/').partition('/');m=s.one('SELECT * FROM media WHERE id=?',(ident,))
-            public=community_tokens.public_image(ident) or any(social.visible(who['user'] if who else None,p['author']) for p in s.rows('SELECT author FROM posts WHERE media=? AND deleted=0',(ident,)))
+            public=any(social.visible(who['user'] if who else None,a['id']) for a in s.rows('SELECT id FROM accounts WHERE avatar=?',('/media/'+ident,))) or community_tokens.public_image(ident) or any(social.visible(who['user'] if who else None,p['author']) for p in s.rows('SELECT author FROM posts WHERE media=? AND deleted=0',(ident,)))
             if not m or not(public or who and who['user']==m['owner']):raise s.Problem('Media not found',404)
             if suffix=='status':return self.response(media_pipeline.describe(ident))
             target,mime=media_pipeline.delivery(ident,suffix)
@@ -405,9 +405,9 @@ class Handler(BaseHTTPRequestHandler):
                 if ticket['grant_id'] and not s.one('SELECT 1 FROM grants WHERE id=? AND owner=? AND agent=? AND revoked=0 AND expires>?',(ticket['grant_id'],ticket['owner'],ticket['actor'],s.now())):raise s.Problem('Connection revoked',401)
                 if not s.write('UPDATE uploads SET used=1 WHERE hash=? AND used=0',(ticket['hash'],)):raise s.Problem('Upload already used',409)
                 who={'user':ticket['owner'],'actor':ticket['actor'],'scopes':{'media:upload'},'grant':ticket['grant_id']}
-            elif self.path!='/api/media':raise s.Problem('Upload endpoint not found',404)
+            elif self.path not in {'/api/media','/api/media/avatar'}:raise s.Problem('Upload endpoint not found',404)
             s.require(who,'media:upload')
-            return self.response(s.upload_file(who,self.body(25*1024*1024),self.headers.get('Content-Type','').split(';')[0]))
+            return self.response(s.upload_file(who,self.body(5*1024*1024 if self.path=='/api/media/avatar' else 25*1024*1024),self.headers.get('Content-Type','').split(';')[0],avatar=self.path=='/api/media/avatar'))
         except Exception as error:self.fail(error)
     def post(self):
         path=urlsplit(self.path).path;who=self.who();data=self.data()

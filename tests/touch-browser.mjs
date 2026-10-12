@@ -11,7 +11,7 @@ try {
  const id='0x'+'a'.repeat(40),token={id,address:id,symbol:'QA',name:'QA market fixture',venue:'nad.fun',nadfun:true,price:1,marketCap:100000,referenceAt:Date.now()/1000,created:Date.now()/1000,graduated:true,progressBps:10000,locked:false,tradeSupported:true,quoteSymbol:'MON',logoURI:'/assets/MON.png',creator:'0x'+'b'.repeat(40)};
  for(const width of [320,390,1440])for(const theme of ['light','dark']) {
   const context=await browser.newContext({viewport:{width,height:844},reducedMotion:width===320?'reduce':'no-preference'}),page=await context.newPage(),errors=[];
-  await context.addInitScript(t=>localStorage.setItem('rally-theme',t),theme);page.on('pageerror',e=>errors.push(e.message));
+  await context.addInitScript(t=>{if(window.top===window)localStorage.setItem('rally-theme',t);},theme);page.on('pageerror',e=>errors.push(e.message));
   await context.route('**/*',r=>{const q=r.request(),u=new URL(q.url());if(u.origin!==origin)return r.abort();if(q.method()!=='GET')throw Error('Financial or account write blocked');
    const body=u.pathname==='/api/nadfun/tokens'?{tokens:[token,{...token,id:'0x'+'c'.repeat(40),address:'0x'+'c'.repeat(40),symbol:'LOCKED',locked:true}],total:2,fetchedAt:Date.now()/1000}:u.pathname==='/api/nadfun/token'?token:u.pathname==='/api/nadfun/references'?{tokens:[token]}:u.pathname==='/api/nadfun/chart'?{candles:[]}:u.pathname==='/api/token-holders'?{holders:[],refreshing:false,indexed:true}:null;
    return body?r.fulfill({contentType:'application/json',body:JSON.stringify(body)}):r.continue();

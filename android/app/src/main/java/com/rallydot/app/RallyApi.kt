@@ -92,15 +92,17 @@ class RallyApi(private val context: Context,private val client: OkHttpClient=nat
             data
         } }
     }
-    suspend fun upload(uri: Uri,maxBytes: Int=25*1024*1024): JSONObject = withContext(Dispatchers.IO) {
-        val requestGeneration=generation
+    suspend fun upload(uri: Uri,maxBytes: Int=25*1024*1024,avatar: Boolean=false): JSONObject {
+        val requestGeneration=generation;val requestSession=session
+        return withContext(Dispatchers.IO) {
         val mime=context.contentResolver.getType(uri) ?: throw IOException("Unsupported file")
-        require(mime in setOf("image/jpeg","image/png","image/webp","video/mp4","video/webm")) { "Choose a photo or an MP4 / WebM video" }
+        require(mime in if(avatar)setOf("image/jpeg","image/png","image/webp") else setOf("image/jpeg","image/png","image/webp","video/mp4","video/webm")) { "Choose a photo or an MP4 / WebM video" }
         val file=java.io.File.createTempFile("rally-upload-",null,context.cacheDir)
         try {
             context.contentResolver.openInputStream(uri)?.use { input -> file.outputStream().use { output -> val bytes=ByteArray(8192);var total=0L;while(true) { val n=input.read(bytes);if(n<0)break;total+=n;if(total>maxBytes)throw IOException("Choose a file under ${maxBytes/(1024*1024)} MB");output.write(bytes,0,n) } } } ?: throw IOException("Choose this file again")
-            val builder=Request.Builder().url(ORIGIN+"/api/media").header("X-Rally-Request","1").put(file.asRequestBody(mime.toMediaType()))
-            session?.let { builder.header("Cookie","rally_session=$it") }
+            val builder=Request.Builder().url(ORIGIN+if(avatar)"/api/media/avatar" else "/api/media").header("X-Rally-Request","1").put(file.asRequestBody(mime.toMediaType()))
+            if(requestGeneration!=generation)throw kotlinx.coroutines.CancellationException("Account changed")
+            requestSession?.let { builder.header("Cookie","rally_session=$it") }
             val call=client.newBuilder().callTimeout(0,TimeUnit.SECONDS).writeTimeout(30,TimeUnit.SECONDS).readTimeout(60,TimeUnit.SECONDS).build().newCall(builder.build())
             val response=suspendCancellableCoroutine<Response> { continuation -> continuation.invokeOnCancellation { call.cancel() };call.enqueue(object:Callback {
                 override fun onFailure(call:Call,e:IOException) { if(continuation.isActive)continuation.resumeWithException(e) }
@@ -108,5 +110,6 @@ class RallyApi(private val context: Context,private val client: OkHttpClient=nat
             }) }
             response.use { val source=it.body?.source() ?: throw IOException("Upload has no response");val buffer=Buffer();while(buffer.size<=65536 && source.read(buffer,(65537-buffer.size).coerceAtMost(8192))!=-1L){};if(buffer.size>65536)throw IOException("Upload response too large");val data=JSONObject(buffer.readUtf8());if(!it.isSuccessful)throw ApiFailure(it.code,data.string("message","Could not upload"));if(requestGeneration!=generation)throw kotlinx.coroutines.CancellationException("Account changed");data }
         } finally { file.delete() }
+        }
     }
 }

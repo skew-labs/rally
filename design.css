@@ -88,7 +88,7 @@ html .nad-filters button{border-radius:100px;font-size:12px;font-weight:450;min-
 html .nad-filters button.selected{background:var(--soft);font-weight:550}
 html .nad-progress-track{height:3px;background:var(--soft)}
 html .nad-progress-track i{background:var(--brand)}
-html .nad-table tbody tr{height:80px}
+html .nad-table tbody tr{height:72px}
 html .r-market-table td{border-color:var(--line);font-weight:450}
 html .r-market-table :is(.r-coin-cell b,.r-market-identity b){font-size:14px;font-weight:550;letter-spacing:-.2px}
 html .r-market-table .r-number{font-weight:500}
@@ -253,7 +253,7 @@ html .r-compose-fab .icon{color:var(--on-solid);width:23px;height:23px}
  html .nad-list-head{padding:8px 20px}
  html .nad-list-head>.r-btn{min-height:40px;height:40px;width:40px;min-width:40px}
  html .nad-filters button{min-height:40px;padding-inline:11px;font-size:11px}
- html .nad-table tbody tr{height:80px}
+ html .nad-table tbody tr{height:72px}
  html .r-market-table :is(.r-coin-cell b,.r-market-identity b){font-size:13px;font-weight:550}
  html .nad-table td:first-child{padding-left:20px}
  html .nad-progress-cell{width:88px}
@@ -307,3 +307,33 @@ html .r-compose-fab .icon{color:var(--on-solid);width:23px;height:23px}
  html :is(.r-modal,.r-trade-panel,.r-nad-panel,.r-overlay){animation:none}
  html :is(.r-btn,.lp-primary,.lp-secondary,.r-icon-button):active{transform:none}
 }
+
+/* A compact identity and an editor that keeps its action above the keyboard. */
+html .r-account-card.r-account-identity{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:14px;padding-block:16px 24px}
+html .r-account-identity>div{min-width:0}html .r-account-identity h2{font-size:19px!important;margin:0;line-height:1.3}
+html .r-account-identity p{margin:4px 0 0;font-size:13px}html .r-account-identity small{display:block;margin-top:6px;color:var(--muted);overflow-wrap:anywhere}
+html .r-profile-settings summary{display:flex;align-items:center;justify-content:space-between;list-style:none;min-height:60px;cursor:pointer;font-size:14px}
+html .r-profile-settings summary .icon{width:18px;transition:transform 160ms ease}html .r-profile-settings[open] summary .icon{transform:rotate(90deg)}
+html .r-modal.r-profile-editor{width:min(480px,100%);padding:0;max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain}
+html .r-profile-editor .r-modal-head{position:sticky;top:0;margin:0;padding:20px 24px;background:var(--paper);z-index:2}
+#profile-form{padding:0 24px 24px}#profile-form .r-field{margin:0 0 16px}#profile-form .r-field small{font-size:11px;color:var(--muted);margin-top:6px;font-weight:400}
+.r-profile-photo{display:flex;align-items:center;gap:16px;padding:4px 0 24px}.r-profile-photo-pick{display:flex;align-items:center;gap:16px;cursor:pointer;font-size:14px;position:relative;color:var(--text)}
+.r-profile-photo [hidden]{display:none!important}
+.r-profile-photo-pick input{position:absolute;width:1px;height:1px;opacity:0;min-height:0}.r-profile-photo-pick:focus-within{outline:2px solid var(--brand);outline-offset:6px;border-radius:12px}
+html #profile-photo-preview .r-avatar{width:72px;height:72px;border-radius:50%;object-fit:cover}
+#profile-form .r-form-error:empty{display:none}#profile-form .r-form-error{margin-bottom:12px;line-height:1.5}
+#profile-form [type=submit]{min-height:48px;margin-top:8px}#profile-form[aria-busy=true] .r-profile-photo{pointer-events:none;opacity:.7}
+@media(min-width:721px){html .r-spot-table td,html .r-perps-table td{height:72px;padding-block:8px}}
+@media(max-width:720px){html .r-spot-table tbody tr,html .r-perps-table tbody tr{min-height:72px;padding-block:10px}}
+html .r-market-table .r-coin-cell{min-height:44px}html .r-market-table tbody tr{cursor:pointer;transition:background-color 100ms ease}
+@media(hover:hover){html .r-market-table tbody tr:hover{background:var(--soft)}}
+html .r-modal.r-asset-modal{width:min(760px,calc(100vw - 40px))}
+html .r-asset-modal .r-mini-periods{gap:8px;padding-block:10px}
+html .r-asset-modal .r-mini-chart{min-height:240px}
+@media(max-width:600px){
+ html .r-modal.r-asset-modal,html .r-modal.r-profile-editor{width:100%;max-height:calc(100dvh - env(safe-area-inset-top) - 12px)}
+ html .r-account-card.r-account-identity{grid-template-columns:44px minmax(0,1fr) auto;gap:10px}html .r-account-identity>.r-btn{padding-inline:12px;font-size:12px;min-height:44px}
+ html .r-account-identity h2{font-size:17px!important}html .r-account-identity>.r-avatar{width:44px!important;height:44px!important}
+ #profile-form{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:reduce){html .r-market-table tbody tr,html .r-profile-settings summary .icon{transition:none}}

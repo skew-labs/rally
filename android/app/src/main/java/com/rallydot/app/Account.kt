@@ -22,6 +22,9 @@ import org.json.JSONObject
 
 @Composable fun ProfileScreen(vm: RallyViewModel,openBrowser: (String)->Unit,onExtra: (String)->Unit,onAsset: (String)->Unit={}) {
     val state by vm.state.collectAsStateWithLifecycle();val me=state.boot?.optJSONObject("me")
+    var editing by remember { mutableStateOf(false) }
+    if(editing && me!=null)ProfileEditor(me,{fields,photo->vm.saveProfile(fields,photo)},{editing=false;vm.message("Profile saved")},{editing=false})
+    LaunchedEffect(me?.string("id")) { editing=false }
     LaunchedEffect(state.boot?.string("wallet")) { vm.loadPortfolio() }
     LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         if(me!=null && !state.boot?.string("wallet").isNullOrBlank())item { WalletBalanceHero(vm) }
@@ -43,8 +46,12 @@ import org.json.JSONObject
                 }
             } else {
                 val person=Person.parse(me)
-                Column(Modifier.fillMaxWidth().padding(vertical=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Artwork(person.image,person.name,48.dp);Text(person.name,style=MaterialTheme.typography.titleLarge);Text("@${person.handle}",color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Artwork(person.image,person.name,48.dp)
+                        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) { Text(person.name,style=MaterialTheme.typography.titleMedium,maxLines=2,overflow=TextOverflow.Ellipsis);Text("@${person.handle}",style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+                        OutlinedButton(onClick={editing=true},contentPadding=PaddingValues(horizontal=14.dp),modifier=Modifier.heightIn(min=48.dp)) { Text("Edit profile",fontSize=12.sp) }
+                    }
                     if(me.string("bio").isNotBlank())Text(me.string("bio"),style=MaterialTheme.typography.bodyMedium)
                     Text("${me.optInt("followers")} followers",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
                 }

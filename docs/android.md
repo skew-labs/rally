@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.13.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.14.apk)
 
 ## Interaction and data
 
@@ -168,3 +168,12 @@ The cached drawing path is rebuilt only on data or size changes. A 220 ms live-e
 Version 0.4.13 adds **1h** to supported Spot and Perps token sheets. Perpl opens on hourly trade OHLC, scaled with the exact market's price decimals. LeverUp keeps its Monad oracle source, and indexed Spot tokens use CoinGecko/GeckoTerminal's exact pool and token OHLC. A provider without hourly history displays an unavailable state, never candles reconstructed from sampled quotes.
 
 Choose a 1D, 7D or 1M window. Tap a candle to inspect its OHLC and drag horizontally for earlier hours. Android retains geometry for the visible 48-bar window, with frame work separate from the order form. Hourly reads refresh every 30 seconds while the sheet is foregrounded. Quiet gaps remain gaps. History, Live and Ticks keep their existing source semantics.
+
+
+## Profile editing and compact markets
+
+Version 0.4.14 adds a native editor for display name, username, bio and profile photo. The system photo picker shares only the selected image. The avatar endpoint validates image type, size and ownership, removes image metadata and produces a 512 × 512 WebP. Profile updates validate every field before committing one transaction. A conflicting username cannot partially change the rest of the profile.
+
+Web and Android apply the canonical save response immediately, retain the draft on errors and reject responses from a previous account. An older bootstrap response cannot overwrite a newer profile save. Account entry on the web no longer waits for the market catalog.
+
+Market rows use a 72 dp minimum footprint at standard text size and expand for larger text. Web token rows also open from their price area; independent Buy and watchlist actions remain separate. Desktop chart sheets are wider, while phone sheets keep Buy/Sell visible. Native hourly charts draw price labels, grid lines and the latest visible close with cached geometry.

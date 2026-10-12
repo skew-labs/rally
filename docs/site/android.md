@@ -4,7 +4,7 @@ Rally's Android app renders markets, charts, Swipe, feeds and profiles natively,
 
 ## Install Rally
 
-Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.13.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.13**. Android 9 or later is required.
+Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.14.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.14**. Android 9 or later is required.
 
 When installing a downloaded APK, Android may ask you to allow installation from the app used to download it. Use the official file rather than a re-signed copy from an unknown source.
 
@@ -15,6 +15,10 @@ Choose Google, email or a wallet from Profile. Google opens its secure authoriza
 If you leave Google before finishing, return to Rally and cancel the pending attempt to choose a method again. Repeated taps do not start additional login requests.
 
 When direct wallet connections are enabled, select an installed MetaMask, Rainbow or Trust Wallet, then approve its connection and Rally sign-in request. Your wallet controls its approval screens. Other connections can use the first-party browser pairing flow. Embedded-wallet signing happens through Privy's native SDK. Rally does not receive either wallet's keys. Verify the linked address before funding it.
+
+## Edit your profile
+
+Open **Profile → Edit profile** to change your name, username, bio or photo. Choose a photo from the Android picker and tap **Save**. Photos are cropped to a square; JPG, PNG and WebP files under 5 MB are supported. A username conflict keeps your changes in the editor so you can choose another. Your saved identity is shared with the web app.
 
 ## Trade inside the app
 

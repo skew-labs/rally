@@ -358,8 +358,12 @@ def new_grant(who,data):
     return {'id':ident,'agent':profile(agent),'token':token,'scopes':sorted(scopes),'expires':now()+86400*30}
 
 
-def upload_file(who,body,mime):
+def upload_file(who,body,mime,avatar=False):
     require(who,'media:upload')
+    if avatar:
+        require(who,human=True)
+        if mime not in {'image/jpeg','image/png','image/webp'}:raise Problem('Choose a JPG, PNG or WebP photo')
+        if len(body)>5*1024*1024:raise Problem('Choose a photo under 5 MB',413)
     if not body or len(body)>25*1024*1024:raise Problem('Choose a file under 25 MB',413)
     if one('SELECT coalesce(sum(size),0) n FROM media WHERE owner=?',(who['user'],))['n']+len(body)>250*1024*1024:raise Problem('Media storage limit reached',413)
     ident=uid()
@@ -370,7 +374,9 @@ def upload_file(who,body,mime):
             if im.width*im.height>20_000_000:raise ValueError('Image dimensions exceed limit')
             im.verify()
             im=Image.open(io.BytesIO(body));im=ImageOps.exif_transpose(im)
-            im.thumbnail((2560,2560));im=im.convert('RGB')
+            if avatar:im=ImageOps.fit(im,(512,512),method=Image.Resampling.LANCZOS)
+            else:im.thumbnail((2560,2560))
+            im=im.convert('RGB')
             output=io.BytesIO();im.save(output,'WEBP',quality=88);body=output.getvalue();mime='image/webp'
         except Exception:raise Problem('This image could not be opened')
         ext='.webp'
@@ -626,12 +632,29 @@ def action(path,who,data,key=''):
     if path=='posts':return publish(who,data,key)
     if path=='profile':
         require(who,human=True)
-        if 'handle' in data:
-            handle=str(data['handle']).lower().strip()
+        # Validate and commit the complete identity together; omitted fields stay intact.
+        with connection() as db:
+            db.execute('BEGIN IMMEDIATE')
+            current=dict(db.execute('SELECT handle,name,bio,avatar FROM accounts WHERE id=?',(user,)).fetchone())
+            values={key:data.get(key,current[key]) for key in ('handle','name','bio')}
+            if any(not isinstance(value,str) for value in values.values()):raise Problem('Enter a username, name and bio')
+            handle=values['handle'].strip().removeprefix('@').lower()
+            name=values['name'].strip();bio=values['bio'].strip()
             if not re.fullmatch(r'[a-z0-9_]{3,24}',handle):raise Problem('Use 3–24 letters, numbers or underscores')
-            try:write('UPDATE accounts SET handle=? WHERE id=?',(handle,user))
+            if not name or len(name)>48:raise Problem('Use a name between 1 and 48 characters')
+            if len(bio)>240:raise Problem('Keep your bio under 241 characters')
+            avatar=current['avatar']
+            if 'avatarMedia' in data:
+                media=data['avatarMedia']
+                if media in ('',None):avatar=''
+                else:
+                    if not isinstance(media,str) or not re.fullmatch(r'[a-f0-9]{32}',media):raise Problem('Choose a profile photo again')
+                    owned=db.execute('SELECT mime FROM media WHERE id=? AND owner=? AND actor=?',(media,user,user)).fetchone()
+                    if not owned or owned['mime'] not in {'image/jpeg','image/png','image/webp'}:raise Problem('Choose your own uploaded photo',403)
+                    avatar='/media/'+media
+            try:db.execute('UPDATE accounts SET handle=?,name=?,bio=?,avatar=? WHERE id=?',(handle,name,bio,avatar,user))
             except sqlite3.IntegrityError:raise Problem('That username is taken',409)
-        write('UPDATE accounts SET name=?,bio=? WHERE id=?',(str(data.get('name',''))[:48],str(data.get('bio',''))[:240],user));return profile(user,user)
+        return profile(user,user)
     if path=='post/delete':
         require(who,'posts:write');changed=write('UPDATE posts SET deleted=1 WHERE id=? AND author=?',(data.get('id'),who['actor']))
         if not changed:raise Problem('Post not found or not owned',403)

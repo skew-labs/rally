@@ -7,8 +7,8 @@ android {
         applicationId 'com.rallydot.app'
         minSdk 28
         targetSdk 36
-        versionCode 26
-        versionName '0.4.13'
+        versionCode 27
+        versionName '0.4.14'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     signingConfigs {
@@ -22,6 +22,7 @@ android {
         }
     }
     buildTypes {
+        debug { applicationIdSuffix '.qa'; versionNameSuffix '-qa' }
         release {
             minifyEnabled true
             shrinkResources true
@@ -42,8 +43,9 @@ dependencies {
  implementation 'com.google.firebase:firebase-messaging:25.0.1'
  // Last Reown release compatible with the app's Android 36 toolchain.
  implementation platform('com.reown:android-bom:1.6.13')
- implementation 'com.reown:android-core'
- implementation 'com.reown:sign'
+ // The provider's obsolete test framework is not an application runtime dependency.
+ implementation('com.reown:android-core') { exclude group: 'junit', module: 'junit' }
+ implementation('com.reown:sign') { exclude group: 'junit', module: 'junit' }
  implementation 'com.google.zxing:core:3.5.3'
  implementation 'io.privy:privy-core:0.16.0'
  implementation platform('androidx.compose:compose-bom:2025.08.01')
@@ -64,6 +66,7 @@ dependencies {
  implementation 'androidx.media3:media3-ui:1.9.2'
  testImplementation 'junit:junit:4.13.2'
  testImplementation 'org.json:json:20250517'
+ androidTestImplementation 'junit:junit:4.13.2'
  androidTestImplementation 'androidx.test.ext:junit:1.3.0'
  androidTestImplementation 'androidx.test:runner:1.7.0'
  androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'

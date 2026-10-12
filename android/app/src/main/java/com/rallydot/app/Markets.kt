@@ -85,10 +85,10 @@ import kotlin.math.abs
     }
 }
 @Composable fun AssetRow(asset: Asset,cap: Boolean,onClick: ()->Unit,onBuy: (()->Unit)?=null) {
-    Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=20.dp,vertical=14.dp).heightIn(min=58.dp),verticalAlignment=Alignment.CenterVertically) {
-        Artwork(asset.image,asset.symbol,34.dp);Spacer(Modifier.width(12.dp))
+    Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=20.dp,vertical=8.dp).heightIn(min=56.dp),verticalAlignment=Alignment.CenterVertically) {
+        Artwork(asset.image,asset.symbol,40.dp);Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f).padding(end=8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-            Text(asset.symbol,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.SemiBold,fontSize=14.sp)
+            Text(asset.symbol,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Medium,fontSize=15.sp)
             Text(if(asset.kind=="perps")asset.venue else asset.name,maxLines=1,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(Modifier.widthIn(max=if(onBuy==null)148.dp else 116.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)) {
