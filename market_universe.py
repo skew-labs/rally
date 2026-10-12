@@ -14,6 +14,7 @@ DB=s.STATE/'market-universe.sqlite3';LOCK=threading.RLock();READY=False
 PRICE_CURSOR=0;POOL_CURSOR=0;SEARCH={};REFRESH_LOCK=threading.Lock();QUERY_SLOTS=threading.BoundedSemaphore(2);PAGES={}
 DEX_SLOTS=threading.BoundedSemaphore(2);DEX_RATE_LOCK=threading.Lock();DEX_NEXT=0;DEX_RETRY_AT=0
 VIEWED={}
+CATALOG_READ_LOCK=threading.Lock()
 
 def priority_ids():
     with LOCK:
@@ -40,7 +41,7 @@ def references(value):
         while len(VIEWED)>256:VIEWED.pop(next(iter(VIEWED)))
     return {'tokens':tokens,'fetchedAt':s.now(),'priceUpdatedAt':max((t.get('fetchedAt',0) for t in tokens if t.get('price')),default=0),'financialTransactions':0}
 
-@lru_cache(maxsize=40000)
+@lru_cache(maxsize=4096)
 def decoded_metadata(raw):
     # Only immutable identity metadata is retained; prices are read each pass.
     return json.loads(raw)
@@ -349,6 +350,7 @@ def gainer_key(token):
     return (not known,-change if known else 0,str(token['id']))
 
 def uncached_catalog(params):
+    import heapq
     q=str(params.get('query','')).strip()[:120];scope=params.get('scope','active');order=params.get('sort','volume')
     if order not in {'volume','gainers'}:raise s.Problem('Unknown token order')
     try:offset=max(0,int(params.get('offset',0)));limit=max(1,min(100,int(params.get('limit',60))))
@@ -357,49 +359,72 @@ def uncached_catalog(params):
         with db() as c:known=c.execute("SELECT 1 FROM assets WHERE info IS NOT NULL AND (address=? OR lower(json_extract(info,'$.symbol')) LIKE ? OR lower(json_extract(info,'$.name')) LIKE ?) LIMIT 1",(q.lower(),'%'+q.lower()+'%','%'+q.lower()+'%')).fetchone()
         if not known and scope=='discovery':known=s.one('SELECT address FROM nad_tokens WHERE instr(lower(info),?)>0 LIMIT 1',(q.lower(),))
         if not known and len(q)>=3:search(q)
-    # Keep baseline identity/launch metadata and indexed identities in one namespace.
-    baseline=s.GATEWAY.markets();tokens={t['id']:t for t in baseline['tokens'] if not t.get('nadfun') or t.get('phase')=='dex'}
+    baseline=s.GATEWAY.markets();base={t['id']:t for t in baseline['tokens'] if not t.get('nadfun') or t.get('phase')=='dex'}
+    stats={'assets':0,'active':0,'lastKnown':0,'total':0,'priceUpdatedAt':0}
     with db() as c:
-        rows=c.execute('SELECT info,price,updated FROM assets WHERE info IS NOT NULL').fetchall()
+        indexed={r[0] for r in c.execute('SELECT address FROM assets WHERE info IS NOT NULL')}
         pool_count=c.execute('SELECT count(*) FROM pools').fetchone()[0]
         pending=c.execute('SELECT count(*) FROM assets WHERE info IS NULL AND updated>=0').fetchone()[0]
         sources=[dict(name=r['name'],**json.loads(r['info'])) for r in c.execute('SELECT * FROM sources')]
-    for r in rows:
-        item=decoded_metadata(r['info']);ident=item['id'];value=json.loads(r['price']) if r['price'] else {};current=s.GATEWAY.prices.get(ident,{})
-        if current.get('fetchedAt',0)>value.get('fetchedAt',0):value=current
-        if value:
-            with s.LOCK:s.GATEWAY.prices[ident]=value
-        stamp=value.get('fetchedAt',0);age=s.now()-stamp
-        t={**tokens.get(ident,{}),**item,**value,'stale':not 0<=age<=120,'priceAgeSeconds':max(0,age) if stamp else None}
-        if age>900:t['price']=None
-        s.GATEWAY.token_map[ident]={**s.GATEWAY.token_map.get(ident,{}),**item};tokens[ident]=t
+    curves=set()
     if scope=='discovery':
-        # Indexed launch metadata only: search does not trigger an RPC per row.
-        import nadfun
-        for row in s.rows('SELECT info FROM nad_tokens'):
-            info=nadfun.public_info(json.loads(row['info']));ident=info['id']
-            if not info.get('graduated') or ident not in tokens:tokens[ident]=info
-    all_tokens=list(tokens.values())
-    for t in all_tokens:
-        try:v=float(t.get('price') or 0)
-        except (TypeError,ValueError):v=0
-        t['price']=v if math.isfinite(v) and v>0 else None
-    if q:all_tokens=[t for t in all_tokens if q.lower() in (t['symbol']+' '+t['name']+' '+t['address']).lower()]
-    active=sum((t.get('price') or 0)>0 and not t.get('stale') for t in all_tokens)
-    selected=all_tokens if scope in {'all','discovery'} else [t for t in all_tokens if (t.get('price') or 0)>0 and not t.get('stale')]
-    selected.sort(key=lambda t: (not((t.get('price') or 0)>0 and not t.get('stale')), -float(t.get('volume') or 0), t['id']))
-    if order=='gainers':selected.sort(key=gainer_key)
-    return {'sort':order,'tokens':selected[offset:offset+limit],'total':len(selected),'active':active,'lastKnown':sum(bool(t.get('price')) and bool(t.get('stale')) for t in all_tokens),'assets':len(all_tokens),'offset':offset,'nextOffset':offset+limit if offset+limit<len(selected) else None,'indexedPools':pool_count,'pendingMetadata':pending,'sources':sources,'fetchedAt':s.now(),'priceUpdatedAt':max((t.get('fetchedAt',0) for t in all_tokens if t.get('price')),default=0),'source':'Monad factories · DexScreener','financialTransactions':0}
+        with s.connection() as c:curves={r[0] for r in c.execute("SELECT address FROM nad_tokens WHERE coalesce(json_extract(info,'$.graduated'),0)!=1")}
+    def candidates():
+        for ident,t in base.items():
+            if ident not in indexed and ident not in curves:yield dict(t)
+        # Stream database records: never retain the full serialized registry or
+        # duplicate every token's decoded metadata for each concurrent page.
+        with db() as c:
+            for r in c.execute('SELECT address,info,price,updated FROM assets WHERE info IS NOT NULL'):
+                ident=r['address']
+                if ident in curves:continue
+                item=decoded_metadata(r['info']);current=s.GATEWAY.prices.get(ident,{})
+                value=current if current and current.get('fetchedAt',0)>=(r['updated'] or 0) else json.loads(r['price']) if r['price'] else {}
+                stamp=value.get('fetchedAt',0);age=s.now()-stamp
+                t={**base.get(ident,{}),**item,**value,'stale':not 0<=age<=120,'priceAgeSeconds':max(0,age) if stamp else None}
+                if age>900 or age<0:t['price']=None
+                yield t
+        if scope=='discovery':
+            import nadfun
+            with s.connection() as c:
+                for row in c.execute('SELECT address,info FROM nad_tokens'):
+                    ident=row['address']
+                    if ident in curves or ident not in indexed and ident not in base:yield nadfun.public_info(json.loads(row['info']))
+    def eligible():
+        for t in candidates():
+            if q and q.lower() not in (t['symbol']+' '+t['name']+' '+t['address']).lower():continue
+            try:v=float(t.get('price') or 0)
+            except (TypeError,ValueError):v=0
+            t['price']=v if math.isfinite(v) and v>0 else None
+            active=bool(t['price']) and not t.get('stale');stats['assets']+=1;stats['active']+=int(active)
+            stats['lastKnown']+=int(bool(t['price']) and bool(t.get('stale')))
+            if t['price']:stats['priceUpdatedAt']=max(stats['priceUpdatedAt'],t.get('fetchedAt',0))
+            if scope not in {'all','discovery'} and not active:continue
+            stats['total']+=1;yield t
+    def volume_key(t):
+        try:volume=float(t.get('volume') or 0)
+        except (TypeError,ValueError):volume=0
+        return (not(bool(t['price']) and not t.get('stale')),-volume if math.isfinite(volume) else 0,t['id'])
+    # Heap size follows the requested page, not the 60k+ token universe.
+    selected=heapq.nsmallest(offset+limit,eligible(),key=gainer_key if order=='gainers' else volume_key)[offset:]
+    with s.LOCK:
+        for t in selected:
+            if t['id'] not in s.GATEWAY.token_map:s.GATEWAY.token_map[t['id']]=t
+    return {'sort':order,'tokens':selected,**stats,'offset':offset,'nextOffset':offset+limit if offset+limit<stats['total'] else None,'indexedPools':pool_count,'pendingMetadata':pending,'sources':sources,'fetchedAt':s.now(),'source':'Monad factories · DexScreener · nad.fun','financialTransactions':0}
 
 def catalog(params):
     key=tuple(str(params.get(k,'')) for k in ['query','scope','sort','offset','limit'])
     with LOCK:cached=PAGES.get(key)
     if cached and time.monotonic()-cached[0]<5:return cached[1]
-    value=uncached_catalog(params)
-    with LOCK:
-        if len(PAGES)>128:PAGES.pop(next(iter(PAGES)))
-        PAGES[key]=(time.monotonic(),value)
-    return value
+    # A cold list rebuild is shared/serialized across viewers and page sizes.
+    with CATALOG_READ_LOCK:
+        with LOCK:cached=PAGES.get(key)
+        if cached and time.monotonic()-cached[0]<5:return cached[1]
+        value=uncached_catalog(params)
+        with LOCK:
+            if len(PAGES)>=128:PAGES.pop(next(iter(PAGES)))
+            PAGES[key]=(time.monotonic(),value)
+        return value
 
 def background():
     try:restore()
