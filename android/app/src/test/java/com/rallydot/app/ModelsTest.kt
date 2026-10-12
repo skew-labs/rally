@@ -4,6 +4,20 @@ import org.junit.Test
 import org.junit.Assert.*
 
 class ModelsTest {
+    @Test fun hourlyBarsPreserveOhlcAndQuietGaps() {
+        val h=System.currentTimeMillis()/1000/3600*3600
+        val rows=org.json.JSONArray().put(JSONObject().put("time",h).put("open",2).put("high",4).put("low",1).put("close",3)).put(JSONObject().put("time",h-7200).put("open",3).put("high",100).put("low",.001).put("close",2))
+        val bars=hourlyCandles(JSONObject().put("interval","1h").put("candles",rows))
+        assertEquals(2,bars.size);assertEquals(h-7200,bars.first().time);assertEquals(100.0,bars.first().high,0.0);assertEquals(.001,bars.first().low,0.0)
+        assertTrue(hourlyCandles(JSONObject().put("interval","1m").put("candles",rows)).isEmpty())
+    }
+    @Test fun hourlyBarsRejectBrokenRangesFutureAndNonHourlySamples() {
+        val h=System.currentTimeMillis()/1000/3600*3600
+        val rows=org.json.JSONArray()
+        for(t in listOf(h,h+3600,h-1))rows.put(JSONObject().put("time",t).put("open",2).put("high",3).put("low",1).put("close",2.5))
+        rows.put(JSONObject().put("time",h-3600).put("open",4).put("high",3).put("low",1).put("close",2.5))
+        assertEquals(1,hourlyCandles(JSONObject().put("interval","1h").put("candles",rows)).size)
+    }
     @Test fun ticksPreserveChangedPricesInTheSameSecondAndBoundRetention() {
         val now=System.currentTimeMillis()/1000
         val data=JSONObject().put("epoch","a").put("points",org.json.JSONArray().apply { repeat(500) { put(JSONObject().put("id",it+1).put("time",now).put("value",it+1.0)) } })

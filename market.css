@@ -259,3 +259,9 @@ html .nad-identity .r-token-art{--token-size:56px;border-radius:14px}
 .r-mini-periods{flex-wrap:wrap;gap:4px}
 .r-mini-periods button{min-height:40px}
 @media(prefers-reduced-motion:reduce){.r-chart-live-modes button{transition:none}}
+
+/* Chart mode and history range are separate controls on small screens. */
+.r-mini-mode-tabs,.r-mini-range-tabs{display:flex;gap:4px;flex-basis:100%;min-width:0}
+.r-mini-mode-tabs button{flex:1;min-width:0;font-weight:500}
+.r-mini-range-tabs button{flex:0 1 56px;min-height:32px;font-size:12px}
+.r-mini-chart canvas{max-width:100%}

@@ -4,7 +4,7 @@ Rally's Android app renders markets, charts, Swipe, feeds and profiles natively,
 
 ## Install Rally
 
-Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.12.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.12**. Android 9 or later is required.
+Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.13.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.13**. Android 9 or later is required.
 
 When installing a downloaded APK, Android may ask you to allow installation from the app used to download it. Use the official file rather than a re-signed copy from an unknown source.
 
@@ -40,3 +40,7 @@ Switch the Feed's algorithm from its selector without leaving the feed. Paid cho
 ## Signals, communities and alerts
 
 The Feed includes **Following** and **Trades**. Create a 24-hour price signal, share selected finalized fills from Profile, set token-holder benefits and enter the weekly algorithm league. See [Signals and benefits](social-loop.md). Android lock-screen push becomes available when the deployment has configured Firebase; in-app notifications work separately.
+
+## Read hourly candles
+
+Open a token and tap **1h** for hourly candles. Perpl opens here by default. Choose **1D**, **7D** or **1M**, swipe sideways for earlier hours and tap a candle for its open, high, low and close. The caption identifies the venue or pool. **Live**, **Ticks** and **History** remain available in the same sheet.

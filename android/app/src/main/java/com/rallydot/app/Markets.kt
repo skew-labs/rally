@@ -179,7 +179,10 @@ import kotlin.math.abs
     val provider=remember(asset.key) { providerTarget(asset) }
     var providerInterval by rememberSaveable(asset.key) { mutableStateOf("1m") }
     var providerDisabled by rememberSaveable(asset.key) { mutableStateOf(false) }
-    var chartMode by rememberSaveable(asset.key) { mutableStateOf("History") }
+    var chartMode by rememberSaveable(asset.key) { mutableStateOf(if(asset.kind=="perps")"1h" else "History") }
+    var hourly by remember(asset.key) { mutableStateOf<JSONObject?>(null) }
+    var selectedCandle by remember(asset.key) { mutableStateOf<HourCandle?>(null) }
+    val candles=remember(hourly) { hourly?.let(::hourlyCandles).orEmpty() }
     var ticks by remember(asset.key) { mutableStateOf<List<PriceTick>>(emptyList()) }
     var tickEpoch by remember(asset.key) { mutableStateOf<String?>(null) }
     var tickCursor by remember(asset.key) { mutableLongStateOf(0) }
@@ -203,7 +206,7 @@ import kotlin.math.abs
     fun dismiss() { focus.clearFocus();scope.launch { sheet.hide();close() } }
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(asset.key,chartMode,trade,lifecycle) {
-        if(trade || chartMode=="History")return@LaunchedEffect
+        if(trade || chartMode !in listOf("Live","Ticks"))return@LaunchedEffect
         lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
             while(isActive){
                 try {
@@ -215,8 +218,25 @@ import kotlin.math.abs
             }
         }
     }
+    LaunchedEffect(asset.key,period,chartMode,trade,chartRetry,lifecycle) {
+        if(trade || chartMode!="1h")return@LaunchedEffect
+        if(hourly?.string("period")!=period)hourly=null
+        selectedCandle=null
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            while(isActive) {
+                chartLoading=true;chartError=null
+                try {
+                    val data=vm.freshChart(asset,period,true)
+                    if(hourlyCandles(data).isEmpty())throw ApiFailure(404,"No hourly candles yet")
+                    hourly=data
+                } catch(e:CancellationException){throw e} catch(e:Exception){chartError=if(e is ApiFailure)e.message else "Candles unavailable"}
+                finally { chartLoading=false }
+                delay(30000)
+            }
+        }
+    }
     LaunchedEffect(asset.key,period,providerDisabled,trade,chartRetry,chartMode) {
-        if(trade || chartMode!="History" || provider!=null&&!providerDisabled){chartLoading=false;return@LaunchedEffect}
+        if(trade || chartMode!="History" || provider!=null&&!providerDisabled)return@LaunchedEffect
         chartError=null;chartLoading=true
         try {
             val history=if(!asset.raw.optBoolean("nadfun") || asset.raw.optBoolean("graduated"))vm.freshChart(asset,period) else vm.chart(asset,period)
@@ -248,7 +268,7 @@ import kotlin.math.abs
             val compactTrade=trade && available<440.dp
             val tightKeyboard=keyboard && maxWidth>=600.dp && available<300.dp
             val compactHeader=trade && maxWidth>=600.dp && available<440.dp
-            val graphHeight=animateDpAsState(if(keyboard)0.dp else if(trade)88.dp else if(chartMode=="History" && provider!=null&&!providerDisabled)if(provider.coin!=null)360.dp else 320.dp else 160.dp,tween(180),label="trade chart")
+            val graphHeight=animateDpAsState(if(keyboard)0.dp else if(trade)88.dp else if(chartMode=="History" && provider!=null&&!providerDisabled)if(provider.coin!=null)360.dp else 320.dp else if(chartMode=="1h")220.dp else 160.dp,tween(180),label="trade chart")
             @Composable fun direction(modifier: Modifier=Modifier) { Segmented(if(asset.kind=="perps")listOf("Buy / Long","Sell / Short") else listOf("Buy","Sell"),if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell",{if(!app.order.blocksOrder)side=if(it.startsWith("Buy"))"buy" else "sell"},modifier,accent=if(side=="buy")Buy else Sell) }
             Column(Modifier.fillMaxWidth().heightIn(max=available)) {
                 Row(Modifier.padding(horizontal=20.dp).padding(bottom=if(compactHeader)4.dp else 12.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -260,14 +280,19 @@ import kotlin.math.abs
                 }
                 if(trade && asset.kind!="prediction" && !compactHeader)direction(Modifier.padding(horizontal=20.dp).padding(bottom=if(compactTrade)8.dp else 16.dp))
                 Column(Modifier.weight(1f,fill=false).highRefresh().verticalScroll(rememberScrollState()).padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(if(compactTrade)8.dp else 16.dp)) {
-                    if(!keyboard && !compactTrade) { if(trade)Fact("Reference price",money(asset.price)) else if(chartMode!="History" && ticks.isNotEmpty())Text(money(scrubbing.value?.value?.toDouble() ?: ticks.last().value),style=MaterialTheme.typography.headlineMedium) else MarketPrice(asset,scrubbing) }
-                    if(!trade)Segmented(listOf("History","Live","Ticks"),chartMode,{chartMode=it;scrubbing.value=null})
+                    if(!keyboard && !compactTrade) { if(trade)Fact("Reference price",money(asset.price)) else if(chartMode in listOf("Live","Ticks") && ticks.isNotEmpty())Text(money(scrubbing.value?.value?.toDouble() ?: ticks.last().value),style=MaterialTheme.typography.headlineMedium) else MarketPrice(asset,scrubbing) }
+                    if(!trade)Segmented(if(asset.kind=="prediction" || asset.raw.optBoolean("nadfun")&&!asset.raw.optBoolean("graduated"))listOf("History","Live","Ticks") else listOf("1h","History","Live","Ticks"),chartMode,{chartMode=it;scrubbing.value=null;selectedCandle=null})
                     if(!trade && chartMode=="History" && provider!=null&&!providerDisabled)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                         Text("CoinGecko · "+if(provider.token!=null)"Monad token" else "Spot reference",Modifier.weight(1f),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         TextButton(onClick={providerDisabled=true}) { Text("Price line") }
                     }
                     if(!compactTrade && !trade)Box(Modifier.fillMaxWidth().animatedHeight(graphHeight).clipToBounds()) {
-                        if(chartMode!="History") {
+                        if(chartMode=="1h") {
+                            if(candles.isNotEmpty())HourlyCandleChart(candles) { selectedCandle=it }
+                            else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { Text(if(chartLoading)"Loading 1h candles…" else chartError ?: "No hourly candles yet",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
+                            if(chartLoading && candles.isNotEmpty())LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
+                        }
+                        else if(chartMode!="History") {
                             if(ticks.isNotEmpty())LivePriceChart(ticks,chartMode=="Ticks",{scrubbing.value=it},tickEpoch)
                             else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { Text(if(ticksDelayed)"Price updates delayed" else "Waiting for price updates…",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
                         }
@@ -278,10 +303,18 @@ import kotlin.math.abs
                         }
                         else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { if(chartError!=null)Text(chartError!!,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) else CircularProgressIndicator(Modifier.size(24.dp),strokeWidth=2.dp) }
                     }
+                    if(!trade && chartMode=="1h") {
+                        Segmented(listOf("1D","7D","1M"),period,{period=it})
+                        selectedCandle?.let { b->
+                            Text("O ${money(b.open)}  H ${money(b.high)}\nL ${money(b.low)}  C ${money(b.close)}",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text((hourly?.string("reference") ?: "Hourly candles")+if(chartError!=null)" · Update delayed" else if(hourly?.optBoolean("stale")==true)" · Last known" else " · 1h",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(chartError!=null)TextButton(onClick={chartRetry++},enabled=!chartLoading) { Text("Retry chart") }
+                    }
                     if(!trade && chartMode=="History" && provider?.token!=null&&!providerDisabled)Segmented(listOf("1m","15m","1h","4h"),providerInterval,{providerInterval=it})
                     if(!trade && chartMode=="History" && (provider==null||providerDisabled))Segmented(if(asset.raw.optBoolean("nadfun"))listOf("1D","7D") else listOf("1D","7D","1M"),period,{period=it})
                     if(!keyboard && !trade) {
-                        if(chartMode!="History")Text(tickSource+(if(ticksDelayed)" · Last known" else "")+(ticks.lastOrNull()?.let { " · "+java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.US).format(java.util.Date(it.time*1000)) } ?: ""),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(chartMode in listOf("Live","Ticks"))Text(tickSource+(if(ticksDelayed)" · Last known" else "")+(ticks.lastOrNull()?.let { " · "+java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.US).format(java.util.Date(it.time*1000)) } ?: ""),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         if(chartMode=="History" && (provider==null||providerDisabled))chart?.let { Text(it.string("reference")+if(it.optBoolean("quoteOnly"))if(chartLoading)" · Loading history" else " · No recent history" else " · $chartPeriod"+if(chartLoading)" · Updating…" else if(it.optBoolean("stale") || chartError!=null)" · Last known" else "",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
                         if(chartMode=="History" && (provider==null||providerDisabled)&&chartError!=null)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                             Text(chartError!!,Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)

@@ -26,7 +26,7 @@ try{
    if(await serveModule(r,u))return;
    if(u.pathname==='/line-fixture')return r.fulfill({contentType:'text/html',body:html});
    if(u.pathname==='/api/chart'){reads++;await sleep(400);return r.fulfill({json:{asset:'MON',interval:'60',candles,fetchedAt:now}});}
-   if(u.pathname==='/api/market-chart'){reads++;await sleep(400);return r.fulfill({json:{asset:u.searchParams.get('asset'),points,period:'1D',source:'Read-only test fixture',sourceURL:'https://example.com',reference:'Fixture prices',fetchedAt:now,lastObservation:now,stale:false}});}
+   if(u.pathname==='/api/market-chart'){if(u.searchParams.get('interval')==='1h')return r.abort();reads++;await sleep(400);return r.fulfill({json:{asset:u.searchParams.get('asset'),points,period:u.searchParams.get('period'),source:'Read-only test fixture',sourceURL:'https://example.com',reference:'Fixture prices',fetchedAt:now,lastObservation:now,stale:false}});}
    return r.continue();
   });
   await page.goto(origin+'/line-fixture');
@@ -38,7 +38,7 @@ try{
     const api=async(path,_,options)=>{const r=await fetch(path,options);if(!r.ok)throw Error('Read failed');return r.json();};
     const ui=marketUI({S,$:s=>document.querySelector(s),api,esc:s=>String(s??'').replaceAll('<','&lt;'),usd:v=>'$'+v,priceHTML:String,volumeHTML:String,age:()=>'',logo:()=>'',token:()=>null,
      modal:(title,body,cls)=>{S.modal?.cleanup?.();root.innerHTML='<div class="'+cls+'">'+body+'</div>';S.modal={};},trade:()=>{throw Error('No trading allowed');},finance:{perplAsset:()=>({symbol:'BTC',name:'Bitcoin'}),handle:()=>{throw Error('No trading allowed');}}});
-    window.mount=()=>ui.details('1','perps');window.unmount=()=>{S.modal.cleanup();S.modal=null;};
+    window.mount=()=>{ui.details('1','perps');document.querySelector('[data-mini-history]')?.click();};window.unmount=()=>{S.modal.cleanup();S.modal=null;};
    }else{
     const C=await import('/charts.js');window.unmount=C.disposeChart;
     window.mount=()=>{if(mode==='pool'){root.innerHTML='<div id="pool-chart"></div>';return C.mountPoolPriceChart({id:asset},state);}

@@ -46,6 +46,62 @@ def identity(asset,kind):
 PERIOD_DAYS={'1D':1,'7D':7,'1M':30}
 POINT_BUDGET=320
 
+def hourly_series(rows,period='1D',scale=1,milliseconds=False):
+    """Retain provider OHLC. Do not turn sampled prices or empty hours into bars."""
+    end=s.now();start=(end-PERIOD_DAYS[period]*86400)//3600*3600;bars={}
+    for row in rows:
+        try:
+            t=int(row[0]/1000) if milliseconds else int(row[0])
+            o,h,l,c=(float(v)/scale for v in row[1:5])
+            if t%3600 or not start<=t<=end or not all(math.isfinite(v) and v>0 for v in (o,h,l,c)):continue
+            if l>min(o,c) or h<max(o,c) or l>h:continue
+            bars[t]={'time':t,'open':o,'high':h,'low':l,'close':c}
+        except (TypeError,ValueError,IndexError,OverflowError):continue
+    if not bars:raise s.Problem('No hourly candles for this market yet',404,'chart_unavailable')
+    return [bars[t] for t in sorted(bars)][-721:]
+
+def hourly_chart(asset,kind='spot',period='1D'):
+    if period not in PERIOD_DAYS:raise s.Problem('Unknown chart period')
+    if not SLOTS.acquire(blocking=False):raise s.Problem('Chart requests are busy. Retry shortly.',503,'chart_busy')
+    try:
+        from native_market_transport import get
+        end=s.now();started=time.perf_counter()
+        if kind=='perps' and str(asset).isdigit():
+            context=s.GATEWAY.perpl_markets(cached_only=True)
+            market=next((m for m in context['markets'] if str(m['id'])==str(asset)),None)
+            if not market:raise s.Problem('Unknown Perpl market',404,'chart_unavailable')
+            decimals=int(market['priceDecimals'])
+            if not 0<=decimals<=18:raise s.Problem('Invalid market precision',502,'chart_identity')
+            ident={'asset':str(asset),'kind':kind,'symbol':market['symbol'],'marketId':market['id'],'reference':'Perpl trades'}
+            start=(end-PERIOD_DAYS[period]*86400)//3600*3600
+            raw=s.http_json(f'https://app.perpl.xyz/api/v1/market-data/{market["id"]}/candles/3600/{start*1000}-{end*1000}',timeout=4)
+            if raw.get('r')!=3600 or not isinstance(raw.get('d'),list):raise s.Problem('Candle interval changed',502,'chart_identity')
+            bars=hourly_series([[r.get('t'),r.get('o'),r.get('h'),r.get('l'),r.get('c')] for r in raw['d'] if isinstance(r,dict)],period,10**decimals,True)
+            source='Perpl';source_url='https://app.perpl.xyz/';timing={'transport':'python-venue','marketCache':False}
+        else:
+            ident=identity(asset,kind)
+            if 'pairBase' in ident:
+                import perp_universe
+                raw=s.http_json('https://service.leverup.xyz/v1/oracle/candles?'+urlencode({'pair_base':ident['pairBase'],'resolution':'60','from':(end-PERIOD_DAYS[period]*86400)//3600*3600,'to':end,'block_chain':'MONAD'}),headers=perp_universe.HEADERS,timeout=4)
+                if str(raw.get('pairBase','')).lower()!=ident['pairBase'] or raw.get('blockChain')!='MONAD' or raw.get('executionVenue')!='POOL':raise s.Problem('Chart identity changed',502,'chart_identity')
+                bars=hourly_series([[r.get('time'),r.get('open'),r.get('high'),r.get('low'),r.get('close')] for r in raw.get('candles',[])],period)
+                source='LeverUp';source_url='https://app.leverup.xyz/';timing={'transport':'python-venue','marketCache':False}
+            else:
+                if kind=='spot' and asset=='MON':
+                    price=s.GATEWAY.prices.get('MON',{});pair=price.get('pair')
+                    if not pair or not s.re.fullmatch(r'0x[0-9a-fA-F]{40}',pair):raise s.Problem('No indexed MON pool',404,'chart_unavailable')
+                    ident={'asset':asset,'kind':kind,'pool':pair.lower(),'token':WMON,'symbol':'MON','reference':'WMON · Monad pool'}
+                if 'pool' not in ident:raise s.Problem('No hourly source for this market',404,'chart_unavailable')
+                raw,timing=get('https://api.geckoterminal.com/api/v2/networks/monad/pools/'+ident['pool']+'/ohlcv/hour?'+urlencode({'aggregate':1,'limit':PERIOD_DAYS[period]*24+1,'currency':'usd','token':ident['token'],'include_empty_intervals':'false'}))
+                meta=raw.get('meta',{})
+                if ident['token'] not in {str(meta.get(k,{}).get('address','')).lower() for k in ('base','quote')}:raise s.Problem('Chart token identity mismatch',502,'chart_identity')
+                bars=hourly_series(raw.get('data',{}).get('attributes',{}).get('ohlcv_list',[]),period)
+                source='GeckoTerminal · CoinGecko';source_url='https://www.geckoterminal.com/monad/tokens/'+ident['token']
+        return {**ident,'period':period,'interval':'1h','candles':bars,'source':source,'sourceURL':source_url,
+                'fetchedAt':end,'lastObservation':bars[-1]['time'],'stale':end-bars[-1]['time']>=7200,
+                'cached':False,'freshRead':True,**timing,'upstreamMs':round((time.perf_counter()-started)*1000,2)}
+    finally:SLOTS.release()
+
 def compact_points(values,budget=POINT_BUDGET):
     """Keep real endpoints and the extremes of each time bucket, never synthetic prices."""
     if len(values)<=budget:return values

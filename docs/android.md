@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.12.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.13.apk)
 
 ## Interaction and data
 
@@ -162,3 +162,9 @@ Fresh historical reads preserve the selected window and send at most 320 real ob
 Version 0.4.12 adds History, Live and Ticks to native token sheets. Live uses observation time on the horizontal axis; Ticks uses the order of actual received price observations, preserving different prices observed in the same second. Both keep at most 240 samples and draw the most recent 60. The HTTPS cursor feed shares existing Monad collectors and has no wallet or order access. A source or pool change resets the series rather than joining different references.
 
 The cached drawing path is rebuilt only on data or size changes. A 220 ms live-edge transition reads Compose's display frame clock in the drawing phase; it does not recompose the order form each frame or mutate observed prices. High-refresh voting lets Android use supported 120/144 Hz displays, subject to device limits. System disabled-animation settings skip the transition. Polling is lifecycle-bound and pauses in the background. This display cadence is independent of provider observation cadence and end-to-end network latency.
+
+## Hourly candles
+
+Version 0.4.13 adds **1h** to supported Spot and Perps token sheets. Perpl opens on hourly trade OHLC, scaled with the exact market's price decimals. LeverUp keeps its Monad oracle source, and indexed Spot tokens use CoinGecko/GeckoTerminal's exact pool and token OHLC. A provider without hourly history displays an unavailable state, never candles reconstructed from sampled quotes.
+
+Choose a 1D, 7D or 1M window. Tap a candle to inspect its OHLC and drag horizontally for earlier hours. Android retains geometry for the visible 48-bar window, with frame work separate from the order form. Hourly reads refresh every 30 seconds while the sheet is foregrounded. Quiet gaps remain gaps. History, Live and Ticks keep their existing source semantics.

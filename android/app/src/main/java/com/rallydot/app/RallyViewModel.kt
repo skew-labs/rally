@@ -76,10 +76,11 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
     }
     fun cachedChart(asset: Asset,period: String): JSONObject?=chartSnapshots[asset.key+":"+period]?.takeIf { System.currentTimeMillis()-it.first<20_000 }?.second
     fun warmChart(asset: Asset) { if(asset.raw.optBoolean("nadfun")&&!asset.raw.optBoolean("graduated"))chartRead(asset,"1D").start();warmHolders(asset) }
-    suspend fun freshChart(asset: Asset,period: String): JSONObject {
+    suspend fun freshChart(asset: Asset,period: String,hourly: Boolean=false): JSONObject {
         val id=if(asset.kind=="prediction")asset.raw.optJSONObject("assetInfo")?.string("chartMarket") ?: asset.id else asset.id
-        val data=api.get("/api/market-chart?asset="+Uri.encode(id)+"&kind="+(if(asset.kind=="prediction")"perps" else asset.kind)+"&period=$period&fresh=1",true)
+        val data=api.get("/api/market-chart?asset="+Uri.encode(id)+"&kind="+(if(asset.kind=="prediction")"perps" else asset.kind)+"&period=$period&fresh=1"+(if(hourly)"&interval=1h" else ""),true)
         if(data.string("asset")!=id || !data.optBoolean("freshRead") || data.optBoolean("cached"))throw ApiFailure(502,"Chart identity changed")
+        if(hourly && (data.string("interval")!="1h" || data.string("period")!=period))throw ApiFailure(502,"Candle interval changed")
         return data
     }
     suspend fun priceTicks(asset: Asset,cursor: Long): JSONObject {

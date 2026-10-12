@@ -256,6 +256,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.response(__import__('market_ticks').read(params.get('asset',''),params.get('kind','spot'),params.get('after','0')))
         if path=='/api/market-chart':
             if who and who['grant']:s.require(who,'markets:read')
+            if params.get('interval')=='1h':return self.response(market_data.hourly_chart(params.get('asset',''),params.get('kind','spot'),params.get('period','1D')))
             if params.get('fresh')=='1':return self.response(market_data.fresh_chart(params.get('asset',''),params.get('kind','spot'),params.get('period','1D')))
             return self.response(market_data.chart(params.get('asset',''),params.get('kind','spot'),params.get('period','1D')))
         if path=='/api/routes/status':return self.response(route_stream.status(who,params.get('id','')))
