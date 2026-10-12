@@ -2,7 +2,7 @@
 export function algorithmRow(c,f,title,roi){
  const {S,esc,avatar}=c,creator=S.boot.people?.find(p=>p.id===f.owner)||{id:f.owner,...f.creator,name:f.creator?.name||'Rally',handle:f.creator?.handle||'rally'};
  const measured=roi!=null&&Number.isFinite(roi),paid=Number(f.priceRaw)>0;
- const byline=creator.name+(f.research?.wallet?' · '+f.research.wallet.slice(-4):'');
+ const byline=creator.name;
  return `<button class="rc-algorithm-row" data-feed="${esc(f.id)}" data-wallet="${Boolean(f.research?.wallet)}" data-action="algorithm-preview" data-id="${esc(f.id)}" aria-label="Preview ${esc(title)}">${avatar(creator)}<span class="rc-row-identity"><b>${esc(title)}</b><small>${esc(byline)}</small></span><span class="rc-row-result"><b class="${measured?roi>=0?'positive':'negative':''}">${measured?(roi>0?'+':'')+roi.toLocaleString('en-US',{maximumFractionDigits:1})+'%':'—'}</b><small>${measured?'Sampled wallet ROI':'No verified return'}</small></span><span class="rc-row-price"><b>${paid?esc(f.price)+' USDC':'Free'}</b><small>${paid?(f.access?'Subscribed':(f.periodDays||30)+' days'):'Preview'}</small></span></button>`;
 }
 

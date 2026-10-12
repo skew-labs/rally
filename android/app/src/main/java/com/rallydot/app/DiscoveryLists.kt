@@ -50,11 +50,11 @@ fun algorithmOwner(f: JSONObject): String {
 }
 @Composable fun AlgorithmListRow(feed: JSONObject,creator: Person=discoveryCreator(feed,emptyList()),onOpen: ()->Unit) {
     val roi=algorithmReturn(feed)
-    Row(Modifier.fillMaxWidth().heightIn(min=80.dp).clickable(onClick=onOpen).padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+    Row(Modifier.fillMaxWidth().heightIn(min=68.dp).clickable(onClick=onOpen).padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
         ProfileArtwork(creator.image,creator.name,36.dp,identity=creator.avatarIdentity)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
             Text(algorithmTitle(feed),fontSize=13.sp,lineHeight=16.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
-            Text(creator.name+(feed.optJSONObject("research")?.string("wallet")?.takeIf { it.isNotBlank() }?.let { " · "+it.takeLast(4) } ?: ""),fontSize=10.sp,lineHeight=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Text(creator.name,fontSize=10.sp,lineHeight=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
         }
         Column(Modifier.widthIn(max=116.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)) {
             Text(algorithmPercent(roi),fontSize=14.sp,lineHeight=18.sp,color=if(roi!=null)performanceInk(roi) else MaterialTheme.colorScheme.onSurface,fontWeight=FontWeight.Medium)
@@ -76,7 +76,7 @@ fun algorithmOwner(f: JSONObject): String {
     }
 }
 @Composable private fun DiscoverySearch(value: String,onValue: (String)->Unit,label: String) {
-    OutlinedTextField(value,onValue,Modifier.fillMaxWidth().semantics { contentDescription=label },singleLine=true,placeholder={Text(label,fontSize=14.sp)},leadingIcon={Icon(Icons.Outlined.Search,null)},shape=RoundedCornerShape(16.dp))
+    RallySearch(value,onValue,label,Modifier.fillMaxWidth())
 }
 @Composable fun CommunityList(vm: RallyViewModel,onCommunity: (String)->Unit,onAsset: (Asset)->Unit) {
     val state by vm.state.collectAsStateWithLifecycle()

@@ -65,9 +65,9 @@ import kotlin.math.abs
             LazyColumn(state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(bottom=24.dp)) {
                 if(!launch && overview!=null)item(key="overview") { overview() }
                 item(key="controls") {
-        if(!launch)ScrollableTabRow(selectedTabIndex=listOf("Memes","Spot","Perps","Prediction").indexOf(category),edgePadding=20.dp,containerColor=MaterialTheme.colorScheme.background,divider={},indicator={}) { listOf("Memes","Spot","Perps","Prediction").forEach { label -> Tab(selected=category==label,onClick={category=label;query="";applied=""},text={Text(label,color=if(category==label)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=if(category==label)FontWeight.SemiBold else FontWeight.Normal)}) } }
-        Row(Modifier.padding(horizontal=20.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
-            OutlinedTextField(query,{query=it},Modifier.weight(1f),singleLine=true,placeholder={Text(if(launch)"Find a launch" else "Search tokens",style=MaterialTheme.typography.bodyMedium)},leadingIcon={Icon(Icons.Outlined.Search,null)},trailingIcon={if(query.isNotEmpty())IconButton(onClick={query=""}){Icon(Icons.Outlined.Close,"Clear search")}},shape=RoundedCornerShape(14.dp),colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=Color.Transparent,focusedBorderColor=Violet,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceContainer,focusedContainerColor=MaterialTheme.colorScheme.surfaceContainer))
+        if(!launch)ScrollableTabRow(selectedTabIndex=listOf("Memes","Spot","Perps","Prediction").indexOf(category),edgePadding=16.dp,containerColor=MaterialTheme.colorScheme.background,divider={},indicator={}) { listOf("Memes","Spot","Perps","Prediction").forEach { label -> Tab(selected=category==label,onClick={category=label;query="";applied=""},text={Text(label,color=if(category==label)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=if(category==label)FontWeight.SemiBold else FontWeight.Normal)}) } }
+        Row(Modifier.padding(horizontal=16.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically) {
+            RallySearch(query,{query=it},if(launch)"Find a launch" else "Search tokens",Modifier.weight(1f))
             if(launch) { Spacer(Modifier.width(8.dp));FilledIconButton(onClick=create,modifier=Modifier.size(52.dp),colors=IconButtonDefaults.filledIconButtonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Icon(Icons.Outlined.Add,"Launch a token") } }
         }
                 }
@@ -78,7 +78,7 @@ import kotlin.math.abs
                     item { Text("Price predictions",Modifier.padding(20.dp),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium) }
                     items(assets,key={it.key}) { a->PredictionRow(a,{onAsset(a)}) }
                 } else {
-                    item { Row(Modifier.padding(horizontal=20.dp,vertical=8.dp)) { Text(if(launch)"New launches" else "Asset",Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(if(category=="Memes" || launch)"Market cap" else "Price",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.width(64.dp)) } }
+                    item { Row(Modifier.padding(horizontal=16.dp,vertical=4.dp)) { Text(if(launch)"New launches" else "Asset",Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(if(category=="Memes" || launch)"Market cap" else "Price",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.width(64.dp)) } }
                     items(assets,key={it.key}) { a -> AssetRow(a,category=="Memes" || launch,{onAsset(a)},{onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","buy")))}) }
                 }
                 if(page.cursor!=null)item { TextButton(onClick={vm.load(key,path+if(category=="Spot" && !launch)"&offset="+page.cursor else "&cursor="+Uri.encode(page.cursor),field,append=true)},modifier=Modifier.fillMaxWidth(),enabled=!page.loading) { Text(if(page.loading)"Loading…" else "Load more") } }
@@ -88,10 +88,10 @@ import kotlin.math.abs
     }
 }
 @Composable fun AssetRow(asset: Asset,cap: Boolean,onClick: ()->Unit,onBuy: (()->Unit)?=null) {
-    Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=20.dp,vertical=8.dp).heightIn(min=56.dp),verticalAlignment=Alignment.CenterVertically) {
-        TokenArtwork(asset,40.dp);Spacer(Modifier.width(12.dp))
+    Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=16.dp,vertical=6.dp).heightIn(min=52.dp),verticalAlignment=Alignment.CenterVertically) {
+        TokenArtwork(asset,36.dp);Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f).padding(end=8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-            Text(asset.symbol,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Medium,fontSize=15.sp)
+            Text(asset.symbol,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Medium,fontSize=14.sp,lineHeight=18.sp)
             Text(if(asset.kind=="perps")asset.venue else asset.name,maxLines=1,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(Modifier.widthIn(max=if(onBuy==null)148.dp else 116.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)) {
@@ -100,16 +100,16 @@ import kotlin.math.abs
         }
         if(onBuy!=null) {
             Spacer(Modifier.width(8.dp))
-            TextButton(onClick=onBuy,enabled=asset.executable&&!asset.stale,modifier=Modifier.width(56.dp).heightIn(min=48.dp).semantics { contentDescription=if(asset.kind=="perps")"Buy / Long ${asset.symbol}" else "Buy ${asset.symbol}" },contentPadding=PaddingValues(4.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceContainer,contentColor=if(MaterialTheme.colorScheme.surfaceContainer.luminance()<.5f)Color(0xFF8CB8FF) else Color(0xFF0055DD))) { Text(if(asset.kind=="perps")"Long" else "Buy",fontSize=12.sp,maxLines=1) }
+            TextButton(onClick=onBuy,enabled=asset.executable&&!asset.stale,modifier=Modifier.width(52.dp).heightIn(min=44.dp).semantics { contentDescription=if(asset.kind=="perps")"Buy / Long ${asset.symbol}" else "Buy ${asset.symbol}" },contentPadding=PaddingValues(4.dp),shape=RoundedCornerShape(10.dp),colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceContainer,contentColor=if(MaterialTheme.colorScheme.surfaceContainer.luminance()<.5f)Color(0xFF8CB8FF) else Color(0xFF0055DD))) { Text(if(asset.kind=="perps")"Long" else "Buy",fontSize=12.sp,maxLines=1) }
         }
     }
-    HorizontalDivider(Modifier.padding(horizontal=20.dp),color=MaterialTheme.colorScheme.outlineVariant)
+    HorizontalDivider(Modifier.padding(horizontal=16.dp),color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=.6f))
 }
 @Composable fun PredictionRow(asset: Asset,onClick: ()->Unit) {
     val raw=asset.raw;val status=raw.string("state").replace('_',' ')
     Surface(Modifier.padding(horizontal=20.dp,vertical=6.dp).fillMaxWidth().clickable(onClick=onClick),shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface) {
         Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            Row(verticalAlignment=Alignment.CenterVertically) { TokenArtwork(asset,40.dp);Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)) { Text("${asset.symbol} / USD",fontWeight=FontWeight.Medium);Text("Pool #${asset.id}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text(status,style=MaterialTheme.typography.labelSmall,color=if(raw.string("state")=="open")Gain else MaterialTheme.colorScheme.onSurfaceVariant) }
+            Row(verticalAlignment=Alignment.CenterVertically) { TokenArtwork(asset,36.dp);Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)) { Text("${asset.symbol} / USD",fontWeight=FontWeight.Medium);Text("Pool #${asset.id}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text(status,style=MaterialTheme.typography.labelSmall,color=if(raw.string("state")=="open")Gain else MaterialTheme.colorScheme.onSurfaceVariant) }
             Text("${raw.string("stake")} ${raw.string("stakeAsset")}",style=MaterialTheme.typography.headlineSmall)
             Row { Text("Entry stake",Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Text("${raw.optInt("predictions")} entries",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
         }
@@ -363,7 +363,7 @@ import kotlin.math.abs
                                 }
                             }
                         }
-                        if(asset.kind=="spot")Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) { listOf("0.1","1","5","10").forEach { preset->TextButton(onClick={amount=preset;focus.clearFocus()},enabled=!app.order.blocksOrder,modifier=Modifier.weight(1f).heightIn(min=44.dp),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceContainer,contentColor=if(amount==preset)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)) { Text(preset) } } }
+                        if(asset.kind=="spot")Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) { listOf("0.1","1","5","10").forEach { preset->TextButton(onClick={amount=preset;focus.clearFocus()},enabled=!app.order.blocksOrder,modifier=Modifier.weight(1f).heightIn(min=44.dp),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(10.dp),colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceContainer,contentColor=if(amount==preset)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)) { Text(preset) } } }
                         Box(Modifier.fillMaxWidth().heightIn(min=28.dp)) {
                             if(quoting)LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.Center))
                             quote?.let { q->val best=q.objects("routes").firstOrNull { it.string("state")=="quoted" };Fact(best?.string("provider") ?: q.string("venue","nad.fun"),best?.string("output")?.let { "≈ ${displayAmount(it)} ${if(side=="buy")asset.symbol else "MON"}" } ?: q.string("receive").takeIf { it.isNotBlank() }?.let { "≈ ${displayAmount(it)} ${q.string("outputAsset")}" } ?: "No route for this amount") }

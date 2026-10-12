@@ -24,6 +24,17 @@ try {
   assert.equal(await page.locator('#home-balance strong').innerText(),'—');
   assert(await page.locator('#home-overview .rc-algorithm-row').count()<=2);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+  // A narrow grid can fit the viewport while individual cells still overlap rows.
+  const collisions=await page.locator('.nad-table tbody tr').evaluateAll(rows=>rows.slice(0,8).flatMap(row=>{
+   const outer=row.getBoundingClientRect();
+   return [...row.children].filter(cell=>cell.getClientRects().length).flatMap(cell=>{
+    const box=cell.getBoundingClientRect();
+    return box.top<outer.top-1||box.bottom>outer.bottom+1||box.left<outer.left-1||box.right>outer.right+1?[cell.cellIndex]:[];
+   });
+  }));
+  assert.deepEqual(collisions,[],'Token cells stay inside their own row');
+  const buyTarget=await page.locator('.nad-table .r-market-buy').first().boundingBox();
+  assert(buyTarget.width>=44&&buyTarget.height>=44,'Compact Buy remains touchable');
   await page.screenshot({path:`${out}/home-${width}-${theme}.png`});
   const coin=page.locator('.nad-table .r-coin-cell').first();await coin.scrollIntoViewIfNeeded();
   const scroll=await page.evaluate(()=>scrollY);await coin.click();

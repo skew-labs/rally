@@ -78,8 +78,24 @@ fun Modifier.animatedHeight(height: State<Dp>)=layout { measurable,constraints->
 
 @Composable fun RallyBrand() {
     Row(verticalAlignment=Alignment.Bottom) {
-        Text("rally",fontFamily=RallyFont,fontWeight=FontWeight.Bold,fontSize=27.sp,letterSpacing=(-1.5).sp,lineHeight=32.sp)
+        Text("rally",fontFamily=RallyFont,fontWeight=FontWeight.Bold,fontSize=25.sp,letterSpacing=(-1.3).sp,lineHeight=30.sp)
         Box(Modifier.padding(start=2.dp,bottom=5.dp).size(5.dp).background(Violet,CircleShape))
+    }
+}
+
+@Composable fun RallySearch(value: String,onValue: (String)->Unit,label: String,modifier: Modifier=Modifier) {
+    val focus=androidx.compose.ui.platform.LocalFocusManager.current
+    Surface(modifier,shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceContainer) {
+        Row(Modifier.heightIn(min=48.dp).padding(start=12.dp,end=4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            Icon(Icons.Outlined.Search,null,Modifier.size(18.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.foundation.text.BasicTextField(value,onValue,Modifier.weight(1f).heightIn(min=44.dp).semantics { contentDescription=label },singleLine=true,
+                textStyle=MaterialTheme.typography.bodyMedium.copy(color=MaterialTheme.colorScheme.onSurface),cursorBrush=SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Search),
+                keyboardActions=androidx.compose.foundation.text.KeyboardActions(onSearch={focus.clearFocus()}),decorationBox={input->
+                    Box(contentAlignment=Alignment.CenterStart) { if(value.isEmpty())Text(label,fontSize=14.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);input() }
+                })
+            if(value.isNotEmpty())IconButton(onClick={onValue("")}) { Icon(Icons.Outlined.Close,"Clear search",Modifier.size(18.dp)) }
+        }
     }
 }
 
@@ -88,15 +104,17 @@ fun Modifier.animatedHeight(height: State<Dp>)=layout { measurable,constraints->
     val outline=listOf(R.drawable.nav_home,R.drawable.nav_communities,R.drawable.nav_search,0,R.drawable.nav_account)
     val filled=listOf(R.drawable.nav_home_selected,R.drawable.nav_communities_selected,R.drawable.nav_search_selected,0,R.drawable.nav_account_selected)
     val labels=listOf("Home",if(density.fontScale>1.3f)"Groups" else "Communities","Discover","Leaderboard","Profile")
-    Surface(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=10.dp,vertical=8.dp),shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surface,border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
-        Row(Modifier.fillMaxWidth().heightIn(min=64.dp).padding(horizontal=4.dp,vertical=5.dp)) {
+    Surface(Modifier.fillMaxWidth(),color=MaterialTheme.colorScheme.surface) {
+      Column {
+        HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+        Row(Modifier.fillMaxWidth().navigationBarsPadding().heightIn(min=60.dp).padding(horizontal=4.dp,vertical=4.dp)) {
             labels.forEachIndexed { index,label->
                 val active=selected==index
                 val interactions=remember { MutableInteractionSource() }
                 val color=MaterialTheme.colorScheme.onSurface
-                val tint=if(active)color else MaterialTheme.colorScheme.onSurfaceVariant
+                val tint by animateColorAsState(if(active)color else MaterialTheme.colorScheme.onSurfaceVariant,tween(140),label="navigation tint")
                 Column(Modifier.weight(1f).pressFeedback(interactions).clickable(interactionSource=interactions,indication=null,role=Role.Tab,onClick={onSelect(index)}).semantics { this.selected=active;contentDescription=Tabs[index].label }.padding(vertical=3.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                    val backdrop by animateColorAsState(if(active)if(MaterialTheme.colorScheme.surface.luminance()<.2f)Color(0xFF302A43) else Color(0xFFEEEAFA) else Color.Transparent,tween(140),label="navigation")
+                    val backdrop=Color.Transparent
                     Box(Modifier.size(width=46.dp,height=34.dp).background(backdrop,RoundedCornerShape(18.dp)),contentAlignment=Alignment.Center) {
                         if(index==3)Icon(Icons.Outlined.EmojiEvents,null,Modifier.size(24.dp),tint=tint)
                         else Icon(painterResource(if(active)filled[index] else outline[index]),null,Modifier.size(24.dp),tint=tint)
@@ -105,5 +123,6 @@ fun Modifier.animatedHeight(height: State<Dp>)=layout { measurable,constraints->
                 }
             }
         }
+    }
     }
 }

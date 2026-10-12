@@ -123,7 +123,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                     topBar={TopAppBar(title={if(tab==0 && extra==null)RallyBrand() else Text(title,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.SemiBold,fontSize=25.sp)},navigationIcon={if(extra!=null || community!=null)IconButton(onClick={extra=null;community=null}){Icon(Icons.Outlined.ArrowBack,"Back")}},actions={
                         IconButton(onClick={dark=!dark;settings.edit().putBoolean("dark",dark).apply();if(android.os.Build.VERSION.SDK_INT>=31)context.getSystemService(android.app.UiModeManager::class.java).setApplicationNightMode(if(dark)android.app.UiModeManager.MODE_NIGHT_YES else android.app.UiModeManager.MODE_NIGHT_NO)}) { Icon(if(dark)Icons.Outlined.LightMode else Icons.Outlined.DarkMode,"Change theme") }
                         if(tab==0)IconButton(onClick={tab=2}) { Icon(Icons.Outlined.Search,"Search") }
-                    },colors=TopAppBarDefaults.topAppBarColors(containerColor=MaterialTheme.colorScheme.background))},
+                    },expandedHeight=56.dp,colors=TopAppBarDefaults.topAppBarColors(containerColor=MaterialTheme.colorScheme.background))},
                     bottomBar={if(!wide)RallyNavigation(tab) { tab=it;extra=null;community=null }},
                     snackbarHost={SnackbarHost(snack)}) { padding ->
                     Column(Modifier.fillMaxSize().padding(padding)) {
@@ -187,12 +187,12 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
 @Composable fun HomeSections(selected: String,onSelect: (String)->Unit) {
     val options=listOf("Markets","Launch","Swipe","Feed")
     val haptic=LocalHapticFeedback.current
-    BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal=20.dp)) {
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal=16.dp)) {
         val cell=maxWidth/options.size
         val position=animateDpAsState(cell*options.indexOf(selected).coerceAtLeast(0),tween(180),label="home section")
         Row(Modifier.fillMaxWidth()) {
             options.forEach { label->
-                Box(Modifier.weight(1f).heightIn(min=48.dp).clickable(role=Role.Tab){if(selected!=label){haptic.performHapticFeedback(HapticFeedbackType.SegmentTick);onSelect(label)}}.semantics { this.selected=selected==label }.padding(vertical=14.dp),contentAlignment=Alignment.Center) {
+                Box(Modifier.weight(1f).heightIn(min=48.dp).clickable(role=Role.Tab){if(selected!=label){haptic.performHapticFeedback(HapticFeedbackType.SegmentTick);onSelect(label)}}.semantics { this.selected=selected==label }.padding(vertical=10.dp),contentAlignment=Alignment.Center) {
                     Text(label,fontSize=14.sp,maxLines=1,fontWeight=if(label==selected)FontWeight.Medium else FontWeight.Normal,color=if(label==selected)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
