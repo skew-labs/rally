@@ -50,10 +50,11 @@ class RallyApi(private val context: Context,private val client: OkHttpClient=nat
     fun signOut() { generation++;session=null;store.clear();clearCache() }
     fun clearCache() = synchronized(cache) { cache.clear() }
     suspend fun get(path: String, force: Boolean=false): JSONObject {
-        synchronized(cache) { cache[path]?.takeIf { !force && System.currentTimeMillis()-it.first < 20000 }?.let { return it.second } }
+        val live=Regex("[?&]fresh=1(?:&|$)").containsMatchIn(path)
+        synchronized(cache) { cache[path]?.takeIf { !live && !force && System.currentTimeMillis()-it.first < 20000 }?.let { return it.second } }
         val version=generation
         val data=request(path,null)
-        synchronized(cache) { if(version!=generation)throw kotlinx.coroutines.CancellationException("Account changed");cache[path]=System.currentTimeMillis() to data;while(cache.size>50)cache.remove(cache.keys.first()) }
+        synchronized(cache) { if(version!=generation)throw kotlinx.coroutines.CancellationException("Account changed");if(!live){cache[path]=System.currentTimeMillis() to data;while(cache.size>50)cache.remove(cache.keys.first())} }
         return data
     }
     suspend fun post(path: String, body: JSONObject, key: String?=null): JSONObject = request(path,body,key)

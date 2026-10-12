@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.16)
+project(rally_market_transport LANGUAGES CXX)
+find_package(CURL 7.85 REQUIRED)
+add_library(rally_market_transport SHARED market_transport.cpp)
+target_compile_features(rally_market_transport PRIVATE cxx_std_17)
+target_link_libraries(rally_market_transport PRIVATE CURL::libcurl)
+target_compile_options(rally_market_transport PRIVATE -Wall -Wextra)

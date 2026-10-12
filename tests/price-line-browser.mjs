@@ -11,7 +11,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms)),now=Math.floor(Date.now()/1000)
 const points=[{time:now-86400,value:1.23},{time:now-3600,value:1.26},{time:now,value:1.24}];
 const candles=points.map(p=>({time:p.time,open:p.value-.01,high:p.value+.02,low:p.value-.02,close:p.value,volume:1}));
 const html=`<!doctype html><html><head><style>body{margin:16px;font:14px Arial}.chart-embed,.r-mini-chart{height:280px}button{min-height:44px}.r-asset-actions{display:flex}</style></head><body><main id="root"></main></body></html>`;
-const modules=new Map(await Promise.all(['charts.js','price-line.js','market-ui.js','wallet-ui.js','holder-ui.js'].map(async name=>['/'+name,await fs.readFile(root+'/'+name,'utf8')])));
+const modules=new Map(await Promise.all(['charts.js','price-line.js','market-ui.js','wallet-ui.js','holder-ui.js','provider-chart.js'].map(async name=>['/'+name,await fs.readFile(root+'/'+name,'utf8')])));
 const serveModule=async(r,u)=>{if(!modules.has(u.pathname))return false;await r.fulfill({contentType:'text/javascript',body:modules.get(u.pathname)});return true;};
 let browser;const results=[];
 try{
@@ -21,7 +21,7 @@ try{
   const context=await browser.newContext({viewport:{width,height:700}}),page=await context.newPage(),errors=[];let reads=0;
   page.on('pageerror',e=>errors.push(e.message));
   await context.route('**/*',async r=>{
-   const u=new URL(r.request().url());assert.equal(r.request().method(),'GET');if(u.origin!==origin)return r.abort();
+   const u=new URL(r.request().url());assert.equal(r.request().method(),'GET');if(u.hostname==='widgets.coingecko.com')return r.fulfill({contentType:'text/javascript',body:''});if(u.origin!==origin)return r.abort();
    if(await observeChartRenderer(r))return;
    if(await serveModule(r,u))return;
    if(u.pathname==='/line-fixture')return r.fulfill({contentType:'text/html',body:html});
@@ -46,6 +46,7 @@ try{
    }
    window.mount();
   },{mode,theme,asset});
+  if(mode==='mini')await page.locator('[data-mini-line]').click();
   await page.waitForFunction(()=>window.chartSeriesObserved?.at(-1)?.points.length===3);
   assert.deepEqual(await page.evaluate(()=>window.chartSeriesObserved.at(-1).points),points,'No invented points in sparse gaps');
   assert((await page.evaluate(()=>window.chartSeriesObserved)).every(s=>s.type==='line'));
@@ -56,10 +57,10 @@ try{
   await page.evaluate(()=>{
    window.unmount();window.firstFrameMs=null;const at=performance.now();
    const watch=new MutationObserver(()=>{if(document.querySelector('#market-chart canvas,.r-mini-chart canvas')){watch.disconnect();requestAnimationFrame(()=>window.firstFrameMs=performance.now()-at);}});
-   document.querySelector('#root').replaceChildren();watch.observe(document.querySelector('#root'),{subtree:true,childList:true});window.mount();
+   document.querySelector('#root').replaceChildren();watch.observe(document.querySelector('#root'),{subtree:true,childList:true});window.mount();document.querySelector('[data-mini-line]')?.click();
   });
   await page.waitForFunction(()=>window.firstFrameMs!=null);const firstFrameMs=await page.evaluate(()=>window.firstFrameMs);
-  assert.equal(reads,before,'Warm reopen reuses observed history');assert(firstFrameMs<=30,mode+' warm first frame '+firstFrameMs);assert.deepEqual(errors,[]);
+  if(mode==='mini'){assert.equal(reads,before+1,'Provider fallback reads current data again');assert(firstFrameMs>=300,'Fresh data cannot paint before its upstream fixture responds');}else{assert.equal(reads,before,'Warm reopen reuses observed history');assert(firstFrameMs<=30,mode+' warm first frame '+firstFrameMs);}assert.deepEqual(errors,[]);
   const plotCoverage=await page.evaluate(()=>window.chartCoverage());results.push({width,theme,mode,firstFrameMs,plotCoverage,points:3,reads,writes:0});await context.close();
  }
  const context=await browser.newContext(),page=await context.newPage();

@@ -4,7 +4,7 @@ Rally's Android app renders markets, charts, Swipe, feeds and profiles natively,
 
 ## Install Rally
 
-Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.9.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.9**. Android 9 or later is required.
+Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.10.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.10**. Android 9 or later is required.
 
 When installing a downloaded APK, Android may ask you to allow installation from the app used to download it. Use the official file rather than a re-signed copy from an unknown source.
 
@@ -34,3 +34,8 @@ Switch the Feed's algorithm from its selector without leaving the feed. Paid cho
 ## Signals, communities and alerts
 
 The Feed includes **Following** and **Trades**. Create a 24-hour price signal, share selected finalized fills from Profile, set token-holder benefits and enter the weekly algorithm league. See [Signals and benefits](social-loop.md). Android lock-screen push becomes available when the deployment has configured Firebase; in-app notifications work separately.
+
+
+## Token charts
+
+CoinGecko and GeckoTerminal render supported charts inside the token sheet. **Price line** switches to a current provider read. Monad token charts use the token contract; perpetual charts are labeled as spot references. Tokens still on a nad.fun curve retain their curve history. Holder rows load independently below the chart.

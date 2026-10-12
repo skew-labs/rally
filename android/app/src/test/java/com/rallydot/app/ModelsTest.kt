@@ -4,6 +4,18 @@ import org.junit.Test
 import org.junit.Assert.*
 
 class ModelsTest {
+    @Test fun providerTokenChartsUseExactContractsAndExcludeUnmigratedCurves() {
+        val address="0x"+"a".repeat(40)
+        val token=Asset.parse(JSONObject().put("id",address).put("chainId",143).put("nadfun",true).put("graduated",true))
+        assertEquals(address,providerTarget(token)?.token)
+        assertNull(providerTarget(token.copy(raw=JSONObject(token.raw.toString()).put("graduated",false))))
+        assertNull(providerTarget(token.copy(raw=JSONObject(token.raw.toString()).put("chainId",1))))
+        assertNull(providerTarget(Asset.parse(JSONObject().put("id","unknown").put("symbol","BTC"))))
+    }
+    @Test fun providerChartsCannotNavigateIntoWalletsOrRallyAuthentication() {
+        assertTrue(allowedProviderNavigation("https://www.geckoterminal.com/monad/tokens/0x1"))
+        listOf("javascript:alert(1)","http://www.geckoterminal.com/","https://rallydot.com/","https://www.geckoterminal.com.evil.test/","https://user@www.geckoterminal.com/","https://www.geckoterminal.com:444/","metamask://connect","file:///private").forEach { assertFalse(it,allowedProviderNavigation(it)) }
+    }
     @Test fun firstAnonymousBootstrapDoesNotCancelAlreadyLoadingPublicMarkets() {
         assertFalse(accountIdentityChanged(null,JSONObject().put("wallet","")))
         assertFalse(accountIdentityChanged(JSONObject(),JSONObject().put("wallet","")))

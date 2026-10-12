@@ -1,4 +1,5 @@
 """Public chart reads. Exact identities, bounded upstream work, no wallet access."""
+import json
 import math
 import threading
 import time
@@ -26,10 +27,19 @@ def identity(asset,kind):
         return {'asset':str(ident),'coin':coin[1],'symbol':coin[0],'reference':'Global spot reference','kind':kind}
     if kind!='spot':raise s.Problem('Unknown chart kind')
     token=s.GATEWAY.token_map.get(asset)
+    # nad.fun's onchain-verified catalog may precede the generic spot registry.
+    verified=None
+    if s.re.fullmatch(r'0x[0-9a-fA-F]{40}',str(asset)):
+        row=s.one('SELECT info FROM nad_tokens WHERE address=?',(str(asset).lower(),))
+        if row:
+            candidate=json.loads(row['info'])
+            if candidate.get('chainId')==143 and candidate.get('address','').lower()==str(asset).lower() and candidate.get('graduated'):
+                verified=candidate
+    if not token:token=verified
     if not token:raise s.Problem('Unknown asset',404)
     if asset=='MON':return {'asset':asset,'coin':'monad','symbol':'MON','reference':'Global spot reference','kind':kind}
     price=s.GATEWAY.prices.get(asset,{})
-    pair=price.get('pair')
+    pair=price.get('pair') or token.get('pair') or (verified or {}).get('pair')
     if not pair or not s.re.fullmatch(r'0x[0-9a-fA-F]{40}',pair):raise s.Problem('No indexed Monad pool chart',404,'chart_unavailable')
     return {'asset':asset,'pool':pair.lower(),'token':token['address'].lower(),'symbol':token['symbol'],'reference':'Monad pool reference','kind':kind}
 
@@ -44,6 +54,33 @@ def series(raw,milliseconds=False):
     values=[{'time':t,'value':v} for t,v in sorted(points.items())]
     if not values:raise s.Problem('No chart observations for this asset',404,'chart_unavailable')
     return values[-3000:]
+
+def fresh_chart(asset,kind='spot',period='1D'):
+    """One current provider read, without reading or writing market snapshots."""
+    if period not in {'1D','7D','1M'}:raise s.Problem('Unknown chart period')
+    ident=identity(asset,kind)
+    if 'pairBase' in ident:
+        coin=next((v for v in COINS.values() if v[0]==ident['symbol']),None)
+        if not coin:raise s.Problem('No CoinGecko reference for this market',404,'chart_unavailable')
+        ident={**ident,'coin':coin[1],'reference':'Global spot reference'}
+    if not SLOTS.acquire(blocking=False):raise s.Problem('Chart requests are busy. Retry shortly.',503,'chart_busy')
+    try:
+        from native_market_transport import get
+        if 'coin' in ident:
+            raw,timing=get('https://api.coingecko.com/api/v3/coins/'+ident['coin']+'/market_chart?'+urlencode({'vs_currency':'usd','days':{'1D':1,'7D':7,'1M':30}[period],'precision':'full'}))
+            points=series(raw.get('prices',[]),True)
+            source='CoinGecko';source_url='https://www.coingecko.com/en/coins/'+ident['coin']
+        else:
+            timeframe,aggregate,limit={'1D':('minute',15,96),'7D':('hour',1,168),'1M':('day',1,30)}[period]
+            raw,timing=get('https://api.geckoterminal.com/api/v2/networks/monad/pools/'+ident['pool']+'/ohlcv/'+timeframe+'?'+urlencode({'aggregate':aggregate,'limit':limit,'currency':'usd','token':ident['token']}))
+            meta=raw.get('meta',{})
+            if ident['token'] not in {str(meta.get(k,{}).get('address','')).lower() for k in ('base','quote')}:
+                raise s.Problem('Chart token identity mismatch',502,'chart_identity')
+            points=series([[r[0],r[4]] for r in raw.get('data',{}).get('attributes',{}).get('ohlcv_list',[]) if isinstance(r,list) and len(r)==6])
+            source='GeckoTerminal · CoinGecko';source_url='https://www.geckoterminal.com/monad/tokens/'+ident['token']
+        return {**ident,'period':period,'points':points,'source':source,'sourceURL':source_url,'fetchedAt':s.now(),
+                'lastObservation':points[-1]['time'],'stale':False,'cached':False,'freshRead':True,**timing}
+    finally:SLOTS.release()
 
 def chart(asset,kind='spot',period='1D'):
     if period not in {'1D','7D','1M'}:raise s.Problem('Unknown chart period')

@@ -11,7 +11,7 @@ const server=spawn(process.env.RALLY_PYTHON||'python3',['scripts/preview.py'],{c
 let browser,diagnostics='';server.stderr.on('data',d=>diagnostics+=d);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const id='0x'+'a'.repeat(40),now=Math.floor(Date.now()/1000);
-const token={id,address:id,symbol:'BUSY',name:'Busy Land',venue:'nad.fun',nadfun:true,price:.002,marketCap:2000000,referenceAt:now,created:now,graduated:true,progressBps:10000,locked:false,tradeSupported:true,quoteSymbol:'MON',logoURI:'/assets/MON.png',creator:'0x'+'b'.repeat(40)};
+const token={id,address:id,symbol:'BUSY',name:'Busy Land',venue:'nad.fun',nadfun:true,price:.002,marketCap:2000000,referenceAt:now,created:now,graduated:false,progressBps:5000,locked:false,tradeSupported:true,quoteSymbol:'MON',logoURI:'/assets/MON.png',creator:'0x'+'b'.repeat(40)};
 const candles=Array.from({length:30},(_,i)=>({time:now-3600*(30-i),open:1+i*.01,high:1.03+i*.01,low:.97+i*.01,close:1.02+i*.01,volume:10}));
 const holders={asset:id,indexed:true,total:1412,source:'nad.fun',fetchedAt:now,refreshing:false,holders:[
  {address:'0x'+'1'.repeat(40),name:'',amount:'890567000.123456789123456789'},

@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.9.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.10.apk)
 
 ## Interaction and data
 
@@ -142,3 +142,10 @@ A valid quote observed within the last two minutes can display as a single point
 ## Token and holder response
 
 Version 0.4.9 warms holders alongside the first visible token charts and shares bounded public observation snapshots across token sheets. Reopening a token shows its cached holders immediately while a single refresh task updates them. Holder rows use fixed rank and quantity columns, compact quantities and one address for unnamed wallets. Long names truncate within the identity column. Snapshot identity and observation age are checked; stale observations are labeled and observations older than fifteen minutes are withheld. Initial provider acquisition and network latency remain separate from cached rendering.
+
+
+## Provider charts
+
+Version 0.4.10 opens CoinGecko's official coin widget or GeckoTerminal's exact Monad token embed inside the token sheet. Only this public chart component uses an isolated WebView. It has no JavaScript wallet bridge, file access, authentication token injection or third-party cookies; navigation and permissions are restricted. Trading, holder rows and the surrounding interface remain native Compose.
+
+A provider error or the Price line action switches to a current CoinGecko/GeckoTerminal read with `fresh=1`. This path bypasses Rally's app and server market snapshots. The server's optional C++/libcurl receiver reuses HTTPS connections without reusing price responses. Provider rate limits and network latency still apply. Tokens that have not migrated from nad.fun's curve retain their supported curve chart source.

@@ -28,3 +28,4 @@ assets/rally-app-*
 assets/token-art-*
 auth-client/privy-build.json
 .DS_Store
+native/*.so

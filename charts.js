@@ -1,4 +1,5 @@
 import {closingPrices,priceLineOptions,fitPriceLine} from './price-line.js';
+import {providerTarget,mountProviderChart} from './provider-chart.js';
 export const money = (n, digits) => '$' + n.toLocaleString('en-US',{minimumFractionDigits:digits ?? (n < .0001 ? 9 : n < 1 ? 5 : 2),maximumFractionDigits:digits ?? (n < .0001 ? 9 : n < 1 ? 5 : 2)});
 export const compact = n => '$' + (n >= 1e12 ? (n/1e12).toFixed(2)+'T' : n >= 1e9 ? (n/1e9).toFixed(2)+'B' : n >= 1e6 ? (n/1e6).toFixed(1)+'M' : (n/1e3).toFixed(1)+'K');
 export const changeText = n => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
@@ -27,7 +28,7 @@ const sources = {
 const coinPage = id => `https://www.coingecko.com/en/coins/${sources[id][0] === 'ondo-finance' ? 'ondo' : sources[id][0]}`;
 const tradingViewAssets = new Set('MON BTC ETH SOL HYPE PENGU LINK ONDO AAVE PEPE UNI USDC'.split(' '));
 const hasTradingView = a => tradingViewAssets.has(a.id);
-const provider = (a,state) => hasTradingView(a) && state.chartProvider !== 'coingecko' ? 'tradingview' : 'coingecko';
+const provider = (a,state) => hasTradingView(a) && state.chartProvider === 'tradingview' ? 'tradingview' : 'coingecko';
 export const chartKey = (a,state) => `${a.id}:${provider(a,state)}:${state.chartInterval}:${state.theme}`;
 export function spark(a) {
   const source=sources[a.id];
@@ -46,23 +47,12 @@ let activeChart;
 export function disposeChart() {
   if(!activeChart)return;
   activeChart.controller.abort();
+  activeChart.providerCleanup?.();
   clearTimeout(activeChart.timer);
   activeChart.api?.remove();
   activeChart=null;
 }
 export function fitChart(){if(activeChart?.api&&activeChart.points)fitPriceLine(activeChart.api,activeChart.points);}
-let geckoScript;
-function loadGecko() {
-  if (!geckoScript) geckoScript = new Promise((resolve,reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://widgets.coingecko.com/gecko-coin-price-chart-widget.js';
-    script.async = true;
-    script.onload = resolve;
-    script.onerror = () => {script.remove();geckoScript=null;reject(new Error('CoinGecko unavailable'));};
-    document.head.append(script);
-  });
-  return geckoScript;
-}
 function failed(host) {
   if (!host.isConnected) return;
   host.replaceChildren();
@@ -80,11 +70,7 @@ export async function mountChart(a,state) {
   host.innerHTML='<div class="chart-loading">Loading chart…</div>';
   if(provider(a,state)==='tradingview')return mountTradingView(host,a,state.chartInterval,dark);
   try {
-    await loadGecko();
-    if(!host.isConnected)return;
-    const widget=document.createElement('gecko-coin-price-chart-widget');
-    Object.entries({'coin-id':source[0],locale:'en','initial-currency':'usd',height:'360',width:'0','dark-mode':String(dark),'transparent-background':'true',outlined:'false'}).forEach(([key,value])=>widget.setAttribute(key,value));
-    host.replaceChildren(widget);
+    activeChart={controller:new AbortController(),providerCleanup:mountProviderChart(host,{kind:'coin',coin:source[0]},{dark,onFailure:()=>failed(host)})};
   }catch{failed(host);}
 }
 const historyCache=new Map();
@@ -92,6 +78,8 @@ export function mountPoolPriceChart(a,state){
   const parent=document.querySelector('#pool-chart');if(!parent)return;
   parent.innerHTML='<section class="provider-chart"><div class="chart-quote"><strong id="chart-price">—</strong><span id="chart-change"></span><small>Monad pool reference</small></div><div class="chart-ohlc" id="chart-ohlc" aria-live="off"></div><div id="market-chart" class="chart-embed tradingview-native" aria-label="Pool price line chart"></div><div class="chart-foot"><a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts™</a><span id="chart-status" role="status">Loading</span></div></section>';
   disposeChart();
+  const target=providerTarget(a);
+  if(target&&state.chartProvider!=='tradingview'){const host=parent.querySelector('#market-chart');host.style.height='360px';activeChart={controller:new AbortController(),providerCleanup:mountProviderChart(host,target,{dark:state.theme==='dark',onFailure:()=>failed(host)})};parent.querySelector('.chart-foot').innerHTML='<span>CoinGecko · Monad token</span>';return;}
   return mountTradingView(parent.querySelector('#market-chart'),a,'D',state.theme==='dark',`/api/market-chart?asset=${encodeURIComponent(a.id)}&kind=spot&period=1D`);
 }
 async function mountTradingView(host,a,interval,dark,requestURL=`/api/chart?asset=${encodeURIComponent(a.id)}&interval=${interval}`){

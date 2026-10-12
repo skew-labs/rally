@@ -223,3 +223,10 @@ The wallet interface paints a cached snapshot immediately and changes balance te
 `social_loop.py` enriches real posts with immutable observed signals and opt-in receipt-backed fill cards. `token_benefits.py` verifies short-lived finalized holdings proofs and extends existing feed entitlement and checkout logic. `algorithm_league.py` persists common forward-only snapshots and runs entered versions through the existing isolated scorer. `push_delivery.py` maintains an account/device outbox and rechecks eligibility before provider delivery. Its independent worker keeps push latency outside market collection and financial reconciliation. Web and native Android use the same APIs and existing token trade sheets.
 
 [Data, authority and provider configuration](social-loop.md)
+
+
+### Public chart delivery
+
+Indexed Monad tokens use CoinGecko/GeckoTerminal provider-rendered embeds identified by the exact token contract, including tokens on the quote side of a pool. Listed reference assets use the official CoinGecko widget. These components load directly from the provider and have no wallet or order authority. Third-party scripts are isolated from the web application's origin and from native wallet bridges.
+
+The Price line fallback performs a fresh, bounded public read through `/api/market-chart?fresh=1`. `native/market_transport.cpp` supplies an optional C++/libcurl HTTPS receiver with certificate validation, an exact provider allowlist, redirect rejection, response-size and deadline limits, and reusable connections. `native_market_transport.py` validates the result and observes provider cooldowns. `market_data.py` checks the requested token against provider metadata and preserves actual observation times and closes. This path neither reads nor writes Rally's chart snapshot cache; Python transport remains available on hosts without the optional shared library. Financial quotes and execution preflight remain separate.

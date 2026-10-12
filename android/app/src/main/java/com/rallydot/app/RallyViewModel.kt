@@ -75,7 +75,13 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         return pending
     }
     fun cachedChart(asset: Asset,period: String): JSONObject?=chartSnapshots[asset.key+":"+period]?.takeIf { System.currentTimeMillis()-it.first<20_000 }?.second
-    fun warmChart(asset: Asset) { chartRead(asset,"1D").start();warmHolders(asset) }
+    fun warmChart(asset: Asset) { if(providerTarget(asset)==null)chartRead(asset,"1D").start();warmHolders(asset) }
+    suspend fun freshChart(asset: Asset,period: String): JSONObject {
+        val id=if(asset.kind=="prediction")asset.raw.optJSONObject("assetInfo")?.string("chartMarket") ?: asset.id else asset.id
+        val data=api.get("/api/market-chart?asset="+Uri.encode(id)+"&kind="+(if(asset.kind=="prediction")"perps" else asset.kind)+"&period=$period&fresh=1",true)
+        if(data.string("asset")!=id || !data.optBoolean("freshRead") || data.optBoolean("cached"))throw ApiFailure(502,"Chart identity changed")
+        return data
+    }
     fun warmHolders(asset: Asset) {
         if(!Regex("0x[0-9a-fA-F]{40}").matches(asset.id))return
         val id=asset.id.lowercase();val saved=holderMutable.value[id]

@@ -65,7 +65,7 @@ const brandMark=b=>`<span class="r-agent-brand-mark" data-agent-brand="${esc(b.i
 const brandPicker=selected=>`<div class="r-agent-client-picker" role="group" aria-label="Choose agent">${agentBrands.map(b=>`<button type="button" data-action="agent-guide" data-id="${b.id}" aria-pressed="${selected===b.id}">${brandMark(b)}<span>${esc(b.name)}</span></button>`).join('')}</div>`;
 const params = new URLSearchParams(location.search);
 const marketTabs=['memes','spot','perps','prediction','stocks','rwa','venues'];
-const S = {view:params.get('view')||'home',mode:'for-you',marketTab:params.get('tab')||'memes',nadMode:params.get('phase')==='dex'?'dex':params.get('sort')==='latest'?'new':'cap',filter:'',boot:null,tokens:[],posts:[],cursor:null,chart:{theme:document.documentElement.dataset.theme||'light',chartProvider:'tradingview',chartInterval:'60'},trade:null,modal:null,provider:null,busy:false};
+const S = {view:params.get('view')||'home',mode:'for-you',marketTab:params.get('tab')||'memes',nadMode:params.get('phase')==='dex'?'dex':params.get('sort')==='latest'?'new':'cap',filter:'',boot:null,tokens:[],posts:[],cursor:null,chart:{theme:document.documentElement.dataset.theme||'light',chartProvider:'coingecko',chartInterval:'60'},trade:null,modal:null,provider:null,busy:false};
 const reactionRequests=new Map();
 const communityRequests=new Set();
 const Mobile=mobileUI({state:S,closeModal,closeTrade});
