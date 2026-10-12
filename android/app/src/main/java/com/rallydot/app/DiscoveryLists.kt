@@ -48,19 +48,18 @@ fun algorithmOwner(f: JSONObject): String {
 @Composable private fun DiscoveryAction(label: String,description: String,onClick: ()->Unit,enabled: Boolean=true,buy: Boolean=false) {
     Button(onClick=onClick,enabled=enabled,modifier=Modifier.heightIn(min=44.dp).widthIn(min=62.dp).semantics { contentDescription=description },contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=if(buy)Buy else MaterialTheme.colorScheme.onSurface,contentColor=if(buy)Color.White else MaterialTheme.colorScheme.surface)) { Text(label,maxLines=1,fontSize=12.sp) }
 }
-@Composable fun AlgorithmListRow(feed: JSONObject,onOpen: ()->Unit) {
-    val roi=algorithmReturn(feed);val pnl=feed.optJSONObject("research")?.number("pnlMON")
-    Row(Modifier.fillMaxWidth().heightIn(min=96.dp).clickable(onClick=onOpen).padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-        AlgorithmArtwork(feed,40.dp)
+@Composable fun AlgorithmListRow(feed: JSONObject,creator: Person=discoveryCreator(feed,emptyList()),onOpen: ()->Unit) {
+    val roi=algorithmReturn(feed)
+    Row(Modifier.fillMaxWidth().heightIn(min=80.dp).clickable(onClick=onOpen).padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+        ProfileArtwork(creator.image,creator.name,36.dp)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-            Text(algorithmTitle(feed),fontSize=14.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
-            Text(algorithmOwner(feed),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
-            if(pnl!=null && roi!=null)Text("${compact(pnl)} MON realized",fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Text(algorithmTitle(feed),fontSize=13.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Text(creator.name+(feed.optJSONObject("research")?.string("wallet")?.takeIf { it.isNotBlank() }?.let { " · "+it.takeLast(4) } ?: ""),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
         }
-        Column(horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(3.dp)) {
-            if(roi!=null){Text(algorithmPercent(roi),fontSize=17.sp,color=performanceInk(roi),fontWeight=FontWeight.Medium);Text("Wallet ROI",fontSize=9.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-            DiscoveryAction(if((feed.number("price") ?: 0.0)==0.0)if(roi!=null)"Track" else "Use" else if(feed.optBoolean("access"))"Open" else "Buy","Preview "+algorithmTitle(feed),onOpen,buy=roi!=null)
-            Text(algorithmPrice(feed),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.widthIn(max=116.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            Text(algorithmPercent(roi),fontSize=14.sp,color=if(roi!=null)performanceInk(roi) else MaterialTheme.colorScheme.onSurface,fontWeight=FontWeight.Medium)
+            Text(if(roi!=null)"Sampled wallet ROI" else "No verified return",fontSize=9.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1)
+            Text(algorithmPrice(feed)+(if((feed.number("price") ?: 0.0)>0)" / ${feed.optInt("periodDays",30)}d" else ""),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
         }
     }
     HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=.6f))
@@ -89,7 +88,7 @@ fun algorithmOwner(f: JSONObject): String {
         items(communities,key={it.string("id")},contentType={"community"}) { c->
             val token=c.optJSONObject("token");val image=token?.string("logoURI") ?: if(c.string("id")=="monad")"/assets/MON.png" else c.string("logoURI")
             Row(Modifier.fillMaxWidth().heightIn(min=112.dp).clickable { onCommunity(c.string("id")) }.padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                Artwork(safeImage(image),c.string("name"),44.dp)
+                ProfileArtwork(safeImage(image),c.string("name"),44.dp)
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
                     Text(token?.string("symbol") ?: c.string("name"),fontSize=15.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
                     Text(listOfNotNull(token?.string("symbol"),"${c.optInt("members")} members").joinToString(" · "),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)

@@ -41,7 +41,7 @@ import org.json.JSONObject
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun MarketsScreen(vm: RallyViewModel,onAsset: (Asset)->Unit,launch: Boolean=false,create: ()->Unit={},initialCategory: String="Memes") {
+@Composable fun MarketsScreen(vm: RallyViewModel,onAsset: (Asset)->Unit,launch: Boolean=false,create: ()->Unit={},initialCategory: String="Memes",overview: (@Composable ()->Unit)?=null) {
     val state by vm.state.collectAsStateWithLifecycle()
     var category by rememberSaveable(initialCategory) { mutableStateOf(initialCategory) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -59,16 +59,19 @@ import kotlin.math.abs
     LaunchedEffect(key,lifecycle) { lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { while(true) { delay(30000);vm.load(key,path,field,true,retain=true) } } }
     val list=rememberLazyListState()
     ReportDrawnWhen { page.items.isNotEmpty() || page.error!=null || (!page.loading && state.pages.containsKey(key)) }
-    LaunchedEffect(list,key,page.cursor) { snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { index -> if(index>=assets.size-4 && page.cursor!=null && !page.loading && page.error==null)vm.load(key,path+if(category=="Spot" && !launch)"&offset="+page.cursor else "&cursor="+Uri.encode(page.cursor),field,append=true) } }
+    LaunchedEffect(list,key,page.cursor) { snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { index -> if(index>=list.layoutInfo.totalItemsCount-4 && assets.isNotEmpty() && page.cursor!=null && !page.loading && page.error==null)vm.load(key,path+if(category=="Spot" && !launch)"&offset="+page.cursor else "&cursor="+Uri.encode(page.cursor),field,append=true) } }
     Column(Modifier.fillMaxSize()) {
+        PullToRefreshBox(isRefreshing=page.loading && page.items.isNotEmpty(),onRefresh={vm.load(key,path,field,true)},modifier=Modifier.weight(1f)) {
+            LazyColumn(state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(bottom=24.dp)) {
+                if(!launch && overview!=null)item(key="overview") { overview() }
+                item(key="controls") {
         if(!launch)ScrollableTabRow(selectedTabIndex=listOf("Memes","Spot","Perps","Prediction").indexOf(category),edgePadding=20.dp,containerColor=MaterialTheme.colorScheme.background,divider={},indicator={}) { listOf("Memes","Spot","Perps","Prediction").forEach { label -> Tab(selected=category==label,onClick={category=label;query="";applied=""},text={Text(label,color=if(category==label)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=if(category==label)FontWeight.SemiBold else FontWeight.Normal)}) } }
         Row(Modifier.padding(horizontal=20.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
             OutlinedTextField(query,{query=it},Modifier.weight(1f),singleLine=true,placeholder={Text(if(launch)"Find a launch" else "Search tokens",style=MaterialTheme.typography.bodyMedium)},leadingIcon={Icon(Icons.Outlined.Search,null)},trailingIcon={if(query.isNotEmpty())IconButton(onClick={query=""}){Icon(Icons.Outlined.Close,"Clear search")}},shape=RoundedCornerShape(14.dp),colors=OutlinedTextFieldDefaults.colors(unfocusedBorderColor=Color.Transparent,focusedBorderColor=Violet,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceContainer,focusedContainerColor=MaterialTheme.colorScheme.surfaceContainer))
             if(launch) { Spacer(Modifier.width(8.dp));FilledIconButton(onClick=create,modifier=Modifier.size(52.dp),colors=IconButtonDefaults.filledIconButtonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Icon(Icons.Outlined.Add,"Launch a token") } }
         }
-        PullToRefreshBox(isRefreshing=page.loading && page.items.isNotEmpty(),onRefresh={vm.load(key,path,field,true)},modifier=Modifier.weight(1f)) {
-            if(page.items.isEmpty() && page.loading)LoadingRows()
-            else LazyColumn(state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(bottom=24.dp)) {
+                }
+                if(page.items.isEmpty() && page.loading)item { LoadingRows() }
                 if(page.error!=null)item { EmptyState("Connection interrupted",page.error,"Retry",{vm.load(key,path,field,true)}) }
                 if(assets.isEmpty() && !page.loading && page.error==null)item { EmptyState("No markets found",if(query.isNotBlank())"Try a token name or address" else "Pull to refresh") }
                 if(category=="Prediction") {
@@ -86,7 +89,7 @@ import kotlin.math.abs
 }
 @Composable fun AssetRow(asset: Asset,cap: Boolean,onClick: ()->Unit,onBuy: (()->Unit)?=null) {
     Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=20.dp,vertical=8.dp).heightIn(min=56.dp),verticalAlignment=Alignment.CenterVertically) {
-        Artwork(asset.image,asset.symbol,40.dp);Spacer(Modifier.width(12.dp))
+        TokenArtwork(asset,40.dp);Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f).padding(end=8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             Text(asset.symbol,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Medium,fontSize=15.sp)
             Text(if(asset.kind=="perps")asset.venue else asset.name,maxLines=1,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -106,7 +109,7 @@ import kotlin.math.abs
     val raw=asset.raw;val status=raw.string("state").replace('_',' ')
     Surface(Modifier.padding(horizontal=20.dp,vertical=6.dp).fillMaxWidth().clickable(onClick=onClick),shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface) {
         Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            Row(verticalAlignment=Alignment.CenterVertically) { Artwork(asset.image,asset.symbol,40.dp);Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)) { Text("${asset.symbol} / USD",fontWeight=FontWeight.Medium);Text("Pool #${asset.id}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text(status,style=MaterialTheme.typography.labelSmall,color=if(raw.string("state")=="open")Gain else MaterialTheme.colorScheme.onSurfaceVariant) }
+            Row(verticalAlignment=Alignment.CenterVertically) { TokenArtwork(asset,40.dp);Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)) { Text("${asset.symbol} / USD",fontWeight=FontWeight.Medium);Text("Pool #${asset.id}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text(status,style=MaterialTheme.typography.labelSmall,color=if(raw.string("state")=="open")Gain else MaterialTheme.colorScheme.onSurfaceVariant) }
             Text("${raw.string("stake")} ${raw.string("stakeAsset")}",style=MaterialTheme.typography.headlineSmall)
             Row { Text("Entry stake",Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);Text("${raw.optInt("predictions")} entries",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
         }
@@ -134,7 +137,7 @@ import kotlin.math.abs
                     if(maxHeight<340.dp) {
                         Row(Modifier.fillMaxSize().padding(20.dp),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
                             Column(Modifier.weight(1f).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                                Row(verticalAlignment=Alignment.CenterVertically) { Artwork(a.image,a.symbol,48.dp);Column(Modifier.padding(start=12.dp)) { Text(a.symbol,fontSize=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1);Text(a.venue,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) } }
+                                Row(verticalAlignment=Alignment.CenterVertically) { TokenArtwork(a,48.dp);Column(Modifier.padding(start=12.dp)) { Text(a.symbol,fontSize=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1);Text(a.venue,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) } }
                                 Spacer(Modifier.weight(1f));Text(money(a.price),fontSize=24.sp)
                             }
                             Column(Modifier.weight(1f).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -144,7 +147,7 @@ import kotlin.math.abs
                         }
                     } else Column(Modifier.fillMaxSize().padding(if(short)16.dp else 24.dp),horizontalAlignment=Alignment.CenterHorizontally) {
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(a.venue,style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant) }
-                        if(compactHeight)Spacer(Modifier.height(8.dp)) else Spacer(Modifier.weight(1f));Artwork(if(short)a.image else a.heroImage,a.symbol,if(short)44.dp else 112.dp)
+                        if(compactHeight)Spacer(Modifier.height(8.dp)) else Spacer(Modifier.weight(1f));TokenArtwork(a,if(short)44.dp else 112.dp)
                         Spacer(Modifier.height(if(short)6.dp else 20.dp));Text(a.symbol,fontSize=if(short)20.sp else 30.sp,fontWeight=FontWeight.SemiBold,maxLines=1);Text(a.name,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1)
                         Spacer(Modifier.height(if(short)6.dp else 28.dp));Text("$"+compact(a.cap),fontSize=if(short)24.sp else 36.sp,fontWeight=FontWeight.Medium);Text("Market cap",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
                         Spacer(Modifier.height(if(short)4.dp else 12.dp));Text(money(a.price),fontSize=if(short)14.sp else 18.sp)
@@ -160,12 +163,12 @@ import kotlin.math.abs
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
         val buyInteraction=remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
         val sellInteraction=remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-        Button(onClick=buy,enabled=enabled,interactionSource=buyInteraction,modifier=Modifier.weight(1f).pressFeedback(buyInteraction).heightIn(min=52.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=Buy,contentColor=Color.White)) { Text(buyLabel) }
-        Button(onClick=sell,enabled=enabled,interactionSource=sellInteraction,modifier=Modifier.weight(1f).pressFeedback(sellInteraction).heightIn(min=52.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=Sell,contentColor=Color.White)) { Text(sellLabel) }
+        Button(onClick=buy,enabled=enabled,interactionSource=buyInteraction,modifier=Modifier.weight(1f).pressFeedback(buyInteraction).heightIn(min=52.dp),shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.buttonColors(containerColor=Buy,contentColor=Color.White)) { Text(buyLabel) }
+        Button(onClick=sell,enabled=enabled,interactionSource=sellInteraction,modifier=Modifier.weight(1f).pressFeedback(sellInteraction).heightIn(min=52.dp),shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.buttonColors(containerColor=Sell,contentColor=Color.White)) { Text(sellLabel) }
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun AssetSheet(asset: Asset,vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit) {
+@Composable fun AssetSheet(asset: Asset,vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit,onCommunity: (String)->Unit={}) {
     val sheet=rememberModalBottomSheetState(skipPartiallyExpanded=true)
     val scope=rememberCoroutineScope()
     val focus=androidx.compose.ui.platform.LocalFocusManager.current
@@ -274,11 +277,11 @@ import kotlin.math.abs
             val compactTrade=trade && available<440.dp
             val tightKeyboard=keyboard && maxWidth>=600.dp && available<300.dp
             val compactHeader=trade && maxWidth>=600.dp && available<440.dp
-            val graphHeight=animateDpAsState(if(keyboard)0.dp else if(trade)88.dp else if(chartMode=="History" && provider!=null&&!providerDisabled)if(provider.coin!=null)360.dp else 320.dp else if(chartMode=="1h")220.dp else 160.dp,tween(180),label="trade chart")
+            val graphHeight=animateDpAsState(if(keyboard)0.dp else if(trade)88.dp else if(chartMode=="History" && provider!=null&&!providerDisabled)if(provider.coin!=null)360.dp else 320.dp else if(chartMode=="1h")240.dp else 220.dp,tween(180),label="trade chart")
             @Composable fun direction(modifier: Modifier=Modifier) { Segmented(if(asset.kind=="perps")listOf("Buy / Long","Sell / Short") else listOf("Buy","Sell"),if(side=="buy")if(asset.kind=="perps")"Buy / Long" else "Buy" else if(asset.kind=="perps")"Sell / Short" else "Sell",{if(!app.order.blocksOrder)side=if(it.startsWith("Buy"))"buy" else "sell"},modifier,accent=if(side=="buy")Buy else Sell) }
             Column(Modifier.fillMaxWidth().heightIn(max=available)) {
                 Row(Modifier.padding(horizontal=20.dp).padding(bottom=if(compactHeader)4.dp else 12.dp),verticalAlignment=Alignment.CenterVertically) {
-                    Artwork(asset.image,asset.symbol,if(compactHeader)24.dp else 40.dp);Spacer(Modifier.width(12.dp))
+                    TokenArtwork(asset,if(compactHeader)24.dp else 40.dp);Spacer(Modifier.width(12.dp))
                     Column(if(compactHeader)Modifier.widthIn(max=90.dp).padding(end=12.dp) else Modifier.weight(1f)) { Text(asset.symbol,style=if(compactHeader)MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge,maxLines=1,overflow=TextOverflow.Ellipsis);if(!compactHeader)Text(asset.venue+if(asset.kind=="perps")" · Perpetual" else " · Monad",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall,maxLines=1,overflow=TextOverflow.Ellipsis) }
                     if(compactHeader && trade && asset.kind!="prediction")direction(Modifier.weight(1f))
                     if(trade && asset.kind!="prediction" && !compactHeader)IconButton(onClick={focus.clearFocus();trade=false}) { Icon(Icons.Outlined.ShowChart,"Show chart") }
@@ -333,10 +336,9 @@ import kotlin.math.abs
                             Text(chartError!!,Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                             TextButton(onClick={chartRetry++},enabled=!chartLoading) { Text("Retry chart") }
                         }
-                        if(asset.cap!=null)Fact("Market cap", "$"+compact(asset.cap))
-                        if(asset.raw.number("liquidity")!=null)Fact("Liquidity",money(asset.raw.number("liquidity")))
+
                     }
-                    if(!trade && asset.kind=="spot")TokenHolders(vm,asset)
+                    if(!trade)TokenInformation(vm,asset) { id->scope.launch { sheet.hide();close();onCommunity(id) } }
                     if(asset.kind=="prediction") { Fact("Entry stake",asset.raw.string("stake")+" "+asset.raw.string("stakeAsset"));Fact("Status",asset.raw.string("state").replace('_',' ')) }
                     if(trade) {
                         val quantity=asset.kind=="perps" && asset.venue in listOf("Perpl","Drake")

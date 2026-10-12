@@ -4,7 +4,7 @@ Rally's Android app renders markets, charts, Swipe, feeds and profiles natively,
 
 ## Install Rally
 
-Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.17.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.17**. Android 9 or later is required.
+Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.18.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.18**. Android 9 or later is required.
 
 When installing a downloaded APK, Android may ask you to allow installation from the app used to download it. Use the official file rather than a re-signed copy from an unknown source.
 
@@ -48,3 +48,10 @@ The Feed includes **Following** and **Trades**. Create a 24-hour price signal, s
 ## Read hourly candles
 
 Open a token and tap **Candles** for hourly candles. Choose **1D**, **7D** or **1M**, swipe sideways for earlier hours and tap a candle for its open, high, low and close. The caption identifies the venue or pool. **Line**, **Live** and **Ticks** remain available in the same sheet.
+
+
+## Home and token details
+
+Home brings your balance, algorithm shortcuts and recent activity together above the token list. Tap See all for the full algorithm market. Each algorithm row shows its creator, available performance and subscription price. Sampled wallet returns are labeled separately from algorithm performance.
+
+Open a token to see its price chart. Holders, Community and Details sit below the chart; Buy and Sell stay at the bottom. Returning from a preview preserves your place in the market list.

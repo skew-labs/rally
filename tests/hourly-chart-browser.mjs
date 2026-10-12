@@ -9,7 +9,7 @@ const evidence=process.env.RALLY_EVIDENCE||'/tmp/rally-hourly';await fs.mkdir(ev
 const server=spawn(process.env.RALLY_PYTHON||'python3',['scripts/preview.py'],{cwd:root,env:{...process.env,RALLY_PREVIEW_PORT:'33223'},stdio:'ignore'});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),hour=Math.floor(Date.now()/3600000)*3600,id='0x'+'a'.repeat(40);
 const candles=Array.from({length:25},(_,i)=>({time:hour-(24-i)*3600,open:100+i,high:104+i,low:98+i,close:102+i}));
-const modules=new Map(await Promise.all(['market-ui.js','chart-settings.js','price-line.js','holder-ui.js','provider-chart.js','live-price.js'].map(async p=>['/'+p,await fs.readFile(root+'/'+p,'utf8')])));
+const modules=new Map(await Promise.all(['market-ui.js','connected-ui.js','chart-settings.js','price-line.js','holder-ui.js','provider-chart.js','live-price.js'].map(async p=>['/'+p,await fs.readFile(root+'/'+p,'utf8')])));
 const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/live.css"><link rel="stylesheet" href="/market.css"><style>body{margin:0}.r-asset-modal{display:block;margin:8px auto;width:min(640px,calc(100% - 16px));max-height:none}button{font:inherit}</style></head><body><main id="root"></main></body></html>';
 const results=[];let browser;
 try {

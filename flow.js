@@ -1,4 +1,5 @@
 import {algorithmLibraryUI} from './assets/algorithm-library.js';
+import {algorithmRow} from './connected-ui.js';
 
 export function feedPresentation(f) {
   if(f?.research?.wallet)return {icon:'markets',name:(f.research.tokens?.[0]?.symbol||'Public')+' wallet',description:'This wallet’s buys & sells'};
@@ -37,8 +38,7 @@ export function journeyUI(c) {
   const getLabel=f=>S.boot.activeFeed===f.id||f.access&&Number(f.priceRaw)?'Open feed':f.access?f.research?.wallet?'Track wallet':'Use feed':'Buy · '+esc(f.price)+' USDC';
   function art(f){const t=f.research?.tokens?.[0];return t?logo({...t,...S.tokens.find(a=>a.id===t.id)},true):`<span class="am-feed-art">${icon(feedPresentation(f).icon)}</span>`;}
   function marketCard(f,index){
-    const r=f.research,roi=feedReturn(f),wallet=!!r?.wallet,selected=S.boot.activeFeed===f.id;
-    return `<article class="am-card ${wallet?'am-wallet-card':''} ${selected?'is-selected':''}" data-feed="${esc(f.id)}"><button class="am-card-preview" data-action="algorithm-preview" data-id="${esc(f.id)}" aria-label="Open ${esc(wallet?walletName(r.wallet):feedTitle(f))}"><span class="am-card-top">${art(f)}${wallet?`<span class="am-rank">#${index+1}</span>`:''}</span><h2>${esc(feedTitle(f))}</h2><span class="am-card-by">${wallet?esc(walletName(r.wallet)):'@'+esc(f.creator?.handle||'rally')}</span>${wallet?`<strong class="am-return ${roi>=0?'positive':'negative'}">${roi==null?'—':percent(roi)}</strong><span class="am-metric-label">Wallet ROI</span><span class="am-profit">+${amount(r.pnlMON)} <small>MON realized</small></span>`:`<p class="am-card-description">${esc(feedPresentation(f).description)}</p>`}</button><footer class="am-card-foot"><span>${feedPrice(f)}${Number(f.priceRaw)?'<small>'+esc(f.periodDays||30)+' days</small>':''}</span><button class="am-get" data-action="${f.access?'use-feed':'subscribe-feed'}" data-id="${esc(f.id)}">${selected?'Open':f.access?wallet?'Track':'Use':'Buy'}</button></footer></article>`;
+    return algorithmRow(c,f,feedTitle(f),feedReturn(f));
   }
   function homeHeading(){
     const f=S.boot.feeds.find(f=>f.id===S.boot.activeFeed)||S.boot.feeds[0];

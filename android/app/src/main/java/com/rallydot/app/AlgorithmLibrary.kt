@@ -89,10 +89,10 @@ private object PublicAlgorithmReferences {
             Segmented(listOf("All","Free","Paid"),filter,{filter=it},Modifier.padding(vertical=8.dp))
         }
         if(wallets.isNotEmpty())item { Row(Modifier.fillMaxWidth().padding(top=6.dp),verticalAlignment=Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Top wallets",fontWeight=FontWeight.Medium);Text("Sampled closed trades",fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) };TextButton(onClick={rank=if(rank=="Top PnL")"Top ROI" else "Top PnL"}) { Text(rank,fontSize=11.sp);Icon(Icons.Outlined.SwapVert,null,Modifier.size(14.dp)) } } }
-        items(if(showWallets || query.isNotBlank())wallets else wallets.take(4),key={it.string("id")},contentType={"feed"}) { f->AlgorithmListRow(f){onAlgorithm(algorithmItem(f))} }
+        items(if(showWallets || query.isNotBlank())wallets else wallets.take(4),key={it.string("id")},contentType={"feed"}) { f->AlgorithmListRow(f,discoveryCreator(f,app.boot?.objects("people").orEmpty())){onAlgorithm(algorithmItem(f))} }
         if(wallets.size>4 && !showWallets && query.isBlank())item { TextButton(onClick={showWallets=true}){Text("See all ${wallets.size} wallets",fontSize=12.sp)} }
         if(live.isNotEmpty())item { Text("Live feeds",Modifier.padding(top=18.dp,bottom=4.dp),fontWeight=FontWeight.Medium) }
-        items(if(showFeeds || query.isNotBlank())live else live.take(3),key={it.string("id")},contentType={"feed"}) { f->AlgorithmListRow(f){onAlgorithm(algorithmItem(f))} }
+        items(if(showFeeds || query.isNotBlank())live else live.take(3),key={it.string("id")},contentType={"feed"}) { f->AlgorithmListRow(f,discoveryCreator(f,app.boot?.objects("people").orEmpty())){onAlgorithm(algorithmItem(f))} }
         if(live.size>3 && !showFeeds && query.isBlank())item { TextButton(onClick={showFeeds=true}){Text("See all ${live.size} feeds",fontSize=12.sp)} }
         if(filter!="Paid")item {
             Row(Modifier.fillMaxWidth().padding(top=18.dp),verticalAlignment=Alignment.CenterVertically) { Text("Playbooks",Modifier.weight(1f),fontWeight=FontWeight.Medium);IconToggleButton(checked=onlySaved,onCheckedChange={onlySaved=it},modifier=Modifier.semantics { contentDescription="Saved playbooks" }){Icon(Icons.Outlined.BookmarkBorder,null,Modifier.size(18.dp))} }

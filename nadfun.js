@@ -3,6 +3,7 @@ import {closingPrices,compactPoints,priceLineOptions,fitPriceLine} from './price
 import {providerTarget,mountProviderChart,preconnectProvider} from './provider-chart.js';
 import {streamPrices} from './live-price.js';
 import {chartSettings,saveChartSettings} from './chart-settings.js';
+import {nadPresentation,tokenPanelMotion} from './connected-ui.js';
 // Social asset discovery and nad.fun's native MON routes use Rally's direct wallet flow.
 export function nadfunUI(c){
   const {S,$,api,esc,icon,usd,age,modal,needAccount,walletReady,notify,navigate,pageHeader,empty,loading}=c;
@@ -78,7 +79,7 @@ export function nadfunUI(c){
     host.replaceChildren(canvas);host.dataset.preview='true';host.dataset.quoteOnly='true';host.dataset.token=t.id;host.dataset.interval=interval;
     const status=$('#nad-chart-status');if(status)status.textContent='Price quote · Loading history';return true;
   }
-  function dispose(){listSequence++;clearTimeout(referenceTimer);listObserver?.disconnect();c.checkout.disposeNad();resetChart();}
+  function dispose(){listSequence++;clearTimeout(referenceTimer);listObserver?.disconnect();c.checkout.disposeNad();resetChart();$('#page')?.classList.remove('rc-token-detail','rc-order-open');}
   async function catalog(phase='',sort='latest',force=false,search='',cursor=''){
     const key=JSON.stringify([phase,sort,search,cursor]),query=new URLSearchParams({sort,query:search});if(phase)query.set('phase',phase);if(cursor)query.set('cursor',cursor);
     const cached=catalogCache.get(key);let data;
@@ -127,12 +128,13 @@ export function nadfunUI(c){
     host.innerHTML=`<div class="nad-list-head"><div class="nad-filters">${[['cap','Mcap'],['new','Latest'],['dex','Graduated']].map(([id,label])=>`<button class="${mode===id?'selected':''}" data-action="nad-filter" data-id="${id}">${label}</button>`).join('')}</div><button class="r-btn primary small" data-action="nad-launch" aria-label="Launch token" title="Launch token">${icon('plus')}Launch token</button></div>${tokens.length?`<div class="r-table-wrap"><table class="r-market-table nad-table"><thead><tr><th>Token</th><th>Mcap / price</th><th>Trade</th><th>Age</th></tr></thead><tbody></tbody></table></div><div class="nad-load-more" aria-live="polite"></div>`:empty(data.error?'Launches unavailable':mode==='dex'?'No graduated tokens in this list':'No tokens found',data.error?'The last successful collection is kept. Try again shortly.':'Try a contract address or switch to Latest.',`<button class="r-btn" data-action="${/^0x[0-9a-f]{40}$/.test(q)?'nad-token':'nad-refresh'}" data-id="${esc(q)}">${/^0x[0-9a-f]{40}$/.test(q)?'Open token':'Refresh'}</button>`)}<div class="r-data-foot"><span>nad.fun · Total-supply cap (FDV)</span><span>${data.fetchedAt?'Updated '+age(data.fetchedAt):'Collecting new launches'}</span></div>${data.error&&tokens.length?'<p class="r-note">Collection is delayed. Quotes use the current contract state.</p>':''}`;
     listState=tokens.length?{host,tokens,mode,query:q,shown:0,total:data.total||tokens.length,nextCursor:data.nextCursor}:null;if(listState){appendRows();observeList();}
   }
-  async function open(id,context=null,side='buy'){
+  async function open(id,context=null,side='buy',checkout=false){
     if(S.view!=='token'){
       c.closeTrade();c.closeModal();c.pauseMedia();
-      const panel={id,context,side:side==='sell'?'sell':'buy',returnFocus:document.activeElement};S.nadOverlay=panel;
+      const panel={id,context,side:side==='sell'?'sell':'buy',checkout,returnFocus:document.activeElement};S.nadOverlay=panel;
       $('#trade-root').innerHTML=`<div class="r-trade-scrim" data-action="nad-close"></div><aside class="r-trade-panel r-nad-panel" role="dialog" aria-modal="true" aria-label="Token trade"><div class="r-trade-head"><b>Token</b><button class="r-icon-button" data-action="nad-close" aria-label="Close token trade">${icon('close')}</button></div><div class="r-nad-content">${loading()}</div></aside>`;
       document.body.classList.add('r-trade-open');document.querySelectorAll('#app>.r-header,#app>.r-layout,#app>.r-mobile-nav').forEach(x=>{x.inert=true;x.setAttribute('aria-hidden','true');});
+      tokenPanelMotion($('.r-nad-panel'),panel.returnFocus);
       $('.r-trade-head button')?.focus({preventScroll:true});
       await detail($('.r-nad-content'),panel);return;
     }
@@ -142,7 +144,8 @@ export function nadfunUI(c){
   function closeOverlay(){
     const panel=S.nadOverlay;if(!panel)return;
     dispose();S.nadOverlay=null;S.nadQuote=null;S.nadDetail=null;
-    $('#trade-root').replaceChildren();document.body.classList.remove('r-trade-open');
+    const nodes=[...$('#trade-root').children],sheet=$('.r-nad-panel'),animation=tokenPanelMotion(sheet,panel.returnFocus,true);nodes.forEach(n=>{n.inert=true;n.style.pointerEvents='none';});
+    const remove=()=>nodes.forEach(n=>n.remove());if(animation){const timer=setTimeout(remove,160);animation.finished.catch(()=>{}).finally(()=>{clearTimeout(timer);remove();});}else remove();document.body.classList.remove('r-trade-open');
     document.querySelectorAll('#app>.r-header,#app>.r-layout,#app>.r-mobile-nav').forEach(x=>{x.inert=false;x.removeAttribute('aria-hidden');});
     if(panel.returnFocus?.isConnected)panel.returnFocus.focus({preventScroll:true});
     observeList();
@@ -175,7 +178,7 @@ export function nadfunUI(c){
       const previewPainted=!providerTarget(t)&&(paintSnapshot(t.id,S.nadInterval||'60')||paintQuote(t,S.nadInterval||'60'));
       // Cached holders join the same first frame; social reads follow it.
       mountHolders({api,esc,age},$('#nad-holders'),t.id);
-      const extras=()=>{if(!current())return;host.insertAdjacentHTML('beforeend','<div id="nad-launch-social"></div>');c.launchPanel?.(t);c.checkout.nad(t);};
+      const extras=()=>{if(!current())return;host.insertAdjacentHTML('beforeend','<div id="nad-launch-social"></div>');c.launchPanel?.(t);c.checkout.nad(t);nadPresentation(c,t,host);};
       if(previewPainted)requestAnimationFrame(()=>setTimeout(extras,0));else extras();
       if(panel){host.querySelector('.r-page-head').remove();$('.r-nad-panel').setAttribute('aria-label','Trade '+t.symbol);$('.r-trade-head>b').textContent=t.symbol;}
       const form=$('#nad-order-form');
@@ -290,9 +293,9 @@ export function nadfunUI(c){
       if(changed){S.nadQuote=null;$('#nad-quote').innerHTML='';const b=$('#nad-order-form [type=submit]');b.disabled=t.locked||t.tradeSupported===false;b.textContent=t.locked?'Migrating':S.nadSide==='sell'?'Sell':'Buy';notify(t.graduated?'Graduated. DEX trading is ready.':'Token state changed. Get a fresh quote.');}
       if(chartSeries&&Date.now()-chartAt>90000){chartAt=Date.now();await mount(S.nadDetail,chartSequence,S.nadInterval||'60',true);}
     }catch{}}
-  async function handle(action,id){
+  async function handle(action,id,el){
     if(!action.startsWith('nad-'))return false;
-    if(action==='nad-token')await open(id);
+    if(action==='nad-token')await open(id,null,'buy',el?.classList.contains('r-market-buy')||el?.dataset.order==='buy');
     else if(action==='nad-close')closeOverlay();
     else if(action==='nad-back'){
       const back=S.nadReturn;S.nadReturn=null;

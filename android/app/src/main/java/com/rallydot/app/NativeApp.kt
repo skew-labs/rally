@@ -158,7 +158,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                                     shown=="Agents"->AgentsScreen(data)
                                     shown=="Activity"->ActivityScreen(vm)
                                     shown=="Wallet"->PortfolioScreen(vm,::showAsset)
-                                    shown=="0:Markets"->MarketsScreen(vm,{asset=it},initialCategory=marketCategory)
+                                    shown=="0:Markets"->MarketsScreen(vm,{asset=it},initialCategory=marketCategory,overview={HomeOverview(vm,{algorithm=it},{extra="Algorithms"},{extra="Wallet"},{post=it})})
                                     shown=="0:Launch"->MarketsScreen(vm,{asset=it},launch=true,create={if(vm.me==null)vm.showWallet() else launching=true})
                                     shown=="0:Swipe"->SwipeScreen(vm,{asset=it},{post=it},{algorithm=it})
                                     shown=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={extra="Algorithms"},onFeedPreview={algorithm=it})
@@ -174,7 +174,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                 }
             }
         }
-        asset?.let { selected -> AssetSheet(selected,vm,{asset=null},openBrowser) }
+        asset?.let { selected -> AssetSheet(selected,vm,{asset=null},openBrowser,{asset=null;community=it;tab=1}) }
         post?.let { selected -> PostSheet(selected,vm,{post=null},::showAsset,openBrowser) }
         algorithm?.let { selected -> AlgorithmSheet(selected,vm,{algorithm=null},openBrowser) }
         if(data.orderDetails)OrderDetailsSheet(vm,{vm.showOrderDetails(false)})
@@ -218,23 +218,31 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
         }
     }
 }
-@Composable fun Artwork(url: String?,label: String,size: Dp=48.dp,round: Boolean=true) {
+@Composable fun ProfileArtwork(url: String?,label: String,size: Dp=48.dp) = Artwork(url?.takeUnless { it==ORIGIN+"/assets/community-rally.png" },label,size,character=true)
+@Composable fun TokenArtwork(asset: Asset,size: Dp=40.dp) = Artwork(asset.image,asset.symbol,size,fallbackURL=asset.heroImage)
+@Composable fun Artwork(url: String?,label: String,size: Dp=48.dp,round: Boolean=true,character: Boolean=false,fallbackURL: String?=null) {
     val context=LocalContext.current
     val density=androidx.compose.ui.platform.LocalDensity.current
     val pixels=with(density) { size.roundToPx() }.coerceAtLeast(1)
-    val request=remember(url,context,pixels) {
-        val artwork: Any?=when(url) {
+    var failed by remember(url,fallbackURL) { mutableStateOf(false) }
+    val current=if(failed)fallbackURL?.takeIf { it!=url } else url
+    val request=remember(current,context,pixels) {
+        val artwork: Any?=when(current) {
             ORIGIN+"/assets/agent-meta.svg"->R.drawable.brand_meta
             ORIGIN+"/assets/agent-grok.svg"->R.drawable.brand_grok
-            else->url
+            else->current
         }
         ImageRequest.Builder(context).data(artwork).size(pixels).crossfade(if(android.os.Build.VERSION.SDK_INT>=26 && !android.animation.ValueAnimator.areAnimatorsEnabled())0 else 100).build()
     }
-    var loaded by remember(url) { mutableStateOf(false) }
+    var loaded by remember(url,fallbackURL) { mutableStateOf(false) }
     val companyLogo=url?.startsWith(ORIGIN+"/assets/agent-")==true
-    Box(Modifier.size(size).clip(if(round)CircleShape else RoundedCornerShape(14.dp)).background(if(companyLogo)Color.White else MaterialTheme.colorScheme.surfaceContainer),contentAlignment=Alignment.Center) {
-        if(!loaded)Text(label.take(2).uppercase(),fontSize=(size.value*.28f).sp,color=if(companyLogo)Color(0xFF727785) else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=FontWeight.Medium)
-        if(url!=null)AsyncImage(request,contentDescription=label,onSuccess={loaded=true},onError={loaded=false},modifier=Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Crop)
+    val background=when { companyLogo->Color.White;character->MaterialTheme.colorScheme.secondaryContainer;else->MaterialTheme.colorScheme.surfaceContainer }
+    Box(Modifier.size(size).clip(if(round)CircleShape else RoundedCornerShape(12.dp)).background(background),contentAlignment=Alignment.Center) {
+        if(!loaded) {
+            if(character)Image(androidx.compose.ui.res.painterResource(R.drawable.rally_character),label,Modifier.fillMaxSize().graphicsLayer { translationY=size.toPx()*.04f;scaleX=.95f;scaleY=.95f },contentScale=androidx.compose.ui.layout.ContentScale.Fit)
+            else Text(label.take(3).uppercase(),fontSize=(size.value*.25f).sp,color=if(companyLogo)Color(0xFF727785) else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=FontWeight.Medium)
+        }
+        if(current!=null)AsyncImage(request,contentDescription=label,onSuccess={loaded=true},onError={loaded=false;failed=true},modifier=Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Crop)
     }
 }
 @Composable fun EmptyState(title: String,detail: String?=null,action: String?=null,onAction: ()->Unit={}) {

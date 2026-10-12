@@ -1,12 +1,30 @@
 // Shared navigation, media-first discovery and verified performance surfaces.
 // Wallet requests and subscription settlement remain in the existing checkout.
 import {feedTitle,feedReturn} from './flow.js';
+import {algorithmRow} from './connected-ui.js';
 export function experienceUI(c){
  const {S,$,api,esc,icon,avatar,mediaCard,postCard,safeURL,usd,pct,navigate,notify,modal,closeModal,needAccount,empty,loading,motion}=c;
  let generation=0,controller,observer,searchTimer,previewController,loadingMore=false;
  const pages=new Map(),boards=new Map();
  const boardKey=()=>`${S.boot.me?.id||'guest'}|${S.discoverScope||'all'}|${S.discoverQuery||''}`;
  let primed;
+ let homeController;
+ const homeActivity=new Map();
+ function homeOverview(){
+  const head=$('#page>.rx-home-head');if(!head||section()!=='markets'||$('#home-overview'))return;
+  const all=S.boot.feeds||[],following=new Set((S.boot.people||[]).filter(p=>p.following).map(p=>p.id));
+  const personal=all.filter(f=>f.id===S.boot.activeFeed&&f.owner!=='rally'||following.has(f.owner)||Number(f.priceRaw)&&f.access);
+  const feeds=[...personal,...all.filter(f=>f.research?.wallet),...all.filter(f=>f.algorithm_version)].filter((f,i,a)=>a.findIndex(x=>x.id===f.id)===i).slice(0,2);
+  head.insertAdjacentHTML('afterend',`<section id="home-overview" class="rc-home-overview"><div id="home-balance" class="rc-home-balance" aria-label="Balance"><button ${S.boot.wallet?'data-nav="portfolio"':'data-action="account"'}><small>${S.boot.wallet?'Your balance':'Your Rally'}</small><strong>—</strong><span>${S.boot.wallet?'Updating balances…':'Sign in to see your balance'}</span></button><button class="rc-balance-open" ${S.boot.wallet?'data-nav="portfolio"':'data-action="account"'} aria-label="${S.boot.wallet?'Open portfolio':'Sign in'}">${icon('chevron')}</button></div><div class="rc-section-heading"><h2>${personal.length?'Your algorithms':'Algorithms to watch'}</h2><a href="?view=feeds" data-nav="feeds">See all</a></div><div class="rc-home-algorithms">${feeds.map(f=>algorithmRow(c,f,feedTitle(f),feedReturn(f))).join('')}</div><div id="home-activity" class="rc-home-activity" aria-label="Community activity"></div></section>`);
+  const host=$('#home-overview'),balance=$('#home-balance'),owner=S.boot.me?.id||'guest',wallet=S.boot.wallet;
+  homeController?.abort();homeController=new AbortController();const request=homeController;
+  const current=()=>host.isConnected&&!request.signal.aborted&&(S.boot.me?.id||'guest')===owner&&S.boot.wallet===wallet;
+  const paint=p=>{if(!current()||!wallet||p?.wallet?.toLowerCase()!==wallet.toLowerCase())return;const v=p.valuation,change=v?.change24hPercent;balance.querySelector('small').textContent=v?.partial?'Priced balance':'Your balance';balance.querySelector('strong').textContent=v?.valueUSD!=null?usd(v.valueUSD):'—';const note=balance.querySelector('span');note.textContent=change!=null?pct(change)+' · 24h price change':p.refreshing?'Updating balances…':'24h change unavailable';note.className=change==null?'':Number(change)>=0?'positive':'negative';};
+  if(wallet){paint(S.portfolio);api('/api/portfolio',undefined,{signal:request.signal}).then(p=>{if(current())paint(p);}).catch(()=>{if(current()&&!S.portfolio)balance.querySelector('span').textContent='Open portfolio to refresh';});}
+  const activity=$('#home-activity'),paintActivity=d=>{if(!current())return;const posts=(d.posts||[]).slice(0,1);S.posts=[...(S.posts||[]),...posts.filter(p=>!S.posts?.some(x=>x.id===p.id))];activity.innerHTML=posts.map(p=>`<button class="rc-activity-row" data-action="open-post" data-id="${esc(p.id)}">${avatar(p.author)}<span><small>${esc(p.author.name)} <i>${following.size?'Following':'Latest activity'}</i></small><b>${esc(p.text.slice(0,180))}</b></span>${icon('chevron')}</button>`).join('');};
+  const key=owner+':'+[...following].join(','),cached=homeActivity.get(key);if(cached&&Date.now()-cached.at<30000){paintActivity(cached.data);return;}
+  api('/api/posts?mode='+(following.size?'following':'for-you')+'&feed=latest',undefined,{signal:request.signal}).then(d=>{if(current()){homeActivity.clear();homeActivity.set(key,{data:d,at:Date.now()});paintActivity(d);}}).catch(()=>{});
+ }
  const invalidate=()=>{pages.clear();boards.clear();primed?.controller.abort();primed=null;};
  function prime(){
   if(primed)return;
@@ -29,12 +47,13 @@ export function experienceUI(c){
  function decorateHome(){
   if(!homeViews.has(S.view))return;
   if(!$('#page>.rx-home-head'))$('#page').insertAdjacentHTML('afterbegin',homeHeader());
+  homeOverview();
   motion.sections();
  }
  function enterPage(){
   motion.enterPage();
  }
- function dispose(){generation++;controller?.abort();observer?.disconnect();clearTimeout(searchTimer);loadingMore=false;}
+ function dispose(){generation++;controller?.abort();homeController?.abort();observer?.disconnect();clearTimeout(searchTimer);loadingMore=false;}
  const rate=p=>p?.roi==null?'—':pct(p.roi);
  const status=p=>p?.roi==null?'No verified returns':'Realized ROI · 30d';
  function tile(item,index=0){
