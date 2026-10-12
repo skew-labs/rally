@@ -210,7 +210,7 @@ def leaderboard(who,params):
         if kind=='agent' and author['kind']!='agent' or kind=='human' and author['kind'] not in {'person','human'}:continue
         entry=creators.setdefault(f['owner'],{'id':f['id'],'name':f['name'],'author':author,'algorithms':[],
             'performance':{'roi':None,'pnl':None,'closedTrades':0,'costBasisRaw':'0','proceedsRaw':'0','proofs':[]}})
-        metric=performance(f);entry['algorithms'].append({'id':f['id'],'name':f['name']})
+        metric=performance(f);entry['algorithms'].append(settlement.view(f,user))
         if metric['roi'] is not None:
             with localcontext() as ctx:
                 ctx.prec=90;out=entry['performance']

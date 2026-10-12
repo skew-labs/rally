@@ -114,7 +114,7 @@ import org.json.JSONObject
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun AlgorithmSheet(item: JSONObject,vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit) {
+@Composable fun AlgorithmSheet(item: JSONObject,vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit,onToken: (String)->Unit={},onOpenFeed: ()->Unit={}) {
     val initial=item.optJSONObject("feed") ?: item;val id=initial.string("id",item.string("id")).removePrefix("feed:")
     var benefitOwner by remember {mutableStateOf<String?>(null)}
     var preview by remember(id) { mutableStateOf<JSONObject?>(null) };var error by remember(id) { mutableStateOf<String?>(null) };val scope=rememberCoroutineScope()
@@ -122,13 +122,13 @@ import org.json.JSONObject
     val price=feed.number("price") ?: 0.0
     val app by vm.state.collectAsStateWithLifecycle()
     val sheet=rememberModalBottomSheetState(skipPartiallyExpanded=true)
-    LaunchedEffect(id) { try { preview=vm.api.get("/api/discover/preview?id="+Uri.encode("feed:$id")) } catch(e:Exception){error=e.message} }
+    LaunchedEffect(id,app.order.completed) { try { preview=vm.api.get("/api/discover/preview?id="+Uri.encode("feed:$id"),app.order.completed) } catch(e:Exception){error=e.message} }
     if(benefitOwner!=null){ModalBottomSheet(onDismissRequest={benefitOwner=null},containerColor=MaterialTheme.colorScheme.surface){Box(Modifier.fillMaxWidth().heightIn(max=650.dp)){TokenBenefitsScreen(vm,benefitOwner!!)}};return}
     ModalBottomSheet(onDismissRequest=close,sheetState=sheet,containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
         Column(Modifier.fillMaxWidth().heightIn(max=720.dp).padding(horizontal=20.dp,vertical=12.dp)) {
             Column(Modifier.weight(1f,false).verticalScroll(rememberScrollState()).padding(bottom=16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             AlgorithmArtwork(feed,48.dp);Text(algorithmTitle(feed),style=MaterialTheme.typography.headlineSmall)
-            item.optJSONObject("author")?.let { a->val p=Person.parse(a);Row(verticalAlignment=Alignment.CenterVertically) { ProfileArtwork(p.image,p.name,36.dp,identity=p.avatarIdentity);Text(p.name,Modifier.padding(start=10.dp),color=MaterialTheme.colorScheme.onSurfaceVariant) } }
+            (preview?.optJSONObject("creator") ?: item.optJSONObject("author") ?: feed.optJSONObject("creator"))?.let { a->val p=Person.parse(a);Row(verticalAlignment=Alignment.CenterVertically) { ProfileArtwork(p.image,p.name,36.dp,identity=p.avatarIdentity);Text(p.name,Modifier.padding(start=10.dp),color=MaterialTheme.colorScheme.onSurfaceVariant) } }
             val research=feed.optJSONObject("research");val roi=algorithmReturn(feed)
             if(roi!=null) {
                 Text(algorithmPercent(roi),fontSize=36.sp,fontWeight=FontWeight.Medium,color=performanceInk(roi))
@@ -137,13 +137,17 @@ import org.json.JSONObject
                 research?.objects("trades")?.take(5)?.forEach { t->Fact(t.string("symbol"),algorithmPercent(t.number("returnPct"))) }
                 Text("Wallet results, not algorithm returns.",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             } else preview?.optJSONObject("performance")?.takeIf { it.string("state")=="verified" }?.number("roi")?.let { Fact("Creator ROI · 30d",algorithmPercent(it)) }
-            Fact("Subscription",if(price>0)feed.string("price")+" USDC / ${feed.optInt("periodDays",30)} days" else "Free")
+            SubscriptionAllocation(feed,onToken)
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                Text("Subscription",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(subscriptionPrice(feed),Modifier.weight(1f),fontSize=12.sp,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+            }
             preview?.let { p->p.objects("posts").take(1).forEach { Text(it.string("text"),style=MaterialTheme.typography.bodyLarge) };p.optJSONObject("post")?.let { Text(it.string("text"),style=MaterialTheme.typography.bodyLarge) } }
             error?.let { Text(it,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall) }
             TextButton(onClick={benefitOwner=feed.string("owner")}){Text("Community token benefits")}
             OrderStatus(vm)
             }
-            Button(onClick={ if(price>0 && !feed.optBoolean("access"))vm.subscribe(JSONObject(feed.toString()).put("id",id)) else vm.action("/api/feeds/use",JSONObject().put("id",id)) { scope.launch { sheet.hide();close();vm.message("Feed selected") } } },enabled=preview!=null && !app.busy && !app.order.blocksOrder,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(price>0 && !feed.optBoolean("access"))"Buy · "+feed.string("price")+" USDC" else if(price>0)"Open feed" else "Get for free") }
+            Button(onClick={ if(price>0 && !feed.optBoolean("access"))vm.subscribe(JSONObject(feed.toString()).put("id",id)) else vm.action("/api/feeds/use",JSONObject().put("id",id)) { scope.launch { sheet.hide();close();onOpenFeed() } } },enabled=preview!=null && !app.busy && !app.order.blocksOrder,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(price>0 && !feed.optBoolean("access"))"Subscribe · "+feed.string("price")+" USDC" else if(price>0)"Open feed" else "Open feed") }
         }
     }
 }

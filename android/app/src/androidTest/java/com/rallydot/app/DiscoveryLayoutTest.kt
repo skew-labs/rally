@@ -57,8 +57,8 @@ class DiscoveryLayoutTest {
    } else { assertTrue(device.wait(Until.hasObject(By.text("+25.0%")),15000));device.takeScreenshot(File(inst.targetContext.getExternalFilesDir(null),"discovery-list.png")) }
    val action=if(mode=="swipe")By.text("Preview algorithm") else By.desc("Preview TEST trader")
    assertTrue(device.wait(Until.hasObject(action),10000));device.findObject(action).click()
-   assertTrue(device.wait(Until.hasObject(By.text("Get for free")),10000));assertTrue(device.wait(Until.hasObject(By.text("Sampled wallet ROI")),10000))
-   val button=device.findObject(By.text("Get for free"));if(!button.isEnabled)Thread.sleep(400)
+   assertTrue(device.wait(Until.hasObject(By.text("Open feed")),10000));assertTrue(device.wait(Until.hasObject(By.text("Sampled wallet ROI")),10000))
+   val button=device.findObject(By.text("Open feed"));if(!button.isEnabled)Thread.sleep(400)
    assertTrue(button.visibleBounds.width()>0);assertTrue(button.visibleBounds.right<=device.displayWidth)
    device.takeScreenshot(File(inst.targetContext.getExternalFilesDir(null),"discovery-preview.png"));device.dumpWindowHierarchy(File(inst.targetContext.getExternalFilesDir(null),"discovery-preview.xml"))
    assertEquals(0,writes.get())

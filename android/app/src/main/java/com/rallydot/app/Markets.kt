@@ -100,7 +100,7 @@ import kotlin.math.abs
         }
         if(onBuy!=null) {
             Spacer(Modifier.width(8.dp))
-            TextButton(onClick=onBuy,enabled=asset.executable&&!asset.stale,modifier=Modifier.width(52.dp).heightIn(min=44.dp).semantics { contentDescription=if(asset.kind=="perps")"Buy / Long ${asset.symbol}" else "Buy ${asset.symbol}" },contentPadding=PaddingValues(4.dp),shape=RoundedCornerShape(10.dp),colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceContainer,contentColor=if(MaterialTheme.colorScheme.surfaceContainer.luminance()<.5f)Color(0xFF8CB8FF) else Color(0xFF0055DD))) { Text(if(asset.kind=="perps")"Long" else "Buy",fontSize=12.sp,maxLines=1) }
+            TextButton(onClick=onBuy,enabled=asset.executable&&!asset.stale,modifier=Modifier.width(52.dp).heightIn(min=44.dp).semantics { contentDescription=if(asset.kind=="perps")"Buy / Long ${asset.symbol}" else "Buy ${asset.symbol}" },contentPadding=PaddingValues(4.dp),shape=RoundedCornerShape(10.dp),colors=ButtonDefaults.textButtonColors(containerColor=Color.Transparent,contentColor=if(MaterialTheme.colorScheme.surfaceContainer.luminance()<.5f)Color(0xFF8CB8FF) else Color(0xFF0055DD))) { Text(if(asset.kind=="perps")"Long" else "Buy",fontSize=12.sp,maxLines=1) }
         }
     }
     HorizontalDivider(Modifier.padding(horizontal=16.dp),color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=.6f))

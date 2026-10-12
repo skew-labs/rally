@@ -10,7 +10,7 @@ Algorithms are feed-ranking formulas. Purchasing access does not authorize trade
 
 ## Preview and purchase
 
-1. Open **Discover** or **Algorithms**.
+1. Open **Leaderboard**, or tap an author in **Community**.
 2. Preview the available content and feed description.
 3. Check its version, USDC price and access term.
 4. Approve the exact payment in your wallet.
@@ -38,11 +38,11 @@ A compatible community revenue vault can divide algorithm-sale proceeds between 
 
 ## Browse on mobile
 
-Phones show compact rows with token artwork, sampled wallet ROI when available, and **Track**, **Use** or **Buy**. Open **Swipe → Algorithms** to browse one algorithm at a time. **Preview** opens its existing feed preview and price; closing it returns to the same swipe position. A swipe never purchases a subscription. The Android app uses the same catalog and access checks.
+Phones show compact rows with token artwork, sampled wallet ROI when available, and **Track**, **Open feed** or **Subscribe**. Open **Swipe → Algorithms** to browse one algorithm at a time. **Preview** opens its existing feed preview and price; closing it returns to the same swipe position. A swipe never purchases a subscription. The Android app uses the same catalog and access checks.
 
 ## Strategy methods
 
-**Algorithms** brings live feeds and 100 strategy methods into one searchable collection. Search a wallet, strategy or source, choose **Memes**, **Momentum** or **Yield** and tap a row for its rule. Source/category filters are available under **Filters**. **Save** keeps a shortlist on this device.
+The free strategy research tool retains 100 public strategy methods. Open **Leaderboard → Create or manage a feed → Free strategy research**. Creator subscriptions live in the leaderboard and creator profiles. Search a wallet, strategy or source, choose **Memes**, **Momentum** or **Yield** and tap a row for its rule. Source/category filters are available under **Filters**. **Save** keeps a shortlist on this device.
 
 Rows show a **1Y model** when a complete published factor year is available. Tap for the exact period, universe and calculation basis. These hypothetical excess-return research figures exclude fees and are separate from Rally trading returns. Unrecorded years are listed inside **How it works**; short wallet samples are never annualized.
 

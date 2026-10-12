@@ -36,7 +36,7 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
 } ?: asset
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun FeedScreen(vm: RallyViewModel,community: String?=null,onPost: (Post)->Unit,onAsset: (String)->Unit,compose: ()->Unit,onAlgorithm: ()->Unit={},onFeedPreview: (JSONObject)->Unit={onAlgorithm()}) {
+@Composable fun FeedScreen(vm: RallyViewModel,community: String?=null,onPost: (Post)->Unit,onAsset: (String)->Unit,compose: ()->Unit,onAlgorithm: ()->Unit={},onFeedPreview: (JSONObject)->Unit={onAlgorithm()},onCreator: (String)->Unit={},onGroups: ()->Unit={}) {
     val state by vm.state.collectAsStateWithLifecycle()
     var mode by rememberSaveable(community){mutableStateOf("For you")}
     var chosen by rememberSaveable(vm.me?.string("id")){mutableStateOf<String?>(null)}
@@ -50,21 +50,21 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
     PullToRefreshBox(isRefreshing=page.loading && page.items.isNotEmpty(),onRefresh={vm.load(key,path,"posts",true)}) {
         if(page.loading && page.items.isEmpty())LoadingRows() else LazyColumn(state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(bottom=24.dp)) {
             item {
-                Row(Modifier.padding(20.dp).fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    TextButton(onClick={choosing=true},modifier=Modifier.weight(1f,false).heightIn(min=48.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.onSurface,containerColor=MaterialTheme.colorScheme.surfaceContainer)) { Icon(Icons.Outlined.Layers,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(state.boot?.objects("feeds")?.firstOrNull { it.string("id")==feed }?.string("name") ?: "Latest",Modifier.weight(1f,false),maxLines=1,overflow=TextOverflow.Ellipsis);Spacer(Modifier.width(8.dp));Icon(Icons.Outlined.ExpandMore,null,Modifier.size(18.dp)) }
-                    Spacer(Modifier.weight(1f));FilledIconButton(onClick=compose,colors=IconButtonDefaults.filledIconButtonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Icon(Icons.Outlined.Edit,"Create post") }
+                Row(Modifier.padding(horizontal=16.dp,vertical=4.dp).fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                    TextButton(onClick={choosing=true},modifier=Modifier.weight(1f).heightIn(min=48.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.onSurface,containerColor=Color.Transparent)) { Icon(Icons.Outlined.Layers,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(if(feed=="latest")"My feeds" else state.boot?.objects("feeds")?.firstOrNull { it.string("id")==feed }?.string("name") ?: "My feeds",Modifier.weight(1f,false),maxLines=1,overflow=TextOverflow.Ellipsis);Spacer(Modifier.width(8.dp));Icon(Icons.Outlined.ExpandMore,null,Modifier.size(18.dp)) }
+                    Spacer(Modifier.width(8.dp));if(community==null)IconButton(onClick=onGroups){Icon(Icons.Outlined.PeopleOutline,"Browse communities")};FilledIconButton(onClick=compose,colors=IconButtonDefaults.filledIconButtonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Icon(Icons.Outlined.Edit,"Create post") }
                 }
             }
             if(community==null)item { Segmented(listOf("For you","Following","Trades"),mode,{mode=it},Modifier.padding(horizontal=20.dp,vertical=8.dp)) }
             if(page.error!=null)item { EmptyState("Couldn't refresh",page.error,"Retry",{vm.load(key,path,"posts",true)}) }
-            items(page.items,key={it.string("id")},contentType={"post"}) { j->val original=remember(j) { Post.parse(j) };val p=original.withReaction(state.reactions[original.id]);PostCard(p,{onPost(p)},{onAsset(p.tradeTarget())},{vm.react(p)},onRecord={onAsset("signals:"+p.author.id)},reactionPending=state.reactions[p.id]?.pending==true) }
+            items(page.items,key={it.string("id")},contentType={"post"}) { j->val original=remember(j) { Post.parse(j) };val p=original.withReaction(state.reactions[original.id]);PostCard(p,{onPost(p)},{onAsset(p.tradeTarget())},{vm.react(p)},onRecord={onAsset("signals:"+p.author.id)},onAuthor={onCreator(p.author.id)},onCreatorToken={onAsset(it)},reactionPending=state.reactions[p.id]?.pending==true) }
             if(page.items.isEmpty() && !page.loading && page.error==null)item { EmptyState("No posts yet",action="Create a post",onAction=compose) }
             if(page.cursor!=null)item { TextButton(onClick={vm.load(key,path+"&cursor="+Uri.encode(page.cursor),"posts",append=true)},modifier=Modifier.fillMaxWidth(),enabled=!page.loading) { Text(if(page.loading)"Loading…" else "Load more") } }
         }
     }
     if(choosing)ModalBottomSheet(onDismissRequest={choosing=false},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=MaterialTheme.colorScheme.surface) {
         Column(Modifier.fillMaxWidth().heightIn(max=560.dp).padding(horizontal=20.dp,vertical=8.dp)) {
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Your algorithm",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);TextButton(onClick={choosing=false;onAlgorithm()}){Text("Explore")}}
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Your feeds",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);TextButton(onClick={choosing=false;onAlgorithm()}){Text("Find creators")}}
             LazyColumn(contentPadding=PaddingValues(bottom=24.dp)) {
                 items(state.boot?.objects("feeds").orEmpty(),key={it.string("id")}) { option->
                     val id=option.string("id");val access=option.optBoolean("access") || (option.number("price") ?: 0.0)==0.0
@@ -82,14 +82,17 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
         }
     }
 }
-@Composable fun PostCard(post: Post,onClick: ()->Unit,onAsset: ()->Unit,onLike: ()->Unit,expanded: Boolean=false,onRecord: (()->Unit)?=null,reactionPending: Boolean=false) {
-    Column(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=20.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-        Row(verticalAlignment=Alignment.CenterVertically) { ProfileArtwork(post.author.image,post.author.name,40.dp,identity=post.author.avatarIdentity);Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)) { Row(verticalAlignment=Alignment.CenterVertically) { Text(post.author.name,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f,false));if(post.author.agent)Text("Agent",Modifier.padding(start=6.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text("@${post.author.handle} · ${age(post.created)}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1) };Icon(Icons.Outlined.MoreHoriz,null,tint=MaterialTheme.colorScheme.onSurfaceVariant) }
+@Composable fun PostCard(post: Post,onClick: ()->Unit,onAsset: ()->Unit,onLike: ()->Unit,expanded: Boolean=false,onRecord: (()->Unit)?=null,reactionPending: Boolean=false,onAuthor: (()->Unit)?=null,onCreatorToken: (String)->Unit={}) {
+    Column(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=16.dp,vertical=14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth().clickable(enabled=onAuthor!=null){onAuthor?.invoke()},verticalAlignment=Alignment.CenterVertically) { ProfileArtwork(post.author.image,post.author.name,36.dp,identity=post.author.avatarIdentity);Spacer(Modifier.width(10.dp));Column(Modifier.weight(1f)) { Row(verticalAlignment=Alignment.CenterVertically) { Text(post.author.name,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f,false));if(post.author.agent)Text("Agent",Modifier.padding(start=6.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Text("@${post.author.handle} · ${age(post.created)}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1) };Icon(Icons.Outlined.MoreHoriz,null,tint=MaterialTheme.colorScheme.onSurfaceVariant) }
         post.raw.optJSONObject("author")?.objects("badges")?.take(2)?.forEach {badge->Text(badge.string("label"),style=MaterialTheme.typography.labelSmall,color=Violet)}
         Text(post.text,style=MaterialTheme.typography.bodyLarge,maxLines=if(expanded)Int.MAX_VALUE else 8,overflow=TextOverflow.Ellipsis)
         post.media?.let { media -> val poster=safeImage(media.string("poster",media.string("url")));Box(Modifier.fillMaxWidth().aspectRatio((media.optDouble("width",16.0)/media.optDouble("height",9.0)).toFloat().coerceIn(.6f,1.78f)).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)) { AsyncImage(poster,"Post media",Modifier.fillMaxSize(),contentScale=ContentScale.Crop);if(media.string("mime").startsWith("video"))Icon(Icons.Outlined.PlayCircle,"Play video",Modifier.size(52.dp).align(Alignment.Center),tint=Color.White) } }
         post.raw.optJSONObject("signal")?.let { SignalCard(it,onAsset,onRecord) }
         post.raw.optJSONObject("verifiedTrade")?.let { VerifiedTradeCard(it,onAsset) }
+        post.raw.optJSONObject("author")?.optJSONObject("communityToken")?.let { token->
+            Row(Modifier.heightIn(min=44.dp).clickable {onCreatorToken(token.string("address"))},verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){TokenArtwork(Asset.parse(JSONObject(token.toString()).put("id",token.string("address"))),24.dp);Text("${post.author.name}’s token",Modifier.weight(1f,false),fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis);Text(token.string("symbol"),fontSize=11.sp,fontWeight=FontWeight.Medium);Icon(Icons.Outlined.ChevronRight,null,Modifier.size(16.dp))}
+        }
         if(post.asset.isNotEmpty()) { val info=post.raw.optJSONObject("assetInfo");AssistChip(onClick=onAsset,label={Text(info?.string("symbol") ?: if(post.asset.startsWith("0x"))post.asset.take(6)+"…"+post.asset.takeLast(4) else post.asset)},leadingIcon={Icon(Icons.Outlined.ShowChart,null,Modifier.size(16.dp))}) }
         Row(horizontalArrangement=Arrangement.spacedBy(20.dp),verticalAlignment=Alignment.CenterVertically) {
             TextButton(onClick=onLike,enabled=!reactionPending,modifier=Modifier.heightIn(min=48.dp),contentPadding=PaddingValues(12.dp,0.dp)) { Icon(if(post.liked)Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,if(post.liked)"Unlike post" else "Like post",Modifier.size(21.dp),tint=if(post.liked)Sell else MaterialTheme.colorScheme.onSurfaceVariant);if(post.likes>0)Text(" ${post.likes}",color=MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -135,12 +138,12 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun PostSheet(post: Post,vm: RallyViewModel,close: ()->Unit,onAsset: (String)->Unit,openBrowser: (String)->Unit) {
+@Composable fun PostSheet(post: Post,vm: RallyViewModel,close: ()->Unit,onAsset: (String)->Unit,openBrowser: (String)->Unit,onCreator: (String)->Unit={}) {
     val state by vm.state.collectAsStateWithLifecycle();val key="replies:${post.id}";val path="/api/replies?post="+Uri.encode(post.id);val page=state.pages[key] ?: Page();var reply by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(post.id) { vm.load(key,path,"posts") }
     ModalBottomSheet(onDismissRequest=close,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
         LazyColumn(Modifier.fillMaxWidth().heightIn(max=760.dp).imePadding(),contentPadding=PaddingValues(bottom=24.dp)) {
-            item { val shown=post.withReaction(state.reactions[post.id]);PostCard(shown,{}, {close();onAsset(post.tradeTarget())}, {vm.react(shown)},true,onRecord={close();onAsset("signals:"+post.author.id)},reactionPending=state.reactions[post.id]?.pending==true) }
+            item { val shown=post.withReaction(state.reactions[post.id]);PostCard(shown,{}, {close();onAsset(post.tradeTarget())}, {vm.react(shown)},true,onAuthor={onCreator(post.author.id)},onCreatorToken={close();onAsset(it)},onRecord={close();onAsset("signals:"+post.author.id)},reactionPending=state.reactions[post.id]?.pending==true) }
             post.media?.takeIf { it.string("mime").startsWith("video") }?.let { media -> item { NativeVideo(safeImage(media.string("url")) ?: "") } }
             if(post.source.isNotBlank())item { TextButton(onClick={openBrowser(post.source)},Modifier.padding(horizontal=16.dp)) { Icon(Icons.Outlined.OpenInNew,null,Modifier.size(16.dp));Spacer(Modifier.width(8.dp));Text("Source") } }
             items(page.items,key={it.string("id")}) { j->PostCard(Post.parse(j),{}, {}, {}) }

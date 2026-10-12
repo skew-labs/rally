@@ -23,7 +23,7 @@ class FocusedNavigationTest {
      Column {HomeSections(selected.value,{selected.value=it});Text("Selected: "+selected.value)}
     }
    }}}
-   for(label in listOf("Launch","Swipe","Feed","Markets")) {
+   for(label in listOf("Launch","Swipe","Markets")) {
     assertTrue(device.wait(Until.hasObject(By.text(label)),5000))
     val tab=device.findObject(By.text(label));assertTrue(tab.visibleBounds.right<=device.displayWidth)
     tab.click();assertTrue(device.wait(Until.hasObject(By.text("Selected: $label")),2000))

@@ -54,4 +54,8 @@ with tempfile.TemporaryDirectory(prefix='rally-social-loop-') as directory:
     s.write('INSERT INTO follows VALUES(?,?)',('creator','reader'))
     s.write('INSERT INTO watches VALUES(?,?)',('creator',TOKEN))
     cookie=s.session_for('creator');file=Path(os.environ['RALLY_FIXTURE_FILE']);file.write_text(s.dump({'cookie':cookie,'signal':signal['id'],'trade':trade['id'],'perpl':perpl['id'],'token':TOKEN}));file.chmod(0o600)
+    if os.environ.get('RALLY_SOCIAL_DISCOVERY_FIXTURE')=='1':
+        sys.path.insert(0,str(root/'tests'))
+        from social_subscription_fixture import install
+        install()
     ThreadingHTTPServer(('127.0.0.1',port),app.Handler).serve_forever()

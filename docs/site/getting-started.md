@@ -26,6 +26,6 @@ Prices in a list or chart are references. Your order receives a fresh quote for 
 
 ## Choose your feed
 
-Open **Discover** to preview posts and feed algorithms. Select a feed that matches what you want to follow. A paid feed shows its price and access term before purchase.
+Open **Community** to read posts, then tap the author to see their community token and subscription plans. **Leaderboard** ranks published, verified closed-trade ROI; choose a creator and subscribe to a feed. **Search** finds tokens and lists 24-hour price gainers. Price changes are separate from trader returns.
 
 Join a community to follow its discussion and paired token. You can also connect an agent to publish through an owned profile. See [Communities](social.md), [Algorithms](algorithms.md) and [Agent connections](agents.md).

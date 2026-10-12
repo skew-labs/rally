@@ -342,12 +342,20 @@ def pool_prices(limit=128,hot_only=False):
                 outputs[a]={**old,'price':price,'liquidity':liquidity,'pair':r['address'],'venue':r['venue'],'source':'https://monadvision.com/address/'+r['address'],'priceSource':'On-chain V2 reserve reference','blockNumber':int(block,16),'fetchedAt':stamp}
         publish_prices(outputs)
 
+def gainer_key(token):
+    try:change=float(token.get('change'))
+    except (ValueError,TypeError):change=float('nan')
+    known=not token.get('stale') and math.isfinite(change)
+    return (not known,-change if known else 0,str(token['id']))
+
 def uncached_catalog(params):
-    q=str(params.get('query','')).strip()[:120];scope=params.get('scope','active')
+    q=str(params.get('query','')).strip()[:120];scope=params.get('scope','active');order=params.get('sort','volume')
+    if order not in {'volume','gainers'}:raise s.Problem('Unknown token order')
     try:offset=max(0,int(params.get('offset',0)));limit=max(1,min(100,int(params.get('limit',60))))
     except (ValueError,TypeError):raise s.Problem('Invalid market page')
     if q:
         with db() as c:known=c.execute("SELECT 1 FROM assets WHERE info IS NOT NULL AND (address=? OR lower(json_extract(info,'$.symbol')) LIKE ? OR lower(json_extract(info,'$.name')) LIKE ?) LIMIT 1",(q.lower(),'%'+q.lower()+'%','%'+q.lower()+'%')).fetchone()
+        if not known and scope=='discovery':known=s.one('SELECT address FROM nad_tokens WHERE instr(lower(info),?)>0 LIMIT 1',(q.lower(),))
         if not known and len(q)>=3:search(q)
     # Keep baseline identity/launch metadata and indexed identities in one namespace.
     baseline=s.GATEWAY.markets();tokens={t['id']:t for t in baseline['tokens'] if not t.get('nadfun') or t.get('phase')=='dex'}
@@ -365,6 +373,12 @@ def uncached_catalog(params):
         t={**tokens.get(ident,{}),**item,**value,'stale':not 0<=age<=120,'priceAgeSeconds':max(0,age) if stamp else None}
         if age>900:t['price']=None
         s.GATEWAY.token_map[ident]={**s.GATEWAY.token_map.get(ident,{}),**item};tokens[ident]=t
+    if scope=='discovery':
+        # Indexed launch metadata only: search does not trigger an RPC per row.
+        import nadfun
+        for row in s.rows('SELECT info FROM nad_tokens'):
+            info=nadfun.public_info(json.loads(row['info']));ident=info['id']
+            if not info.get('graduated') or ident not in tokens:tokens[ident]=info
     all_tokens=list(tokens.values())
     for t in all_tokens:
         try:v=float(t.get('price') or 0)
@@ -372,12 +386,13 @@ def uncached_catalog(params):
         t['price']=v if math.isfinite(v) and v>0 else None
     if q:all_tokens=[t for t in all_tokens if q.lower() in (t['symbol']+' '+t['name']+' '+t['address']).lower()]
     active=sum((t.get('price') or 0)>0 and not t.get('stale') for t in all_tokens)
-    selected=all_tokens if scope=='all' else [t for t in all_tokens if (t.get('price') or 0)>0 and not t.get('stale')]
+    selected=all_tokens if scope in {'all','discovery'} else [t for t in all_tokens if (t.get('price') or 0)>0 and not t.get('stale')]
     selected.sort(key=lambda t: (not((t.get('price') or 0)>0 and not t.get('stale')), -float(t.get('volume') or 0), t['id']))
-    return {'tokens':selected[offset:offset+limit],'total':len(selected),'active':active,'lastKnown':sum(bool(t.get('price')) and bool(t.get('stale')) for t in all_tokens),'assets':len(all_tokens),'offset':offset,'nextOffset':offset+limit if offset+limit<len(selected) else None,'indexedPools':pool_count,'pendingMetadata':pending,'sources':sources,'fetchedAt':s.now(),'priceUpdatedAt':max((t.get('fetchedAt',0) for t in all_tokens if t.get('price')),default=0),'source':'Monad factories · DexScreener','financialTransactions':0}
+    if order=='gainers':selected.sort(key=gainer_key)
+    return {'sort':order,'tokens':selected[offset:offset+limit],'total':len(selected),'active':active,'lastKnown':sum(bool(t.get('price')) and bool(t.get('stale')) for t in all_tokens),'assets':len(all_tokens),'offset':offset,'nextOffset':offset+limit if offset+limit<len(selected) else None,'indexedPools':pool_count,'pendingMetadata':pending,'sources':sources,'fetchedAt':s.now(),'priceUpdatedAt':max((t.get('fetchedAt',0) for t in all_tokens if t.get('price')),default=0),'source':'Monad factories · DexScreener','financialTransactions':0}
 
 def catalog(params):
-    key=tuple(str(params.get(k,'')) for k in ['query','scope','offset','limit'])
+    key=tuple(str(params.get(k,'')) for k in ['query','scope','sort','offset','limit'])
     with LOCK:cached=PAGES.get(key)
     if cached and time.monotonic()-cached[0]<5:return cached[1]
     value=uncached_catalog(params)

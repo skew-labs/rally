@@ -103,7 +103,7 @@ fun Modifier.animatedHeight(height: State<Dp>)=layout { measurable,constraints->
     val density=androidx.compose.ui.platform.LocalDensity.current
     val outline=listOf(R.drawable.nav_home,R.drawable.nav_communities,R.drawable.nav_search,0,R.drawable.nav_account)
     val filled=listOf(R.drawable.nav_home_selected,R.drawable.nav_communities_selected,R.drawable.nav_search_selected,0,R.drawable.nav_account_selected)
-    val labels=listOf("Home",if(density.fontScale>1.3f)"Groups" else "Communities","Discover","Leaderboard","Profile")
+    val labels=listOf("Home",if(density.fontScale>1.3f)"Groups" else "Community","Search","Leaderboard","Profile")
     Surface(Modifier.fillMaxWidth(),color=MaterialTheme.colorScheme.surface) {
       Column {
         HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)

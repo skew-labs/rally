@@ -55,8 +55,8 @@ class RallyProfiles {
         device.waitForIdle()
         device.swipe(width/2,height*3/4,width/2,height/3,40)
         device.waitForIdle()
-        device.tapCurrent(By.desc("Discover"))
-        check(device.wait(Until.hasObject(By.text("Search people, posts, algorithms")),10000))
+        device.tapCurrent(By.desc("Search"))
+        check(device.wait(Until.hasObject(By.text("Token name or address")),10000))
         device.tapCurrent(By.desc("Profile"))
         device.waitForIdle()
         // Only public reads and sheet presentation; never submit a wallet request.

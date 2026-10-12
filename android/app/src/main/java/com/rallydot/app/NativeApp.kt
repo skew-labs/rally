@@ -45,7 +45,7 @@ val Gain=Color(0xFF12845A)
     MaterialTheme(colorScheme=scheme,typography=RallyTypography,content=content)
 }
 data class Tab(val label: String,val icon: ImageVector)
-val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined.PeopleOutline),Tab("Discover",Icons.Outlined.Search),Tab("Leaderboard",Icons.Outlined.EmojiEvents),Tab("Profile",Icons.Outlined.PersonOutline))
+val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Community",Icons.Outlined.PeopleOutline),Tab("Search",Icons.Outlined.Search),Tab("Leaderboard",Icons.Outlined.EmojiEvents),Tab("Profile",Icons.Outlined.PersonOutline))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun RallyApp(vm: RallyViewModel,openBrowser: (String)->Unit,link: Uri?) {
@@ -61,6 +61,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
     var asset by remember { mutableStateOf<Asset?>(null) }
     var post by remember { mutableStateOf<Post?>(null) }
     var algorithm by remember { mutableStateOf<JSONObject?>(null) }
+    var creator by rememberSaveable { mutableStateOf<String?>(null) }
     var community by rememberSaveable { mutableStateOf<String?>(null) }
     var launching by rememberSaveable { mutableStateOf(false) }
     var composing by rememberSaveable { mutableStateOf(false) }
@@ -92,7 +93,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
             when(link.getQueryParameter("view")) { "notifications"->{tab=4;extra="Notifications"};"communities"->tab=1;"discover"->tab=2;"leaderboard"->tab=3;"account","agents","feeds","earnings"->tab=4;"launchpad"->{tab=0;home="Launch"};"swipe"->{tab=0;home="Swipe"};"home"->{tab=0;home=when(link.getQueryParameter("section")){"feed"->"Feed";"launchpad"->"Launch";"swipe"->"Swipe";else->"Markets"}} }
         }
     }
-    BackHandler(asset==null && post==null && algorithm==null && !composing && (extra!=null || community!=null || tab!=0 || home!="Markets")) {
+    BackHandler(asset==null && post==null && algorithm==null && creator==null && !composing && (extra!=null || community!=null || tab!=0 || home!="Markets")) {
         when { extra!=null->extra=null;community!=null->community=null;tab!=0->tab=0;else->home="Markets" }
     }
     RallyTheme(dark) {
@@ -122,14 +123,14 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                     contentWindowInsets=WindowInsets.safeDrawing,
                     topBar={TopAppBar(title={if(tab==0 && extra==null)RallyBrand() else Text(title,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.SemiBold,fontSize=25.sp)},navigationIcon={if(extra!=null || community!=null)IconButton(onClick={extra=null;community=null}){Icon(Icons.Outlined.ArrowBack,"Back")}},actions={
                         IconButton(onClick={dark=!dark;settings.edit().putBoolean("dark",dark).apply();if(android.os.Build.VERSION.SDK_INT>=31)context.getSystemService(android.app.UiModeManager::class.java).setApplicationNightMode(if(dark)android.app.UiModeManager.MODE_NIGHT_YES else android.app.UiModeManager.MODE_NIGHT_NO)}) { Icon(if(dark)Icons.Outlined.LightMode else Icons.Outlined.DarkMode,"Change theme") }
-                        if(tab==0)IconButton(onClick={tab=2}) { Icon(Icons.Outlined.Search,"Search") }
+
                     },expandedHeight=56.dp,colors=TopAppBarDefaults.topAppBarColors(containerColor=MaterialTheme.colorScheme.background))},
                     bottomBar={if(!wide)RallyNavigation(tab) { tab=it;extra=null;community=null }},
                     snackbarHost={SnackbarHost(snack)}) { padding ->
                     Column(Modifier.fillMaxSize().padding(padding)) {
                         if(data.order.blocksOrder && asset==null && algorithm==null && !launching)Box(Modifier.padding(horizontal=20.dp,vertical=6.dp).clickable { extra="Wallet" }) { OrderStatus(vm,compact=true) }
                         data.bootError?.let { Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically) { Text(it,Modifier.weight(1f),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall);TextButton(onClick={vm.bootstrap()}) { Text("Retry") } } }
-                        if(tab==0 && extra==null)HomeSections(home,{home=it})
+                        if(tab==0 && extra==null)HomeSections(home,{if(it=="Feed"){tab=1;community=null}else home=it})
                         val destination=extra ?: "$tab:${if(tab==0)home else community.orEmpty()}"
                         LaunchedEffect(destination,accountId) {
                             val stateKey="$accountId/$destination"
@@ -154,18 +155,19 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
                                     shown=="Weekly league"->WeeklyLeagueScreen(vm)
                                     shown.startsWith("Benefits:")->TokenBenefitsScreen(vm,shown.substringAfter(":"))
                                     shown=="Token benefits"->TokenBenefitsScreen(vm,vm.me?.string("id").orEmpty())
+                                    shown=="Groups"->CommunitiesScreen(vm,{community=it;tab=1;extra=null},{asset=it})
                                     shown=="Algorithms"->AlgorithmsScreen(vm,{algorithm=it},{marketCategory=it;extra=null;tab=0;home="Markets"})
                                     shown=="Agents"->AgentsScreen(data)
                                     shown=="Activity"->ActivityScreen(vm)
                                     shown=="Wallet"->PortfolioScreen(vm,::showAsset)
-                                    shown=="0:Markets"->MarketsScreen(vm,{asset=it},initialCategory=marketCategory,overview={HomeOverview(vm,{algorithm=it},{extra="Algorithms"},{extra="Wallet"},{post=it})})
+                                    shown=="0:Markets"->MarketsScreen(vm,{asset=it},initialCategory=marketCategory,overview={HomeOverview(vm,{algorithm=it},{tab=3},{extra="Wallet"},{post=it})})
                                     shown=="0:Launch"->MarketsScreen(vm,{asset=it},launch=true,create={if(vm.me==null)vm.showWallet() else launching=true})
                                     shown=="0:Swipe"->SwipeScreen(vm,{asset=it},{post=it},{algorithm=it})
-                                    shown=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={extra="Algorithms"},onFeedPreview={algorithm=it})
-                                    shown.startsWith("1:") && shown.substringAfter(':').isNotEmpty()->CommunityRoom(vm,shown.substringAfter(':'),{asset=it},{algorithm=it},{extra="Benefits:$it"}) { FeedScreen(vm,community=shown.substringAfter(':'),onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={extra="Algorithms"},onFeedPreview={algorithm=it}) }
-                                    shown.startsWith("1:")->CommunitiesScreen(vm,{community=it},{asset=it})
-                                    shown.startsWith("2:")->DiscoverScreen(vm,onPost={post=it},onAlgorithm={algorithm=it})
-                                    shown.startsWith("3:")->LeaderboardScreen(vm,{algorithm=it},{extra="Weekly league"})
+                                    shown=="0:Feed"->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={tab=3;extra=null},onFeedPreview={algorithm=it},onCreator={creator=it},onGroups={extra="Groups"})
+                                    shown.startsWith("1:") && shown.substringAfter(':').isNotEmpty()->CommunityRoom(vm,shown.substringAfter(':'),{asset=it},{algorithm=it},{extra="Benefits:$it"}) { FeedScreen(vm,community=shown.substringAfter(':'),onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={tab=3;extra=null},onFeedPreview={algorithm=it},onCreator={creator=it},onGroups={extra="Groups"}) }
+                                    shown.startsWith("1:")->FeedScreen(vm,onPost={post=it},onAsset=::showAsset,compose={if(vm.me!=null)composing=true else vm.showWallet()},onAlgorithm={tab=3},onFeedPreview={algorithm=it},onCreator={creator=it},onGroups={extra="Groups"})
+                                    shown.startsWith("2:")->TokenSearchScreen(vm,{asset=it})
+                                    shown.startsWith("3:")->CreatorLeaderboardScreen(vm,{creator=it},{algorithm=it},{extra="Weekly league"})
                                     else->ProfileScreen(vm,openBrowser,{extra=it},::showAsset)
                                 }
                             }
@@ -175,8 +177,9 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
             }
         }
         asset?.let { selected -> AssetSheet(selected,vm,{asset=null},openBrowser,{asset=null;community=it;tab=1}) }
-        post?.let { selected -> PostSheet(selected,vm,{post=null},::showAsset,openBrowser) }
-        algorithm?.let { selected -> AlgorithmSheet(selected,vm,{algorithm=null},openBrowser) }
+        post?.let { selected -> PostSheet(selected,vm,{post=null},::showAsset,openBrowser,{post=null;creator=it}) }
+        creator?.let { id->CreatorSheet(id,vm,{creator=null},{creator=null;showAsset(it)},{creator=null;algorithm=it},{creator=null;post=it}) }
+        algorithm?.let { selected -> AlgorithmSheet(selected,vm,{algorithm=null},openBrowser,{algorithm=null;showAsset(it)},{algorithm=null;tab=1;community=null;extra=null}) }
         if(data.orderDetails)OrderDetailsSheet(vm,{vm.showOrderDetails(false)})
         data.walletPanel?.let { WalletAssetsSheet(vm,it,{vm.showWalletPanel(null)}) }
         if(data.walletOpen)WalletLoginSheet(vm,{vm.showWallet(false)},openBrowser)
@@ -185,7 +188,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
     }
 }
 @Composable fun HomeSections(selected: String,onSelect: (String)->Unit) {
-    val options=listOf("Markets","Launch","Swipe","Feed")
+    val options=listOf("Markets","Launch","Swipe")
     val haptic=LocalHapticFeedback.current
     BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal=16.dp)) {
         val cell=maxWidth/options.size

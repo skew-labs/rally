@@ -5,11 +5,11 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ConnectedDiscoveryTest {
- @Test fun personalAlgorithmsPrecedePublicSuggestionsWithoutDuplicates() {
+ @Test fun creatorSubscriptionsDoNotImpersonatePublicWalletResearch() {
   val f=JSONObject().put("id","chosen").put("owner","creator").put("research",JSONObject().put("wallet","public"))
   val other=JSONObject().put("id","other").put("owner","rally").put("research",JSONObject().put("wallet","other"))
   val b=JSONObject().put("activeFeed","chosen").put("feeds",JSONArray().put(other).put(f))
-  assertEquals(listOf("chosen","other"),homeAlgorithms(b).map { it.string("id") })
+  assertEquals(listOf("chosen"),homeAlgorithms(b).map { it.string("id") })
  }
  @Test fun unverifiedAlgorithmsHaveNoInventedPerformance() {
   val f=JSONObject().put("id","new").put("owner","creator").put("algorithm_version",1)

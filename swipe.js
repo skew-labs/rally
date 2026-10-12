@@ -1,3 +1,4 @@
+import {swipeHistory} from './swipe-history.js';
 import { swipeMotion, swipePaging } from './swipe-motion.js';
 import { swipeTrade } from './swipe-trade.js';
 import { feedTitle, feedPresentation, feedReturn, feedTerms } from './flow.js';
@@ -5,6 +6,7 @@ import { feedTitle, feedPresentation, feedReturn, feedTerms } from './flow.js';
 export function swipeUI(c){
   const {S,$,api,esc,icon,logo,avatar,usd,age,mediaCard,safeURL,token,navigate,notify}=c;
   let generation=0,deadlineTimer,metricsTimer,items=[],active=0,loadingMore=false,request,motion,paging,events,resize,deckHeight=0,busy=false,entryKey=null,layoutFrame=0;
+  const historyPreview=swipeHistory(api);
   const cache=new Map(),positions=new Map(),playheads=new Map();
   const quick=swipeTrade({...c,releaseInteraction:()=>{busy=false;}});
   const cacheKey=()=>(S.boot.me?.id||'guest')+':'+S.boot.activeFeed+':'+S.mode+':'+S.boot.watches.join(',');
@@ -21,7 +23,7 @@ export function swipeUI(c){
   const key=(tab=S.swipeTab)=>cacheKey()+':'+tab;
   const remember=()=>{if(items.length)positions.set(key(),active);};
   function save(tab,data){cache.delete(key(tab));cache.set(key(tab),{...data,time:Date.now()});while(cache.size>4)cache.delete(cache.keys().next().value);}
-  function dispose(){remember();quick.dispose();generation++;request?.abort();events?.abort();resize?.disconnect();resize=null;motion?.dispose();paging?.dispose();paging=null;cancelAnimationFrame(layoutFrame);layoutFrame=0;document.body.style.removeProperty('--swipe-viewport-height');document.body.removeAttribute('data-swipe-keyboard');clearTimeout(deadlineTimer);clearTimeout(metricsTimer);document.querySelectorAll('.r-swipe-card').forEach(el=>media(el,false));loadingMore=false;}
+  function dispose(){historyPreview.dispose();remember();quick.dispose();generation++;request?.abort();events?.abort();resize?.disconnect();resize=null;motion?.dispose();paging?.dispose();paging=null;cancelAnimationFrame(layoutFrame);layoutFrame=0;document.body.style.removeProperty('--swipe-viewport-height');document.body.removeAttribute('data-swipe-keyboard');clearTimeout(deadlineTimer);clearTimeout(metricsTimer);document.querySelectorAll('.r-swipe-card').forEach(el=>media(el,false));loadingMore=false;}
   const stats=(t,m)=>t.nadfun&&!m?c.nad.metrics(t):`<b>${usd(m?m.mark:t.price)}</b><small>${m?esc(m.priceSource):t.price?'Reference price':'Quote in order'}</small>`;
   async function refreshMetrics(seq){
     if(seq!==generation||S.view!=='swipe'||S.swipeTab!=='spot')return;
@@ -42,7 +44,7 @@ export function swipeUI(c){
     return `<div class="r-swipe-caption"><div class="r-swipe-copy" id="swipe-copy-${index}" tabindex="0">${esc(p.text.replace(/(?:^|\n)\s*https:\/\/[^\s<>]+\s*$/, '').trim()).replace(/\n/g,'<br>')}</div><button class="r-swipe-expand" data-action="swipe-expand" data-id="${index}" aria-controls="swipe-copy-${index}" aria-expanded="false" hidden>Read more</button></div>`;
   }
   function actions(item,index){
-    if(item.kind==='algorithm')return `<button class="r-swipe-direction skip" data-action="swipe-order" data-id="${index}" data-side="skip">Skip</button><button class="r-swipe-direction buy" data-action="algorithm-preview" data-id="${esc(item.feed.id)}">${item.feed.access?'Preview · '+(Number(item.feed.priceRaw)?'Open':'Free'):'Preview · '+esc(item.feed.price)+' USDC'}</button>`;
+    if(item.kind==='algorithm')return `<button class="r-swipe-direction skip" data-action="swipe-order" data-id="${index}" data-side="skip">Skip</button><button class="r-swipe-direction buy" data-action="algorithm-preview" data-id="${esc(item.feed.id)}">${item.feed.access?'Preview · '+(Number(item.feed.priceRaw)?'Open':'Free'):'Subscribe · '+esc(item.feed.price)+' USDC'}</button>`;
     const button=(side,label,style)=>`<button class="r-swipe-direction ${style} ${style==='buy'&&hasTicket(item)?'quick-selected':''}" data-action="swipe-order" data-id="${index}" data-side="${side}" aria-label="${label} in this card. Wallet approval required.">${style==='sell'||style==='skip'?icon('back'):''}<span>${label}</span>${style==='buy'?icon('arrow'):''}</button>`;
     if(item.kind==='spot')return item.asset?button('sell','Sell','sell')+button('buy','Buy','buy'):button('skip','Skip','skip')+button('discussion','Discuss','discussion');
     if(item.kind==='perps')return item.market.open?button('short','Short','sell')+button('long','Long','buy'):'<span class="r-swipe-unavailable">Market closed</span>';
@@ -73,7 +75,7 @@ export function swipeUI(c){
     const visual=p?.media?`<div class="r-swipe-media">${mediaCard(p.media,p.author.name).replace(/<video\b([^>]*?)\bsrc=/,'<video$1data-src=')}</div>`:t&&!p?`<div class="r-swipe-art">${artwork(t,index===active)}<span>${esc(t.symbol)}</span></div>`:'';
     const identity=t?`<div class="r-swipe-market"><div>${artwork(t)}<span><b>${esc(t.symbol)}${m?'<small> Perp</small>':''}</b><small>${esc(m?m.venue+' · '+(m.venue==='LeverUp'?'USDC':'AUSD'):pool?'Castora · Price prediction':t.venue||'Monad · Spot')}</small></span></div><div class="r-swipe-price" data-swipe-metrics>${stats(t,m)}</div></div>`:'';
     const poolInfo=pool?`<div class="r-swipe-pool"><div><span>Pool #${pool.id}</span><b>${esc(state(pool))}</b></div><div><span>Stake</span><b>${esc(pool.stake)} ${esc(pool.stakeAsset)}</b></div><div><span>${state(pool)==='Open'?'Closes':'Snapshot'}</span><time datetime="${new Date((state(pool)==='Open'?pool.close:pool.snapshot)*1000).toISOString()}">${esc(when(state(pool)==='Open'?pool.close:pool.snapshot))}</time></div><small>${pool.feeBps/100}% fee · ${pool.predictions} entries</small></div>`:'';
-    return `<article class="r-swipe-card ${p?.media?'has-media':''} ${hasTicket(item)?'has-quick-ticket':''}" data-swipe-index="${index}" data-kind="${item.kind}" ${p?`data-swipe-post="${esc(p.id)}"`:''} aria-label="${esc(p?p.author.name+' post':pool?'Prediction pool '+pool.id:t.symbol+' perpetual')}" aria-roledescription="slide"><div class="r-swipe-intent" aria-hidden="true"></div><div class="r-swipe-content">${p?author(p):''}${visual}${p?postContent(p,index):`<div class="r-swipe-market-heading"><h1>${esc(t?.name||t?.symbol||pool?.asset||'Market')}</h1><p>${m?'Perpetual · Monad':'Price prediction · Monad'}</p></div>`}${poolInfo}<div class="r-swipe-engagement">${p?source(p):''}<div class="r-swipe-social">${p?`<button data-action="swipe-like" data-id="${esc(p.id)}" class="${p.liked?'liked':''}" aria-label="${p.liked?'Unlike':'Like'} post">${icon('heart')}<span>${p.likes||''}</span></button><button data-action="reply" data-id="${esc(p.id)}" aria-label="Reply to post">${icon('chat')}<span>${p.replies||''}</span></button><button data-action="share" data-id="${esc(p.id)}" aria-label="Copy post link">${icon('share')}</button>`:''}</div></div></div><footer>${identity}<div data-swipe-ticket data-kind="${item.kind}">${ticketPreview(item)}</div><div class="r-swipe-directions">${actions(item,index)}</div></footer></article>`;
+    return `<article class="r-swipe-card ${p?.media?'has-media':''} ${hasTicket(item)?'has-quick-ticket':''}" data-swipe-index="${index}" data-kind="${item.kind}" ${p?`data-swipe-post="${esc(p.id)}"`:''} aria-label="${esc(p?p.author.name+' post':pool?'Prediction pool '+pool.id:t.symbol+' perpetual')}" aria-roledescription="slide"><div class="r-swipe-intent" aria-hidden="true"></div><div class="r-swipe-content">${p?author(p):''}${visual}${p?postContent(p,index):`<div class="r-swipe-market-heading"><h1>${esc(t?.name||t?.symbol||pool?.asset||'Market')}</h1><p>${m?'Perpetual · Monad':'Price prediction · Monad'}</p></div>`}${poolInfo}${t&&!pool&&!p?.media?'<div class="rs-swipe-history" aria-label="Token price history">Loading chart…</div>':''}<div class="r-swipe-engagement">${p?source(p):''}<div class="r-swipe-social">${p?`<button data-action="swipe-like" data-id="${esc(p.id)}" class="${p.liked?'liked':''}" aria-label="${p.liked?'Unlike':'Like'} post">${icon('heart')}<span>${p.likes||''}</span></button><button data-action="reply" data-id="${esc(p.id)}" aria-label="Reply to post">${icon('chat')}<span>${p.replies||''}</span></button><button data-action="share" data-id="${esc(p.id)}" aria-label="Copy post link">${icon('share')}</button>`:''}</div></div></div><footer>${identity}<div data-swipe-ticket data-kind="${item.kind}">${ticketPreview(item)}</div><div class="r-swipe-directions">${actions(item,index)}</div></footer></article>`;
   }
   function algorithmCard(item,index){
     const f=item.feed,r=f.research,roi=feedReturn(f),wallet=r?.wallet;
@@ -117,6 +119,7 @@ export function swipeUI(c){
       if(added||resized)measured.push(el);
     }
     const selected=$('[data-swipe-index="'+active+'"]',deck);if(selected)quick.mount(items[active],selected,()=>Number(selected.dataset.swipeIndex)===active);
+    if(selected)historyPreview.mount($('.rs-swipe-history',selected),items[active]);
     if(selected&&!measured.includes(selected))measured.push(selected);captions(measured);
     if(resize)for(const el of measured)resize.observe($('.r-swipe-content',el));
     deck.dataset.total=items.length;deck.dataset.windowStart=start;updatePosition();
@@ -184,7 +187,7 @@ export function swipeUI(c){
     try{
       const saved=cache.get(key());
       if(tab==='algorithms'){
-        S.swipeCursor=null;items=[...S.boot.feeds].sort((a,b)=>Number(!!b.research?.wallet)-Number(!!a.research?.wallet)||Number(b.research?.pnlMON||0)-Number(a.research?.pnlMON||0)).map(feed=>({kind:'algorithm',feed}));
+        S.swipeCursor=null;items=S.boot.feeds.filter(f=>f.owner!=='rally').map(feed=>({kind:'algorithm',feed}));
       }else if(!refresh&&saved&&Date.now()-saved.time<(tab==='spot'?60000:30000)){
         items=[...saved.items];S.swipeCursor=saved.cursor;
       }else if(tab==='spot'){

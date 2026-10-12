@@ -1,9 +1,10 @@
 // Shared navigation, media-first discovery and verified performance surfaces.
 // Wallet requests and subscription settlement remain in the existing checkout.
 import {feedTitle,feedReturn} from './flow.js';
-import {algorithmRow} from './connected-ui.js';
+import {socialDiscoveryUI} from './social-discovery.js';
 export function experienceUI(c){
  const {S,$,api,esc,icon,avatar,mediaCard,postCard,safeURL,usd,pct,navigate,notify,modal,closeModal,needAccount,empty,loading,motion}=c;
+ const social=socialDiscoveryUI(c);
  let generation=0,controller,observer,searchTimer,previewController,loadingMore=false;
  const pages=new Map(),boards=new Map();
  const boardKey=()=>`${S.boot.me?.id||'guest'}|${S.discoverScope||'all'}|${S.discoverQuery||''}`;
@@ -15,18 +16,19 @@ export function experienceUI(c){
   const all=S.boot.feeds||[],following=new Set((S.boot.people||[]).filter(p=>p.following).map(p=>p.id));
   const personal=all.filter(f=>f.id===S.boot.activeFeed&&f.owner!=='rally'||following.has(f.owner)||Number(f.priceRaw)&&f.access);
   const feeds=[...personal,...all.filter(f=>f.research?.wallet),...all.filter(f=>f.algorithm_version)].filter((f,i,a)=>a.findIndex(x=>x.id===f.id)===i).slice(0,2);
-  head.insertAdjacentHTML('afterend',`<section id="home-overview" class="rc-home-overview"><div id="home-balance" class="rc-home-balance ${S.boot.wallet?'':'is-guest'}" aria-label="Balance"><button ${S.boot.wallet?'data-nav="portfolio"':'data-action="account"'}><small>${S.boot.wallet?'Your balance':'Your Rally'}</small><strong>—</strong><span>${S.boot.wallet?'Updating balances…':'Sign in to see your balance'}</span></button><button class="rc-balance-open" ${S.boot.wallet?'data-nav="portfolio"':'data-action="account"'} aria-label="${S.boot.wallet?'Open portfolio':'Sign in'}">${S.boot.wallet?'Wallet':'Connect'}</button></div><div class="rc-section-heading"><h2>${personal.length?'Your algorithms':'Algorithms'}</h2><a href="?view=feeds" data-nav="feeds">See all</a></div><div class="rc-home-algorithms">${feeds.map(f=>algorithmRow(c,f,feedTitle(f),feedReturn(f))).join('')}</div><div id="home-activity" class="rc-home-activity" aria-label="Community activity"></div></section>`);
+  head.insertAdjacentHTML('afterend',`<section id="home-overview" class="rc-home-overview"><div id="home-balance" class="rc-home-balance ${S.boot.wallet?'':'is-guest'}" aria-label="Balance"><button ${S.boot.wallet?'data-nav="portfolio"':'data-action="account"'}><small>${S.boot.wallet?'Balance':'Your balance'}</small><strong>—</strong><span>${S.boot.wallet?'Updating…':''}</span></button><button class="rc-balance-open" ${S.boot.wallet?'data-nav="portfolio"':'data-action="account"'} aria-label="${S.boot.wallet?'Open portfolio':'Sign in'}">${S.boot.wallet?'Wallet':'Connect'}</button></div><div class="rc-section-heading"><h2>${personal.length?'Following':'Traders & agents'}</h2><a href="?view=leaderboard" data-nav="leaderboard">Leaderboard</a></div>${social.homeCards()}<div id="home-activity" class="rc-home-activity" aria-label="Community activity"></div></section>`);
   const host=$('#home-overview'),balance=$('#home-balance'),owner=S.boot.me?.id||'guest',wallet=S.boot.wallet;
   homeController?.abort();homeController=new AbortController();const request=homeController;
   const current=()=>host.isConnected&&!request.signal.aborted&&(S.boot.me?.id||'guest')===owner&&S.boot.wallet===wallet;
   const paint=p=>{if(!current()||!wallet||p?.wallet?.toLowerCase()!==wallet.toLowerCase())return;const v=p.valuation,change=v?.change24hPercent;balance.querySelector('small').textContent=v?.partial?'Priced balance':'Your balance';balance.querySelector('strong').textContent=v?.valueUSD!=null?usd(v.valueUSD):'—';const note=balance.querySelector('span');note.textContent=change!=null?pct(change)+' · 24h price change':p.refreshing?'Updating balances…':'24h change unavailable';note.className=change==null?'':Number(change)>=0?'positive':'negative';};
   if(wallet){paint(S.portfolio);api('/api/portfolio',undefined,{signal:request.signal}).then(p=>{if(current())paint(p);}).catch(()=>{if(current()&&!S.portfolio)balance.querySelector('span').textContent='Open portfolio to refresh';});}
-  const activity=$('#home-activity'),paintActivity=d=>{if(!current())return;const posts=(d.posts||[]).slice(0,1);S.posts=[...(S.posts||[]),...posts.filter(p=>!S.posts?.some(x=>x.id===p.id))];activity.innerHTML=posts.map(p=>`<button class="rc-activity-row" data-action="open-post" data-id="${esc(p.id)}">${avatar(p.author)}<span><small>${esc(p.author.name)} <i>${following.size?'Following':'Latest activity'}</i></small><b>${esc(p.text.slice(0,180))}</b></span>${icon('chevron')}</button>`).join('');};
+  const activity=$('#home-activity'),paintActivity=d=>{if(!current())return;const posts=(d.posts||[]).slice(0,1);S.posts=[...(S.posts||[]),...posts.filter(p=>!S.posts?.some(x=>x.id===p.id))];activity.innerHTML=posts.map(p=>`<button class="rc-activity-row" data-action="open-post" data-id="${esc(p.id)}">${avatar(p.author)}<span><small>${esc(p.author.name)} <i>${p.verifiedTrade?esc(p.verifiedTrade.label||p.verifiedTrade.side||'Trade'):'Posted'}</i></small><b>${esc(p.verifiedTrade?[p.verifiedTrade.quantity,p.verifiedTrade.symbol].filter(Boolean).join(' '):p.text.slice(0,180))}</b></span>${icon('chevron')}</button>`).join('');};
+  api('/api/performance/leaderboard',undefined,{signal:request.signal}).then(d=>{if(!current())return;for(const e of d.entries){const node=host.querySelector('[data-home-owner="'+CSS.escape(e.author.id)+'"] [data-home-return]');if(node&&e.performance.roi!=null){node.textContent=pct(e.performance.roi)+' · 30d ROI';node.classList.add(e.performance.roi>=0?'positive':'negative');}}}).catch(()=>{});
   const key=owner+':'+[...following].join(','),cached=homeActivity.get(key);if(cached&&Date.now()-cached.at<30000){paintActivity(cached.data);return;}
   api('/api/posts?mode='+(following.size?'following':'for-you')+'&feed=latest',undefined,{signal:request.signal}).then(d=>{if(current()){homeActivity.clear();homeActivity.set(key,{data:d,at:Date.now()});paintActivity(d);}}).catch(()=>{});
  }
  const invalidate=()=>{pages.clear();boards.clear();primed?.controller.abort();primed=null;};
- function prime(){
+ function prime(){return;
   if(primed)return;
   const request=new AbortController();
   primed={controller:request,at:Date.now(),promise:api('/api/discover?q=&scope=all',undefined,{signal:request.signal}).catch(()=>null)};
@@ -42,7 +44,7 @@ export function experienceUI(c){
  const homeViews=new Set(['home','explore','launchpad','launch','payments','analytics','swipe','token']);
  const section=()=>S.view==='explore'?'markets':S.view==='swipe'?'swipe':['launchpad','launch','payments','analytics'].includes(S.view)?'launch':S.homeSection||'markets';
  function homeHeader(){
-  return `<header class="rx-home-head"><div><h1 class="rx-home-brand" aria-label="Rally">rally<span class="rx-brand-dot" aria-hidden="true"></span></h1><div class="rx-head-actions"><button class="r-icon-button" data-nav="notifications" aria-label="Notifications">${icon('bell')}${S.boot?.unread?'<i class="rx-notice-dot"></i>':''}</button><button class="r-icon-button" data-action="search" aria-label="Search Rally">${icon('search')}</button></div></div><nav class="rx-home-tabs" aria-label="Home sections">${[['markets','Markets'],['launch','Launch'],['swipe','Swipe'],['feed','Feed']].map(([id,name])=>`<button data-action="home-section" data-id="${id}" aria-current="${section()===id?'page':'false'}">${name}</button>`).join('')}</nav></header>`;
+  return `<header class="rx-home-head"><div><h1 class="rx-home-brand" aria-label="Rally">rally<span class="rx-brand-dot" aria-hidden="true"></span></h1><div class="rx-head-actions"><button class="r-icon-button" data-nav="notifications" aria-label="Notifications">${icon('bell')}${S.boot?.unread?'<i class="rx-notice-dot"></i>':''}</button></div></div><nav class="rx-home-tabs" aria-label="Home sections">${[['markets','Markets'],['launch','Launch'],['swipe','Swipe']].map(([id,name])=>`<button data-action="home-section" data-id="${id}" aria-current="${section()===id?'page':'false'}">${name}</button>`).join('')}</nav></header>`;
  }
  function decorateHome(){
   if(!homeViews.has(S.view))return;
@@ -53,7 +55,7 @@ export function experienceUI(c){
  function enterPage(){
   motion.enterPage();
  }
- function dispose(){generation++;controller?.abort();homeController?.abort();observer?.disconnect();clearTimeout(searchTimer);loadingMore=false;}
+ function dispose(){social.dispose();generation++;controller?.abort();homeController?.abort();observer?.disconnect();clearTimeout(searchTimer);loadingMore=false;}
  const rate=p=>p?.roi==null?'—':pct(p.roi);
  const status=p=>p?.roi==null?'No verified returns':'Realized ROI · 30d';
  function tile(item,index=0){
@@ -67,7 +69,7 @@ export function experienceUI(c){
   </button>`;
  }
  const skeleton=()=>`<div class="rx-grid rx-grid-skeleton" aria-label="Loading discovery" role="status">${Array.from({length:9},()=>'<div></div>').join('')}</div>`;
- async function discover(){
+ async function legacyDiscover(){
   const seq=generation;S.discoverQuery||='';S.discoverScope||='all';
   $('#page').innerHTML=`<header class="rx-discover-head"><div><h1>Discover</h1><button class="r-icon-button" data-nav="feeds" aria-label="Manage algorithms">${icon('feeds')}</button></div><label class="rx-search">${icon('search')}<input id="discover-search" type="search" autocomplete="off" placeholder="Search people, posts, algorithms" aria-label="Search discovery" value="${esc(S.discoverQuery)}"><button type="button" data-action="discover-clear" aria-label="Clear search" ${S.discoverQuery?'':'hidden'}>${icon('close')}</button></label><div class="rx-discover-filters" role="group" aria-label="Discovery filter">${[['all','For you'],['algorithms','Algorithms'],['photos','Photos'],['videos','Videos']].map(([id,title])=>`<button data-action="discover-filter" data-id="${id}" aria-pressed="${S.discoverScope===id}">${title}</button>`).join('')}</div></header><div id="discover-content">${skeleton()}</div>`;
   $('#discover-search').addEventListener('input',e=>{S.discoverQuery=e.target.value;const clear=$('[data-action=discover-clear]');if(clear)clear.hidden=!S.discoverQuery;clearTimeout(searchTimer);controller?.abort();searchTimer=setTimeout(()=>load(false,seq),180);});
@@ -125,7 +127,7 @@ export function experienceUI(c){
   const d=S.discoveryPreview,p=d?.performance;if(!p)return;
   modal('Verified returns',`<p class="rx-method">${esc(p.basis)}</p><p class="rx-method">Only finalized USDC spot buy/sell pairs recorded in Rally are included. Open positions, perpetuals, quoted prices and feed engagement are excluded.</p>${p.proofs.length?'<div class="rx-proof-list">'+p.proofs.map(tx=>`<a href="https://monadvision.com/tx/${esc(tx)}" target="_blank" rel="noopener noreferrer">${esc(tx.slice(0,10)+'…'+tx.slice(-6))}${icon('external')}</a>`).join('')+'</div>':'<p class="rx-method">No verified closed trades yet.</p>'}${d.feed.owner===S.boot.me?.id?`<div class="rx-sharing"><p class="rx-method">Publishing shows the return and supporting transaction links publicly.</p><button class="r-btn" data-action="discover-performance-sharing" data-id="${esc(d.feed.id)}" aria-pressed="${d.performancePublic}">${d.performancePublic?'Stop publishing returns':'Publish verified returns'}</button></div>`:''}`,'rx-method-modal');
  }
- async function leaderboard(){
+ async function legacyLeaderboard(){
   const seq=generation;S.leaderKind||='all';
   $('#page').innerHTML=`<header class="rx-leader-head"><div><h1>Leaderboard</h1><span>Realized ROI · 30d</span></div><button class="r-btn small" data-action="weekly-league">Weekly league</button><div class="rx-leader-filters" role="group" aria-label="Leaderboard creator type">${[['all','Everyone'],['human','People'],['agent','Agents']].map(([id,label])=>`<button data-action="leader-filter" data-id="${id}" aria-pressed="${S.leaderKind===id}">${label}</button>`).join('')}</div></header><div id="leader-results">${loading()}</div>`;
   controller=new AbortController();
@@ -136,9 +138,10 @@ export function experienceUI(c){
   }catch(error){if(error.name!=='AbortError'&&seq===generation)$('#leader-results').innerHTML=empty('Rankings unavailable',esc(error.message),'<button class="r-btn" data-action="leader-retry">Retry</button>');}
  }
  async function handle(action,id,el){
+  if(await social.handle(action,id,el))return true;
   if(action==='home-section'){
    S.homeSection=id;closeModal();
-   await navigate(id==='launch'?'launchpad':id==='swipe'?'swipe':'home');return true;
+   await navigate(id==='launch'?'launchpad':id==='swipe'?'swipe':id==='feed'?'communities':'home');return true;
   }
   if(action==='discover-preview'){await preview(id);return true;}
   if(action==='discover-more'){await load(true);return true;}
@@ -160,5 +163,5 @@ export function experienceUI(c){
   if(action==='leader-retry'){await leaderboard();return true;}
   return false;
  }
- return {homeHeader,decorateHome,enterPage,discover,leaderboard,handle,dispose,invalidate,prime,homeViews,section};
+ return {homeHeader,decorateHome,enterPage,discover:social.search,leaderboard:social.leaderboard,communityHeader:social.communityHeader,handle,dispose,invalidate,prime,homeViews,section};
 }

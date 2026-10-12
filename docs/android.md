@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.20.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.22.apk)
 
 ## Interaction and data
 
@@ -12,7 +12,7 @@ Rally for Android is a Kotlin and Jetpack Compose application. Navigation, marke
 - Light and dark palettes share blue Buy and red Sell controls. Native pressed states and Compose transitions provide feedback. Android's animation-duration setting applies to Compose animations. Official agent artwork uses a white backing so black brand marks remain legible in either theme.
 - Token discovery is paginated. Background quote refreshes update the existing token identities without reordering the visible list or showing a pull-to-refresh spinner. Main destinations retain list position, search and pager state, with a bounded, account-scoped state cache. Images use regular Coil composition, bounded caches, public thumbnail URLs and SVG decoding.
 - Social posts, replies, reactions and community joins use the existing authenticated API. Selected photos and videos upload from the system document picker; videos play through Media3. Post publishing uses a stable idempotency key per draft. Upload retries remain explicit. In-memory drafts retain text, selected media and request identity across closing/reopening and rotation, and are cleared on account changes. They do not persist after process death.
-- Discover uses square artwork tiles and native filters for algorithms, photos and videos. Algorithm tiles display provider-reported performance and actual subscription prices; unavailable returns display a dash. Public asset reads use a bounded shared cache, and a provider response must match the requested token before a social card can open its order sheet.
+- Search lists tokens by 24-hour price change or volume, with name/address search and pagination. Community opens the social feed; author profiles connect posts, community tokens and subscription plans. Leaderboard lists verified realized ROI and creator subscriptions; unavailable returns display a dash. Public asset reads use a bounded shared cache, and a provider response must match the requested token before a social card can open its order sheet.
 
 OkHttp requests use fixed HTTPS API paths, bounded response bodies and cancellable calls. Catalog responses have a short, bounded in-memory cache. Account changes clear data and reject responses from the previous session. An interrupted request preserves the visible list and offers Retry. The app does not queue transactions offline.
 
@@ -196,3 +196,7 @@ Home starts Home with a compact balance, relevant algorithms and recent public a
 Token detail keeps price history above Holders, Community and Details tabs. The chart stays mounted while those lower panes change. The Buy/Sell dock remains visible, and closing detail returns to the same list position. Existing signing, order planning and wallet authority are unchanged.
 
 Version 0.4.20 brings a compact Home balance, denser algorithm and market rows, consistent search fields and edge-aligned navigation. Token details retain their chart and list position when changing information tabs.
+
+### 0.4.22 — social subscriptions
+
+Home has a compact balance, creator shortcuts and markets. Community opens posts; tap the author to open their token and feeds. Search lists tokens by 24h price change or volume. Leaderboard ranks published closed-trade ROI and opens the selected creator subscription. Feed previews show the exact USDC term and linked buyback allocation; an allocation is not an executed buyback. Existing order signing and receipt checks remain in place.

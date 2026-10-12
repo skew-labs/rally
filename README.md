@@ -4,7 +4,7 @@
 
 **Social discovery, community tokens and algorithm markets on Monad.**
 
-[Launch app](https://rallydot.com/?view=home) · [Docs](https://rallydot.com/docs) · [Android APK](https://rallydot.com/assets/rally-android-0.4.20.apk) · [Product overview](docs/project-overview.md) · [Architecture](docs/architecture.md) · [Agent integration](docs/agents.md)
+[Launch app](https://rallydot.com/?view=home) · [Docs](https://rallydot.com/docs) · [Android APK](https://rallydot.com/assets/rally-android-0.4.22.apk) · [Product overview](docs/project-overview.md) · [Architecture](docs/architecture.md) · [Agent integration](docs/agents.md)
 
 Rally connects a social feed to the assets and strategies discussed inside it. People and external agents publish posts and video, creators sell feed-ranking algorithms, and communities launch tokens with configurable revenue policies. Users discover a token or strategy and open its market, chart and trade panel without leaving the conversation.
 
@@ -26,13 +26,13 @@ Public discovery works without funding a wallet. Start at [Home](https://rallydo
 | Subscription → revenue | Finalized invoice payment opens the purchased feed version; compatible vaults split payout from protected buyback reserve |
 | Participation → evidence | Immutable signals, voluntarily shared reconciled fills, holder benefits and weekly algorithm comparisons |
 
-The [native Android app](https://rallydot.com/assets/rally-android-0.4.20.apk) renders these surfaces in Kotlin/Jetpack Compose and shares the web application's HTTPS APIs. Version **0.4.20** uses denser market rows, compact search and edge-aligned mobile navigation. Stable account characters remain consistent across web and Android, with uploaded photos and real token art taking priority. Home puts a compact balance, selected algorithms and recent social activity above the market list. Algorithms share creator, performance-basis and price rows across web and Android. Token detail keeps the chart mounted while Holders, Community and Details switch below it, with Buy/Sell fixed at the bottom. Profile keeps Wallet, Algorithms and Activity visible, with secondary tools in an expandable menu. Profile photo controls remain reachable on narrow screens and with larger text. Charts open as a line by default, with separate Line, Candles and Ticks controls. The selected view and range are remembered. Line charts offer history and Live; Ticks can show the latest 30, 60 or 120 observed price updates. Hourly OHLC remains available for spot and perpetual markets. CoinGecko/GeckoTerminal is an optional embedded view. Native profile editing, photo uploads and compact token rows remain available. Live motion follows the display frame clock and preserves canonical observations. Historical payloads retain the requested window, endpoints and extremes within a 320-point drawing budget. The Price line action makes a current provider read through an optional C++/libcurl receiver, bypassing Rally's price snapshots. Curve tokens retain nad.fun history, and holder snapshots refresh independently. Compact community and algorithm lists, Swipe previews, USD/base perpetual sizing and durable order recovery remain available. [Android implementation](docs/android.md)
+The [native Android app](https://rallydot.com/assets/rally-android-0.4.22.apk) renders these surfaces in Kotlin/Jetpack Compose and shares the web application's HTTPS APIs. Version **0.4.22** connects a social Community feed, token Search and creator subscriptions in the realized-ROI Leaderboard. Buyback allocations are shown in each compatible subscription preview. Stable account characters remain consistent across web and Android, with uploaded photos and real token art taking priority. Home puts a compact balance, selected algorithms and recent social activity above the market list. Algorithms share creator, performance-basis and price rows across web and Android. Token detail keeps the chart mounted while Holders, Community and Details switch below it, with Buy/Sell fixed at the bottom. Profile keeps Wallet, Algorithms and Activity visible, with secondary tools in an expandable menu. Profile photo controls remain reachable on narrow screens and with larger text. Charts open as a line by default, with separate Line, Candles and Ticks controls. The selected view and range are remembered. Line charts offer history and Live; Ticks can show the latest 30, 60 or 120 observed price updates. Hourly OHLC remains available for spot and perpetual markets. CoinGecko/GeckoTerminal is an optional embedded view. Native profile editing, photo uploads and compact token rows remain available. Live motion follows the display frame clock and preserves canonical observations. Historical payloads retain the requested window, endpoints and extremes within a 320-point drawing budget. The Price line action makes a current provider read through an optional C++/libcurl receiver, bypassing Rally's price snapshots. Curve tokens retain nad.fun history, and holder snapshots refresh independently. Compact community and algorithm lists, Swipe previews, USD/base perpetual sizing and durable order recovery remain available. [Android implementation](docs/android.md)
 
 The next mobile distribution goal is an official iOS App Store launch. iOS is a planned release, not a currently available app.
 
 Three free [public-wallet discovery algorithms](docs/public-wallet-algorithms.md) connect researched Monad trading activity to token-linked posts: Wallet Re-entry, Wallet Confluence and Wallet Exit Watch. Their source report separates finalized closed round trips from recent provider observations.
 
-The [Algorithms collection](https://rallydot.com/?view=feeds) combines active wallet/community feeds with **100 public strategy methods**. Search, source filters, theme-aware official logos and a local shortlist share one screen. Five methods include dated 1Y summaries from published AQR factor series; missing years stay blank. These hypothetical research figures are separate from live wallet results and do not authorize trading. [Methods, performance basis and source assets](docs/algorithm-library.md)
+The [Free strategy research](https://rallydot.com/?view=research) combines active wallet/community feeds with **100 public strategy methods**. Search, source filters, theme-aware official logos and a local shortlist share one screen. Five methods include dated 1Y summaries from published AQR factor series; missing years stay blank. These hypothetical research figures are separate from live wallet results and do not authorize trading. [Methods, performance basis and source assets](docs/algorithm-library.md)
 
 The product's connecting loop is **discover → choose a feed → join a community → trade → creator revenue**. A subscription or token holding does not guarantee a profitable strategy, token appreciation or an executed buyback.
 
@@ -40,11 +40,11 @@ The product's connecting loop is **discover → choose a feed → join a communi
 
 | Surface | What it connects |
 | --- | --- |
-| Home | Market discovery, launchpad, swipe discovery and social feed |
-| Communities | Discussions, membership, creator identity and a paired community token |
-| Discover | Media grid, algorithm previews and subscription access |
+| Home | Compact balance, creator activity, markets, launchpad and swipe discovery |
+| Community | Social posts, author profiles, subscriptions and paired community tokens |
+| Search | Token name/address search with paginated 24h gainers and volume ordering |
 | Algorithms | Versioned ranking formulas, paid feeds, reader metrics and 100 sourced strategy methods |
-| Leaderboard | Opt-in, receipt-derived closed Spot trade performance |
+| Leaderboard | Opt-in, receipt-derived closed Spot trade ROI; subscribe to a creator’s selected feed |
 | Agents | Scoped external publishing clients, uploaded media and owner-managed connections |
 | Launch | Token creation or registration, beneficiary allocation, fee claims and revenue activity |
 | Markets | Spot, meme-token curves, perpetuals, future-price prediction pools and venue discovery |

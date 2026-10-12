@@ -26,7 +26,8 @@ fun discoveryCreator(feed: JSONObject,people: List<JSONObject>): Person {
 }
 fun homeAlgorithms(boot: JSONObject?): List<JSONObject> {
     val all=boot?.objects("feeds").orEmpty();val following=boot?.objects("people").orEmpty().filter { it.optBoolean("following") }.map { it.string("id") }.toSet()
-    return (all.filter { it.string("id")==boot?.string("activeFeed") && it.string("owner")!="rally" || it.string("owner") in following || (it.number("price") ?: 0.0)>0 && it.optBoolean("access") }+all.filter { !it.optJSONObject("research")?.string("wallet").isNullOrBlank() }+all.filter { it.has("algorithm_version") && !it.isNull("algorithm_version") }).distinctBy { it.string("id") }.take(2)
+    val creators=all.filter { it.string("owner")!="rally" }
+    return (creators.filter { it.string("owner") in following || (it.number("price") ?: 0.0)>0 && it.optBoolean("access") }+creators).distinctBy { it.string("owner") }.take(8)
 }
 
 @Composable fun HomeOverview(vm: RallyViewModel,onAlgorithm: (JSONObject)->Unit,onAlgorithms: ()->Unit,onPortfolio: ()->Unit,onPost: (Post)->Unit) {
@@ -35,25 +36,36 @@ fun homeAlgorithms(boot: JSONObject?): List<JSONObject> {
     val following=state.boot?.objects("people").orEmpty().any { it.optBoolean("following") }
     val key="home-activity:$owner:$following"
     LaunchedEffect(owner,following,state.boot!=null) { if(state.boot!=null)vm.load(key,"/api/posts?mode="+(if(following)"following" else "for-you")+"&feed=latest","posts") }
+    LaunchedEffect(owner) { vm.load("home-returns:$owner","/api/performance/leaderboard","entries") }
     LaunchedEffect(wallet) { if(wallet.isNotBlank())vm.loadPortfolio() }
     val balance=state.portfolio?.takeIf { it.string("wallet").equals(wallet,true) }?.optJSONObject("valuation")
-    val narrow=androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp<600
-    val feeds=homeAlgorithms(state.boot).take(if(narrow)1 else 2);val post=state.pages[key]?.items?.firstOrNull()?.let(Post::parse)
+    val feeds=homeAlgorithms(state.boot);val post=state.pages[key]?.items?.firstOrNull()?.let(Post::parse)
     Column(Modifier.fillMaxWidth().padding(horizontal=16.dp)) {
-        Row(Modifier.fillMaxWidth().clickable { if(wallet.isBlank())vm.showWallet() else onPortfolio() }.padding(top=6.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically) {
-            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                Text(if(balance?.optBoolean("partial")==true)"Priced balance" else if(wallet.isBlank())"Your Rally" else "Your balance",fontSize=12.sp,lineHeight=15.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(money(balance?.number("valueUSD")),fontSize=28.sp,lineHeight=34.sp,fontWeight=FontWeight.Medium,letterSpacing=(-.8).sp)
-                val change=balance?.number("change24hPercent")
-                if(wallet.isNotBlank())Text(if(change!=null)String.format(Locale.US,"%+.2f%% · 24h price change",change) else if(state.portfolio==null)"Updating balances…" else "24h change unavailable",fontSize=11.sp,lineHeight=14.sp,color=if(change==null)MaterialTheme.colorScheme.onSurfaceVariant else performanceInk(change))
+        Row(Modifier.fillMaxWidth().heightIn(min=60.dp),verticalAlignment=Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).clickable { if(wallet.isBlank())vm.showWallet() else onPortfolio() }) {
+                Text(if(balance?.optBoolean("partial")==true)"Priced balance" else "Balance",fontSize=11.sp,lineHeight=14.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Text(money(balance?.number("valueUSD")),fontSize=27.sp,lineHeight=34.sp,fontWeight=FontWeight.Medium,letterSpacing=(-.8).sp)
+                    balance?.number("change24hPercent")?.let { change->Text(String.format(Locale.US,"%+.2f%%",change),fontSize=11.sp,color=performanceInk(change)) }
+                }
             }
-            Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.onSurface) { Box(Modifier.heightIn(min=44.dp).widthIn(min=84.dp).padding(horizontal=16.dp),contentAlignment=Alignment.Center){Text(if(wallet.isBlank())"Connect" else "Wallet",fontSize=13.sp,lineHeight=16.sp,fontWeight=FontWeight.Medium,color=MaterialTheme.colorScheme.surface)} }
+            TextButton(onClick={if(wallet.isBlank())vm.showWallet() else onPortfolio()}){Text(if(wallet.isBlank())"Connect" else "Wallet",fontSize=12.sp)}
         }
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text(if(following)"Your algorithms" else "Algorithms",Modifier.weight(1f),fontSize=13.sp,lineHeight=17.sp,fontWeight=FontWeight.Medium);TextButton(onClick=onAlgorithms){Text("See all",fontSize=12.sp,lineHeight=15.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)} }
-        feeds.forEach { f->AlgorithmListRow(f,discoveryCreator(f,state.boot?.objects("people").orEmpty())) { onAlgorithm(algorithmItem(f)) } }
-        if(post!=null)Row(Modifier.fillMaxWidth().clickable { onPost(post) }.padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            ProfileArtwork(post.author.image,post.author.name,28.dp,identity=post.author.avatarIdentity)
-            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) { Text(post.author.name+" · "+if(following)"Following" else "Latest activity",fontSize=10.sp,lineHeight=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis);Text(post.text,fontSize=12.sp,lineHeight=15.sp,maxLines=1,overflow=TextOverflow.Ellipsis) }
+        Row(Modifier.fillMaxWidth().heightIn(min=36.dp),verticalAlignment=Alignment.CenterVertically) { Text(if(following)"Following" else "Traders & agents",Modifier.weight(1f),fontSize=12.sp,fontWeight=FontWeight.Medium);TextButton(onClick=onAlgorithms){Text("Leaderboard",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)} }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            feeds.forEach { f->val p=discoveryCreator(f,state.boot?.objects("people").orEmpty())
+                Surface(shape=RoundedCornerShape(14.dp),color=MaterialTheme.colorScheme.surfaceVariant) {
+                    Row(Modifier.width(190.dp).heightIn(min=66.dp).clickable{onAlgorithm(algorithmItem(f))}.padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        ProfileArtwork(p.image,p.name,32.dp,identity=p.avatarIdentity)
+                        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){Text(p.name,fontSize=12.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis);Text(algorithmTitle(f),fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis);Text(state.pages["home-returns:$owner"]?.items?.firstOrNull { it.optJSONObject("author")?.string("id")==f.string("owner") }?.optJSONObject("performance")?.number("roi")?.let { algorithmPercent(it)+" · 30d ROI" } ?: subscriptionPrice(f),fontSize=10.sp,color=MaterialTheme.colorScheme.primary,maxLines=1,overflow=TextOverflow.Ellipsis)}
+                    }
+                }
+            }
+            if(feeds.isEmpty())state.boot?.objects("people")?.take(5)?.forEach { j->val p=Person.parse(j);TextButton(onClick=onAlgorithms){ProfileArtwork(p.image,p.name,28.dp,identity=p.avatarIdentity);Spacer(Modifier.width(6.dp));Text(p.name,fontSize=12.sp,maxLines=1)} }
+        }
+        if(post!=null)Row(Modifier.fillMaxWidth().heightIn(min=48.dp).clickable { onPost(post) }.padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            ProfileArtwork(post.author.image,post.author.name,26.dp,identity=post.author.avatarIdentity)
+            Column(Modifier.weight(1f)){Text(post.author.name+" · "+(post.raw.optJSONObject("verifiedTrade")?.let { it.string("label").ifBlank { it.string("side").replaceFirstChar { c->c.uppercase() } } } ?: "Posted"),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis);Text(post.raw.optJSONObject("verifiedTrade")?.let { it.string("quantity")+" "+it.string("symbol") } ?: post.text,fontSize=12.sp,lineHeight=16.sp,maxLines=1,overflow=TextOverflow.Ellipsis)}
             Icon(Icons.Outlined.ChevronRight,null,Modifier.size(16.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

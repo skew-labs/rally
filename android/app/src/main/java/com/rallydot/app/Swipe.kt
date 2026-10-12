@@ -45,7 +45,7 @@ import kotlin.math.abs
             listOf("Spot","Algorithms","Perps","Prediction","Memes").forEach { name->TextButton(onClick={mode=name},modifier=Modifier.heightIn(min=44.dp).semantics { selected=mode==name;contentDescription=name },shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(containerColor=if(mode==name)MaterialTheme.colorScheme.surfaceContainer else Color.Transparent,contentColor=if(mode==name)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)) { Text(name,fontSize=12.sp) } }
         }
         if(mode=="Algorithms") {
-            val feeds=rankedAlgorithms(state.boot?.objects("feeds").orEmpty())
+            val feeds=rankedAlgorithms(state.boot?.objects("feeds").orEmpty().filter { it.string("owner")!="rally" })
             if(feeds.isEmpty()) { if(state.boot==null)LoadingRows() else EmptyState("No algorithms yet") }
             else key("algorithm-deck") { NativeSwipeDeck(feeds.map { it.string("id") },Modifier.weight(1f)) { index->AlgorithmSwipeCard(feeds[index]){onAlgorithm(algorithmItem(feeds[index]))} } }
         } else if(mode=="Memes")NadSwipeScreen(vm,onAsset)
@@ -87,12 +87,12 @@ import kotlin.math.abs
                 Row(verticalAlignment=Alignment.CenterVertically) { ProfileArtwork(post.author.image,post.author.name,36.dp,identity=post.author.avatarIdentity);Column(Modifier.weight(1f).padding(start=10.dp)) { Text(post.author.name,style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis);Text("@${post.author.handle} · ${age(post.created)}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis) };if(post.author.agent)Text("Agent",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
                 Text(post.text,Modifier.clickable { onPost(post) },maxLines=if(short)3 else if(post.media!=null)4 else 7,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodyLarge)
                 if(!short && post.media!=null) { val media=post.media;val poster=safeImage(media.string("poster",media.string("url")));if(poster!=null)AsyncImage(poster,"Post media",Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(16.dp)).clickable { onPost(post) },contentScale=androidx.compose.ui.layout.ContentScale.Fit) else Spacer(Modifier.weight(1f)) }
-                else Spacer(Modifier.weight(1f))
+                else if(!short && asset!=null)SwipePriceHistory(vm,asset!!,Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
                 if(!short)TextButton(onClick={onPost(post)},contentPadding=PaddingValues(0.dp)) { Text("Read more",color=MaterialTheme.colorScheme.onSurfaceVariant,fontSize=12.sp) }
             } else {
                 Text(if(mode=="Prediction")"Price prediction" else "Perpetual",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 fixed?.let { a->Row(verticalAlignment=Alignment.CenterVertically) { TokenArtwork(a,if(short)44.dp else 64.dp);Text(a.symbol,Modifier.padding(start=14.dp),fontSize=if(short)22.sp else 30.sp,fontWeight=FontWeight.SemiBold) };Text(money(a.price),fontSize=if(short)26.sp else 38.sp,fontWeight=FontWeight.Medium) }
-                Spacer(Modifier.weight(1f))
+                if(!short && fixed!=null && mode!="Prediction")SwipePriceHistory(vm,fixed,Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
                 if(mode=="Prediction") { Fact("Pool", "#"+item.string("id"));Fact("Entry stake",item.string("stake")+" "+item.string("stakeAsset"));Fact("Status",item.string("state").replace('_',' ')) }
             }
             val a=asset
