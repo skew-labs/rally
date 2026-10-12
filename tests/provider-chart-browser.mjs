@@ -31,11 +31,11 @@ try{
   await page.goto(origin+'/?view=home&section=markets&tab=memes');await page.locator('.r-market-buy').waitFor();
   await page.locator('.r-market-buy').click();await page.locator('#nad-chart iframe').waitFor();
   const frame=page.locator('#nad-chart iframe');assert.match(await frame.getAttribute('src'),new RegExp('/monad/tokens/'+id));assert.equal(await frame.getAttribute('sandbox'),'allow-scripts allow-same-origin');
-  assert.equal(reads.length,0);await page.locator('[data-action=nad-interval][data-id="240"]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart iframe')?.src.includes('resolution=4h'));
+  assert.equal(new URL(await frame.getAttribute('src')).searchParams.get('resolution'),'1m');assert.equal(reads.length,0);await page.locator('[data-action=nad-interval][data-id="240"]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart iframe')?.src.includes('resolution=4h'));
   await page.locator('[data-action=nad-chart-line]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.series==='line');assert.equal(reads.length,1);
   await page.locator('[data-action=nad-chart-retry]').count();
   const geometry=await page.evaluate(()=>({pageOverflow:document.documentElement.scrollWidth>innerWidth+1,panelOverflow:document.querySelector('.r-nad-content').scrollWidth>document.querySelector('.r-nad-content').clientWidth+1}));assert(!geometry.pageOverflow&&!geometry.panelOverflow);
-  await page.locator('[data-action=nad-interval][data-id="15"]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.interval==='15');assert.equal(reads.length,2,'Every line interval must perform a fresh provider read');
+  await page.locator('[data-action=nad-line-period][data-id="7D"]').click();await page.waitForFunction(()=>document.querySelector('#nad-chart')?.dataset.interval==='7D');assert.equal(reads.length,2,'Every line interval must perform a fresh provider read');
   await page.screenshot({path:`${evidence}/provider-${width}-${theme}.png`});assert.deepEqual(errors,[]);results.push({width,theme,...geometry,providerReads,freshReads:reads.length,writes:0});await context.close();
  }
  // A third-party coin script never receives Rally's origin, storage or wallet.

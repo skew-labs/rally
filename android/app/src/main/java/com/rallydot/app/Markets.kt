@@ -177,6 +177,7 @@ import kotlin.math.abs
     var chartPeriod by remember(asset.key) { mutableStateOf(period) }
     var trade by rememberSaveable(asset.key) { mutableStateOf(asset.raw.has("nativeSide")) }
     val provider=remember(asset.key) { providerTarget(asset) }
+    var providerInterval by rememberSaveable(asset.key) { mutableStateOf("1m") }
     var providerDisabled by rememberSaveable(asset.key) { mutableStateOf(false) }
     var side by rememberSaveable(asset.key) { mutableStateOf(asset.raw.string("nativeSide","buy")) }
     val app by vm.state.collectAsStateWithLifecycle()
@@ -198,7 +199,8 @@ import kotlin.math.abs
         if(trade || provider!=null&&!providerDisabled){chartLoading=false;return@LaunchedEffect}
         chartError=null;chartLoading=true
         try {
-            val history=if(provider!=null)vm.freshChart(asset,period) else vm.chart(asset,period)
+            val history=if(!asset.raw.optBoolean("nadfun") || asset.raw.optBoolean("graduated"))vm.freshChart(asset,period) else vm.chart(asset,period)
+            scrubbing.value=null
             chart=history.takeIf { chartPoints(it).isNotEmpty() } ?: referenceChart(asset) ?: history
             chartPeriod=period
             if(chartPoints(chart!!).isEmpty())chartError="No chart history yet"
@@ -244,13 +246,14 @@ import kotlin.math.abs
                         TextButton(onClick={providerDisabled=true}) { Text("Price line") }
                     }
                     if(!compactTrade && !trade)Box(Modifier.fillMaxWidth().animatedHeight(graphHeight).clipToBounds()) {
-                        if(provider!=null&&!providerDisabled)ProviderPriceChart(provider,MaterialTheme.colorScheme.surface.luminance()<.5f,{providerDisabled=true})
+                        if(provider!=null&&!providerDisabled)ProviderPriceChart(provider,MaterialTheme.colorScheme.surface.luminance()<.5f,providerInterval,{providerDisabled=true})
                         else if(points.isNotEmpty()) {
                             PriceChart(points,{scrubbing.value=it})
                             if(chartLoading)LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
                         }
                         else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { if(chartError!=null)Text(chartError!!,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) else CircularProgressIndicator(Modifier.size(24.dp),strokeWidth=2.dp) }
                     }
+                    if(!trade && provider?.token!=null&&!providerDisabled)Segmented(listOf("1m","15m","1h","4h"),providerInterval,{providerInterval=it})
                     if(!trade && (provider==null||providerDisabled))Segmented(if(asset.raw.optBoolean("nadfun"))listOf("1D","7D") else listOf("1D","7D","1M"),period,{period=it})
                     if(!keyboard && !trade) {
                         if(provider==null||providerDisabled)chart?.let { Text(it.string("reference")+if(it.optBoolean("quoteOnly"))if(chartLoading)" · Loading history" else " · No recent history" else " · $chartPeriod"+if(chartLoading)" · Updating…" else if(it.optBoolean("stale") || chartError!=null)" · Last known" else "",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }

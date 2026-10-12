@@ -1,6 +1,7 @@
 // Provider-rendered charts are isolated from Rally authentication and wallets.
 const coins={MON:'monad',BTC:'bitcoin',ETH:'ethereum',SOL:'solana',HYPE:'hyperliquid',PENGU:'pudgy-penguins',LINK:'chainlink',ONDO:'ondo-finance',AAVE:'aave',PEPE:'pepe',UNI:'uniswap',USDC:'usd-coin',ZEC:'zcash',LIT:'lighter',VVV:'venice-token',PUMP:'pump-fun',NEAR:'near',NVDAon:'nvidia-ondo-tokenized-stock',TSLAon:'tesla-ondo-tokenized-stock',AAPLon:'apple-ondo-tokenized-stock',SPYon:'spdr-s-p-500-etf-ondo-tokenized-etf',PAXG:'pax-gold'};
 export function providerTarget(asset,kind='spot'){
+  if(kind!=='spot')return null;
   const id=String(asset?.address||asset?.id||'').toLowerCase();
   if(kind==='spot'&&/^0x[0-9a-f]{40}$/.test(id)&&id!=='0x'+'0'.repeat(40)){
     if(asset.nadfun&&!asset.graduated)return null;
@@ -10,9 +11,9 @@ export function providerTarget(asset,kind='spot'){
   const coin=coins[kind==='spot'?asset?.id:asset?.symbol];
   return coin?{kind:'coin',coin}:null;
 }
-export function providerURL(target,dark=false,interval='60'){
+export function providerURL(target,dark=false,interval='1'){
   if(target?.kind!=='pool'||!/^0x[0-9a-f]{40}$/.test(target.token))return null;
-  const query=new URLSearchParams({embed:'1',info:'0',swaps:'0',light_chart:dark?'0':'1',chart_type:'price',resolution:({'1':'1m','15':'15m','60':'1h','240':'4h'})[interval]||'1h',bg_color:dark?'17181c':'ffffff'});
+  const query=new URLSearchParams({embed:'1',info:'0',swaps:'0',light_chart:dark?'0':'1',chart_type:'price',resolution:({'1':'1m','15':'15m','60':'1h','240':'4h'})[interval]||'1m',bg_color:dark?'17181c':'ffffff'});
   return 'https://www.geckoterminal.com/monad/tokens/'+target.token+'?'+query;
 }
 export function preconnectProvider(){
@@ -20,7 +21,7 @@ export function preconnectProvider(){
     const link=document.createElement('link');link.rel='preconnect';link.href=origin;link.crossOrigin='anonymous';document.head.append(link);
   }
 }
-export function mountProviderChart(host,target,{dark=false,interval='60',onFailure=()=>{}}={}){
+export function mountProviderChart(host,target,{dark=false,interval='1',onFailure=()=>{}}={}){
   if(!host||!target)return ()=>{};
   preconnectProvider();let disposed=false,timer;
   const frame=document.createElement('iframe'),channel=crypto.randomUUID();

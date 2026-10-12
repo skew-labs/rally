@@ -12,6 +12,21 @@ class ModelsTest {
         assertNull(providerTarget(token.copy(raw=JSONObject(token.raw.toString()).put("chainId",1))))
         assertNull(providerTarget(Asset.parse(JSONObject().put("id","unknown").put("symbol","BTC"))))
     }
+    @Test fun spotEmbedsOpenAtOneMinuteAndPerpsStayNative() {
+        val address="0x"+"a".repeat(40)
+        val target=ProviderTarget(token=address)
+        assertTrue(target.url(false)!!.contains("resolution=1m"))
+        assertTrue(target.url(true,"15m")!!.contains("resolution=15m"))
+        assertTrue(target.url(false,"bad")!!.contains("resolution=1m"))
+        assertNull(providerTarget(Asset.parse(JSONObject().put("id","1").put("symbol","BTC"),"perps")))
+    }
+    @Test fun compactHistoryPreservesTheWholeWindowAndRealExtremes() {
+        val points=(1..9000).map { ChartPoint(it.toLong(),if(it==100).01f else if(it==500)100000f else (it%30+2).toFloat()) }
+        val compact=compactChartPoints(points)
+        assertTrue(compact.size<=320);assertEquals(points.first(),compact.first());assertEquals(points.last(),compact.last())
+        assertEquals(.01f,compact.minOf { it.value },0f);assertEquals(100000f,compact.maxOf { it.value },0f)
+        assertTrue(compact.all { it in points });assertEquals(compact.sortedBy { it.time },compact)
+    }
     @Test fun providerChartsCannotNavigateIntoWalletsOrRallyAuthentication() {
         assertTrue(allowedProviderNavigation("https://www.geckoterminal.com/monad/tokens/0x1"))
         listOf("javascript:alert(1)","http://www.geckoterminal.com/","https://rallydot.com/","https://www.geckoterminal.com.evil.test/","https://user@www.geckoterminal.com/","https://www.geckoterminal.com:444/","metamask://connect","file:///private").forEach { assertFalse(it,allowedProviderNavigation(it)) }

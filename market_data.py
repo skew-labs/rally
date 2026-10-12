@@ -43,32 +43,55 @@ def identity(asset,kind):
     if not pair or not s.re.fullmatch(r'0x[0-9a-fA-F]{40}',pair):raise s.Problem('No indexed Monad pool chart',404,'chart_unavailable')
     return {'asset':asset,'pool':pair.lower(),'token':token['address'].lower(),'symbol':token['symbol'],'reference':'Monad pool reference','kind':kind}
 
-def series(raw,milliseconds=False):
-    points={}
+PERIOD_DAYS={'1D':1,'7D':7,'1M':30}
+POINT_BUDGET=320
+
+def compact_points(values,budget=POINT_BUDGET):
+    """Keep real endpoints and the extremes of each time bucket, never synthetic prices."""
+    if len(values)<=budget:return values
+    buckets={};start=values[0]['time'];span=max(1,values[-1]['time']-start)
+    count=(budget-2)//2
+    for point in values[1:-1]:
+        key=min(count-1,(point['time']-start)*count//span)
+        low,high=buckets.get(key,(point,point))
+        buckets[key]=(point if point['value']<low['value'] else low,point if point['value']>high['value'] else high)
+    selected={values[0]['time']:values[0],values[-1]['time']:values[-1]}
+    for low,high in buckets.values():
+        selected[low['time']]=low;selected[high['time']]=high
+    return [selected[t] for t in sorted(selected)]
+
+def series(raw,milliseconds=False,period=None):
+    points={};end=s.now();start=end-PERIOD_DAYS[period]*86400 if period else 0
     for row in raw:
         try:
             t=int(row[0]/1000) if milliseconds else int(row[0]);v=float(row[1])
-            if not 0<t<=s.now()+300 or not math.isfinite(v) or v<=0:continue
+            if not max(0,start)<=t<=end+300 or t<=0 or not math.isfinite(v) or v<=0:continue
             points[t]=v
-        except (TypeError,ValueError,IndexError):continue
+        except (TypeError,ValueError,IndexError,OverflowError):continue
     values=[{'time':t,'value':v} for t,v in sorted(points.items())]
-    if not values:raise s.Problem('No chart observations for this asset',404,'chart_unavailable')
-    return values[-3000:]
+    if not values:raise s.Problem('No chart observations in this period',404,'chart_unavailable')
+    return compact_points(values)
+
 
 def fresh_chart(asset,kind='spot',period='1D'):
     """One current provider read, without reading or writing market snapshots."""
     if period not in {'1D','7D','1M'}:raise s.Problem('Unknown chart period')
     ident=identity(asset,kind)
-    if 'pairBase' in ident:
-        coin=next((v for v in COINS.values() if v[0]==ident['symbol']),None)
-        if not coin:raise s.Problem('No CoinGecko reference for this market',404,'chart_unavailable')
-        ident={**ident,'coin':coin[1],'reference':'Global spot reference'}
     if not SLOTS.acquire(blocking=False):raise s.Problem('Chart requests are busy. Retry shortly.',503,'chart_busy')
     try:
         from native_market_transport import get
-        if 'coin' in ident:
+        if 'pairBase' in ident:
+            import perp_universe
+            end=s.now();started=time.perf_counter()
+            raw=s.http_json('https://service.leverup.xyz/v1/oracle/candles?'+urlencode({'pair_base':ident['pairBase'],'resolution':'60' if period=='1D' else '240','from':end-PERIOD_DAYS[period]*86400,'to':end,'block_chain':'MONAD'}),headers=perp_universe.HEADERS,timeout=4)
+            if str(raw.get('pairBase','')).lower()!=ident['pairBase'] or raw.get('blockChain')!='MONAD' or raw.get('executionVenue')!='POOL':raise s.Problem('Chart identity changed',502,'chart_identity')
+            observations=[[r['time'],r['close']] for r in raw.get('candles',[])]
+            points=series(observations,period=period)
+            timing={'transport':'python-venue','upstreamMs':round((time.perf_counter()-started)*1000,2),'marketCache':False}
+            source='LeverUp';source_url='https://app.leverup.xyz/'
+        elif 'coin' in ident:
             raw,timing=get('https://api.coingecko.com/api/v3/coins/'+ident['coin']+'/market_chart?'+urlencode({'vs_currency':'usd','days':{'1D':1,'7D':7,'1M':30}[period],'precision':'full'}))
-            points=series(raw.get('prices',[]),True)
+            points=series(raw.get('prices',[]),True,period)
             source='CoinGecko';source_url='https://www.coingecko.com/en/coins/'+ident['coin']
         else:
             timeframe,aggregate,limit={'1D':('minute',15,96),'7D':('hour',1,168),'1M':('day',1,30)}[period]
@@ -76,10 +99,12 @@ def fresh_chart(asset,kind='spot',period='1D'):
             meta=raw.get('meta',{})
             if ident['token'] not in {str(meta.get(k,{}).get('address','')).lower() for k in ('base','quote')}:
                 raise s.Problem('Chart token identity mismatch',502,'chart_identity')
-            points=series([[r[0],r[4]] for r in raw.get('data',{}).get('attributes',{}).get('ohlcv_list',[]) if isinstance(r,list) and len(r)==6])
+            points=series([[r[0],r[4]] for r in raw.get('data',{}).get('attributes',{}).get('ohlcv_list',[]) if isinstance(r,list) and len(r)==6],period=period)
             source='GeckoTerminal · CoinGecko';source_url='https://www.geckoterminal.com/monad/tokens/'+ident['token']
         return {**ident,'period':period,'points':points,'source':source,'sourceURL':source_url,'fetchedAt':s.now(),
-                'lastObservation':points[-1]['time'],'stale':False,'cached':False,'freshRead':True,**timing}
+                'lastObservation':points[-1]['time'],'historyStart':points[0]['time'],'historyEnd':points[-1]['time'],
+                'rangeStart':s.now()-PERIOD_DAYS[period]*86400,'rangeEnd':s.now(),'pointBudget':POINT_BUDGET,
+                'stale':False,'cached':False,'freshRead':True,**timing}
     finally:SLOTS.release()
 
 def chart(asset,kind='spot',period='1D'):
@@ -104,11 +129,11 @@ def chart(asset,kind='spot',period='1D'):
             end=s.now();days={'1D':1,'7D':7,'1M':30}[period]
             raw=s.http_json('https://service.leverup.xyz/v1/oracle/candles?'+urlencode({'pair_base':ident['pairBase'],'resolution':'60' if period=='1D' else '240','from':end-days*86400,'to':end,'block_chain':'MONAD'}),headers=perp_universe.HEADERS,timeout=4)
             if str(raw.get('pairBase','')).lower()!=ident['pairBase'] or raw.get('blockChain')!='MONAD' or raw.get('executionVenue')!='POOL':raise s.Problem('Chart identity changed',502,'chart_identity')
-            points=series([[r['time'],r['close']] for r in raw.get('candles',[])])
+            points=series([[r['time'],r['close']] for r in raw.get('candles',[])],period=period)
             source='LeverUp';source_url='https://app.leverup.xyz/'
         elif 'coin' in ident:
             url='https://api.coingecko.com/api/v3/coins/'+ident['coin']+'/market_chart?'+urlencode({'vs_currency':'usd','days':{'1D':1,'7D':7,'1M':30}[period],'precision':'full'})
-            raw=s.http_json(url,timeout=4);points=series(raw.get('prices',[]),True)
+            raw=s.http_json(url,timeout=4);points=series(raw.get('prices',[]),True,period)
             source='CoinGecko';source_url='https://www.coingecko.com/en/coins/'+ident['coin']
         else:
             timeframe='day' if period=='1M' else 'hour'
@@ -118,7 +143,7 @@ def chart(asset,kind='spot',period='1D'):
             if ident['token'] not in {str(meta.get(k,{}).get('address','')).lower() for k in ('base','quote')}:
                 raise s.Problem('Chart token identity mismatch',502,'chart_identity')
             rows=raw.get('data',{}).get('attributes',{}).get('ohlcv_list',[])
-            points=series([[r[0],r[4]] for r in rows if isinstance(r,list) and len(r)==6])
+            points=series([[r[0],r[4]] for r in rows if isinstance(r,list) and len(r)==6],period=period)
             source='GeckoTerminal · CoinGecko';source_url='https://www.geckoterminal.com/monad/pools/'+ident['pool']
         value={**ident,'period':period,'points':points,'source':source,'sourceURL':source_url,'fetchedAt':s.now(),'lastObservation':points[-1]['time'],'stale':False}
         with LOCK:

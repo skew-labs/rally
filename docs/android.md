@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.10.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.11.apk)
 
 ## Interaction and data
 
@@ -149,3 +149,10 @@ Version 0.4.9 warms holders alongside the first visible token charts and shares 
 Version 0.4.10 opens CoinGecko's official coin widget or GeckoTerminal's exact Monad token embed inside the token sheet. Only this public chart component uses an isolated WebView. It has no JavaScript wallet bridge, file access, authentication token injection or third-party cookies; navigation and permissions are restricted. Trading, holder rows and the surrounding interface remain native Compose.
 
 A provider error or the Price line action switches to a current CoinGecko/GeckoTerminal read with `fresh=1`. This path bypasses Rally's app and server market snapshots. The server's optional C++/libcurl receiver reuses HTTPS connections without reusing price responses. Provider rate limits and network latency still apply. Tokens that have not migrated from nad.fun's curve retain their supported curve chart source.
+
+
+## Minute candles and compact history
+
+Version 0.4.11 opens indexed Monad spot tokens at the official GeckoTerminal 1-minute resolution, with 15-minute, 1-hour and 4-hour controls. The provider handles candle history and rendering. Perpetual and prediction references use the native price line instead of a provider WebView. LeverUp history remains its own Monad oracle source; other supported markets label their CoinGecko spot reference.
+
+Fresh historical reads preserve the selected window and send at most 320 real observations, retaining endpoints and time-bucket extremes. The native renderer retains its drawing path during scrubbing; changing a web period updates the existing chart instance. Curve tokens retain their supported nad.fun history. No synthetic prices fill inactive periods. An embed requires the token to be indexed and the provider to permit access; the Price line fallback remains available.

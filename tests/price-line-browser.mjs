@@ -46,13 +46,19 @@ try{
    }
    window.mount();
   },{mode,theme,asset});
-  if(mode==='mini')await page.locator('[data-mini-line]').click();
+  if(mode==='mini')assert.equal(await page.locator('iframe').count(),0,'Perps use the small native line');
   await page.waitForFunction(()=>window.chartSeriesObserved?.at(-1)?.points.length===3);
   assert.deepEqual(await page.evaluate(()=>window.chartSeriesObserved.at(-1).points),points,'No invented points in sparse gaps');
   assert((await page.evaluate(()=>window.chartSeriesObserved)).every(s=>s.type==='line'));
   await page.waitForFunction(()=>window.chartCoverage?.()>.85);
   assert.equal(await page.locator('iframe').count(),0,'Basic pool charts render in-app');
   await page.screenshot({path:`${evidence}/line-${mode}-${width}-${theme}.png`});
+  if(mode==='mini'){
+   const seriesCount=await page.evaluate(()=>window.chartSeriesObserved.length);
+   await page.locator('[data-mini-period="7D"]').click();await sleep(600);
+   assert.equal(await page.evaluate(()=>window.chartSeriesObserved.length),seriesCount,'Period changes retain the renderer');
+   assert.equal(await page.locator('iframe').count(),0);assert.deepEqual(await page.evaluate(()=>window.chartSeriesObserved.at(-1).points),points);
+  }
   const before=reads;
   await page.evaluate(()=>{
    window.unmount();window.firstFrameMs=null;const at=performance.now();
@@ -63,9 +69,12 @@ try{
   if(mode==='mini'){assert.equal(reads,before+1,'Provider fallback reads current data again');assert(firstFrameMs>=300,'Fresh data cannot paint before its upstream fixture responds');}else{assert.equal(reads,before,'Warm reopen reuses observed history');assert(firstFrameMs<=30,mode+' warm first frame '+firstFrameMs);}assert.deepEqual(errors,[]);
   const plotCoverage=await page.evaluate(()=>window.chartCoverage());results.push({width,theme,mode,firstFrameMs,plotCoverage,points:3,reads,writes:0});await context.close();
  }
+ const compactProof=await browser.newPage();await compactProof.goto(origin+'/');
+ const compact=await compactProof.evaluate(async()=>{const {compactPoints}=await import('/price-line.js');const raw=Array.from({length:9000},(_,i)=>({time:i+1,value:i===100?.001:i===500?100000:2+i%30}));const actual=compactPoints(raw);return {count:actual.length,first:actual[0].time,last:actual.at(-1).time,low:Math.min(...actual.map(p=>p.value)),high:Math.max(...actual.map(p=>p.value)),actual:actual.every(p=>raw[p.time-1]===p)};});
+ assert(compact.count<=320&&compact.actual);assert.equal(compact.first,1);assert.equal(compact.last,9000);assert.equal(compact.low,.001);assert.equal(compact.high,100000);await compactProof.close();
  const context=await browser.newContext(),page=await context.newPage();
  await context.route('**/*',async r=>{const u=new URL(r.request().url());if(u.origin!==origin)return r.abort();assert.equal(r.request().method(),'GET');if(await observeChartRenderer(r))return;if(await serveModule(r,u))return;if(u.pathname==='/line-fixture')return r.fulfill({contentType:'text/html',body:html});if(u.pathname==='/api/chart')return r.fulfill({json:{asset:'MON',interval:'60',candles:[candles[0]],fetchedAt:now}});return r.continue();});
  await page.goto(origin+'/line-fixture');await page.evaluate(async()=>{const C=await import('/charts.js'),s={theme:'light',chartProvider:'tradingview',chartInterval:'60'};document.querySelector('#root').innerHTML=C.chart({id:'MON'},s);await C.mountChart({id:'MON'},s);});
  assert.deepEqual(await page.evaluate(()=>window.chartSeriesObserved.at(-1).points),[points[0]]);assert.equal(await page.locator('#market-chart').getAttribute('data-points'),'1');await context.close();
- await fs.writeFile(evidence+'/price-lines.json',JSON.stringify({results,singleObservation:true,financialTransactions:0},null,2));console.log(JSON.stringify({cases:results.length,singleObservation:true,firstFrames:results.map(r=>r.firstFrameMs)}));
+ await fs.writeFile(evidence+'/price-lines.json',JSON.stringify({results,singleObservation:true,compact,financialTransactions:0},null,2));console.log(JSON.stringify({cases:results.length,singleObservation:true,firstFrames:results.map(r=>r.firstFrameMs)}));
 }finally{await browser?.close();server.kill();}

@@ -81,7 +81,21 @@ fun referenceChart(asset: Asset,now: Long=System.currentTimeMillis()/1000): JSON
     val points=JSONArray().put(JSONObject().put("time",asset.time).put("value",price))
     return JSONObject().put("asset",asset.id).put("points",points).put("reference",asset.raw.string("priceSource","Reference quote")).put("quoteOnly",true).put("fetchedAt",asset.time)
 }
-fun chartPoints(j: JSONObject) = j.objects("points").mapNotNull { val v=it.number("value"); val t=it.optLong("time"); if(v != null && v > 0 && v.toFloat().isFinite() && t > 0 && t<=System.currentTimeMillis()/1000+300) ChartPoint(t,v.toFloat()) else null }.distinctBy { it.time }.sortedBy { it.time }.takeLast(600)
+// Bound drawing work without discarding the beginning of the requested history.
+fun compactChartPoints(points: List<ChartPoint>,budget: Int=320): List<ChartPoint> {
+    if(points.size<=budget)return points
+    val first=points.first();val last=points.last();val span=(last.time-first.time).coerceAtLeast(1);val count=(budget-2)/2
+    val buckets=mutableMapOf<Int,Pair<ChartPoint,ChartPoint>>()
+    for(i in 1 until points.lastIndex) {
+        val p=points[i];val key=(((p.time-first.time)*count)/span).toInt().coerceIn(0,count-1)
+        val (low,high)=buckets[key] ?: (p to p)
+        buckets[key]=(if(p.value<low.value)p else low) to (if(p.value>high.value)p else high)
+    }
+    val selected=mutableMapOf(first.time to first,last.time to last)
+    buckets.values.forEach { (low,high)->selected[low.time]=low;selected[high.time]=high }
+    return selected.toSortedMap().values.toList()
+}
+fun chartPoints(j: JSONObject) = compactChartPoints(j.objects("points").mapNotNull { val v=it.number("value"); val t=it.optLong("time"); if(v != null && v > 0 && v.toFloat().isFinite() && t > 0 && t<=System.currentTimeMillis()/1000+300) ChartPoint(t,v.toFloat()) else null }.distinctBy { it.time }.sortedBy { it.time })
 fun nadChart(j: JSONObject,token: String,days: Int): JSONObject {
     require(j.string("token").equals(token,true)) { "Chart token identity changed" }
     val cutoff=System.currentTimeMillis()/1000-days*86400L

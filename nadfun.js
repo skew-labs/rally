@@ -1,5 +1,5 @@
 import {mountHolders,warmHolders} from './holder-ui.js';
-import {closingPrices,priceLineOptions,fitPriceLine} from './price-line.js';
+import {closingPrices,compactPoints,priceLineOptions,fitPriceLine} from './price-line.js';
 import {providerTarget,mountProviderChart,preconnectProvider} from './provider-chart.js';
 // Social asset discovery and nad.fun's native MON routes use Rally's direct wallet flow.
 export function nadfunUI(c){
@@ -14,7 +14,7 @@ export function nadfunUI(c){
   const metrics=(t,compact=false)=>`<b data-meme-cap title="Total-supply valuation (FDV)">${cap(t)}</b><small data-meme-price aria-label="Price ${esc(price(t.price))}" title="${t.price==null?'Price unavailable':esc('$'+t.price)}">${compact?'':'Price '}${price(t.price)}${t.stale&&t.price?' · Last '+esc(age(t.referenceAt)):''}</small>`;
   const phase=t=>t.locked?'Migrating':t.graduated?'DEX':'Bonding curve';
   const marketAction=t=>`<b>${t.locked?'Migrating':t.tradeSupported===false?'Unavailable':'Buy'}</b><small>${t.graduated?'DEX':(t.progressBps/100).toFixed(1)+'% curve'}</small>`;
-  let chartApi,chartSeries,chartSequence=0,pollAt=0,chartAt=0,chartTimer,chartLibrary,providerCleanup,providerLine=false;
+  let chartApi,chartSeries,chartSequence=0,pollAt=0,chartAt=0,chartTimer,chartLibrary,providerCleanup,providerLine=false,linePeriod='1D';
   const chartRequests=new Map(),chartCache=new Map(),chartSnapshots=new Map();
   const validSnapshot=(data,id,interval)=>data?.token?.toLowerCase()===id.toLowerCase()&&String(data.interval)===String(interval)&&Number.isFinite(data.fetchedAt)&&Date.now()/1000-data.fetchedAt>=0&&Date.now()/1000-data.fetchedAt<900&&Array.isArray(data.candles)&&data.candles.length<=1200&&data.candles.every((v,i,a)=>Number.isFinite(v.time)&&v.time>0&&v.time<=Date.now()/1000+300&&(!i||v.time>a[i-1].time)&&['open','high','low','close'].every(k=>Number.isFinite(v[k])&&v[k]>=0));
   try{for(const [key,data] of JSON.parse(localStorage.getItem('rally:nad-chart-snapshots')||'[]').slice(-8)){const [id,interval]=key.split(':');if(validSnapshot(data,id,interval))chartCache.set(key,{data,at:0});}}catch{}
@@ -91,7 +91,7 @@ export function nadfunUI(c){
     const button=event.target.closest?.('[data-action=nad-token]');if(!button)return;
     preconnectProvider();
     // Warm one explicit intent at a time, rather than consuming the venue quota for a whole list.
-    if(!document.hidden&&!S.nadOverlay&&chartRequests.size===0&&/^0x[0-9a-f]{40}$/i.test(button.dataset.id)){const known=S.tokens.find(t=>t.id===button.dataset.id);if(!providerTarget(known)){readChart(button.dataset.id,S.nadInterval||'60').catch(()=>{});library().catch(()=>{});}warmHolders({api},button.dataset.id).catch(()=>{});}
+    if(!document.hidden&&!S.nadOverlay&&chartRequests.size===0&&/^0x[0-9a-f]{40}$/i.test(button.dataset.id)){const known=S.tokens.find(t=>t.id===button.dataset.id);if(!providerTarget(known)){readChart(button.dataset.id,S.nadInterval||(providerTarget(S.nadDetail)?'1':'60')).catch(()=>{});library().catch(()=>{});}warmHolders({api},button.dataset.id).catch(()=>{});}
   }
   document.addEventListener('pointerover',warmIntent,{passive:true});
   document.addEventListener('touchstart',warmIntent,{passive:true});
@@ -169,8 +169,8 @@ export function nadfunUI(c){
       }).catch(()=>{if(current()){const status=host.querySelector('#nad-chart-status');if(status)status.textContent='nad.fun · Token update delayed';}});
 
       remember(t);S.nadDetail=t;S.nadQuote=null;S.nadOrderVersion=0;S.nadSide=panel?.side||S.nadIntentSide||'buy';S.nadIntentSide=null;if(panel)S.nadOrigin=panel.context;
-      host.innerHTML=`<div class="r-page-head"><button class="nad-back r-text-button" data-action="nad-back">${icon('chevron')}${S.nadReturn?'Back':'Memes'}</button><div class="nad-token-actions"><button class="r-icon-button ${S.boot.watches.includes(t.id)?'saved':''}" data-action="watch" data-id="${esc(t.id)}" aria-label="Watch ${esc(t.symbol)}">${icon('star')}</button><button class="r-icon-button" data-action="nad-share" data-id="${esc(t.id)}" aria-label="Copy token link">${icon('share')}</button></div></div><section class="nad-identity"><div class="nad-token-title">${img(t)}<div><h1>${esc(t.name)}</h1><span>${esc(t.symbol)} <button class="r-text-button" data-action="nad-copy" data-id="${esc(t.id)}">${short(t.address)} ${icon('link')}</button></span></div></div><div class="nad-price"><span class="nad-cap-label">Market cap / FDV</span>${metrics(t)}</div></section>${c.originCard(S.nadOrigin)}<section class="nad-lifecycle"><span id="nad-phase" class="r-pill ${t.graduated?'good':''}">${phase(t)}</span><div class="nad-progress-track"><i id="nad-progress" style="width:${Math.min(100,t.progressBps/100)}%"></i></div><b id="nad-progress-label">${t.graduated?'100':(t.progressBps/100).toFixed(1)}%</b></section><section class="nad-chart-section"><div class="nad-chart-toolbar"><div class="nad-filters">${[['1','1m'],['15','15m'],['60','1h'],['240','4h']].map(([id,label])=>`<button data-action="nad-interval" data-id="${id}" class="${(S.nadInterval||'60')===id?'selected':''}">${label}</button>`).join('')}</div><span>USD</span></div><div id="nad-chart" aria-label="${esc(t.symbol)} price line chart">${loading()}</div><section id="nad-holders" class="r-holders"></section><div class="r-data-foot"><a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts™</a><span id="nad-chart-status" role="status">nad.fun data</span></div></section><div class="nad-token-bottom"><section class="nad-order"><div class="r-order-directions"><button data-action="nad-side" data-id="buy" aria-pressed="${S.nadSide==='buy'}" class="${S.nadSide==='buy'?'selected':''}">Buy</button><button data-action="nad-side" data-id="sell" aria-pressed="${S.nadSide==='sell'}" class="${S.nadSide==='sell'?'selected':''}">Sell</button></div><form id="nad-order-form"><label class="nad-amount"><span>Amount <b id="nad-input-unit">${esc(S.nadSide==='sell'?t.symbol:t.quoteSymbol||'MON')}</b></span><input name="amount" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" required aria-label="Trade amount"></label><div class="nad-slippage"><label for="nad-slippage">Slippage</label><select id="nad-slippage" name="slippage"><option value="50">0.5%</option><option value="100" selected>1%</option><option value="300">3%</option><option value="500">5%</option></select></div><small id="nad-penalty" class="r-note" ${t.snipingPenaltyBps>0?'':'hidden'}>${t.snipingPenaltyBps>0?'Early-trade penalty: '+t.snipingPenaltyBps/100+'%':''}</small><div id="nad-quote"></div><div class="r-form-error" role="alert"></div><button type="submit" class="r-btn primary full" ${t.locked||t.tradeSupported===false?'disabled':''}>${t.locked?'Migrating':t.tradeSupported===false?'Quote asset unavailable':(S.nadSide==='sell'?'Sell':'Buy')}</button></form></section><section class="nad-facts"><h2>Token</h2><div class="r-summary"><span>Network</span><b>Monad</b><span>Market</span><b id="nad-market">${phase(t)}</b><span>Creator</span><a href="https://monadvision.com/address/${esc(t.creator)}" target="_blank" rel="noopener noreferrer">${short(t.creator)} ${icon('external')}</a><span>Contract</span><a href="https://monadvision.com/token/${esc(t.address)}" target="_blank" rel="noopener noreferrer">${short(t.address)} ${icon('external')}</a>${t.holders!=null?`<span>Holders</span><b>${quantity(t.holders)}</b>`:''}${t.creatorFeeBps!=null?`<span>Creator fee</span><b>${t.creatorFeeBps/100}%</b>`:''}</div><button class="r-btn subtle full" data-action="nad-post" data-id="${esc(t.id)}">${icon('plus')}Post about ${esc(t.symbol)}</button><a class="nad-source-link" href="https://nad.fun/tokens/${esc(t.id)}" target="_blank" rel="noopener noreferrer">nad.fun ${icon('external')}</a></section></div>`;
-      const previewPainted=!providerTarget(t)&&(paintSnapshot(t.id,S.nadInterval||'60')||paintQuote(t,S.nadInterval||'60'));
+      host.innerHTML=`<div class="r-page-head"><button class="nad-back r-text-button" data-action="nad-back">${icon('chevron')}${S.nadReturn?'Back':'Memes'}</button><div class="nad-token-actions"><button class="r-icon-button ${S.boot.watches.includes(t.id)?'saved':''}" data-action="watch" data-id="${esc(t.id)}" aria-label="Watch ${esc(t.symbol)}">${icon('star')}</button><button class="r-icon-button" data-action="nad-share" data-id="${esc(t.id)}" aria-label="Copy token link">${icon('share')}</button></div></div><section class="nad-identity"><div class="nad-token-title">${img(t)}<div><h1>${esc(t.name)}</h1><span>${esc(t.symbol)} <button class="r-text-button" data-action="nad-copy" data-id="${esc(t.id)}">${short(t.address)} ${icon('link')}</button></span></div></div><div class="nad-price"><span class="nad-cap-label">Market cap / FDV</span>${metrics(t)}</div></section>${c.originCard(S.nadOrigin)}<section class="nad-lifecycle"><span id="nad-phase" class="r-pill ${t.graduated?'good':''}">${phase(t)}</span><div class="nad-progress-track"><i id="nad-progress" style="width:${Math.min(100,t.progressBps/100)}%"></i></div><b id="nad-progress-label">${t.graduated?'100':(t.progressBps/100).toFixed(1)}%</b></section><section class="nad-chart-section"><div class="nad-chart-toolbar"><div class="nad-filters">${[['1','1m'],['15','15m'],['60','1h'],['240','4h']].map(([id,label])=>`<button data-action="nad-interval" data-id="${id}" class="${(S.nadInterval||(providerTarget(S.nadDetail)?'1':'60'))===id?'selected':''}">${label}</button>`).join('')}</div><span>USD</span></div><div id="nad-chart" aria-label="${esc(t.symbol)} price line chart">${loading()}</div><section id="nad-holders" class="r-holders"></section><div class="r-data-foot"><a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView Lightweight Charts™</a><span id="nad-chart-status" role="status">nad.fun data</span></div></section><div class="nad-token-bottom"><section class="nad-order"><div class="r-order-directions"><button data-action="nad-side" data-id="buy" aria-pressed="${S.nadSide==='buy'}" class="${S.nadSide==='buy'?'selected':''}">Buy</button><button data-action="nad-side" data-id="sell" aria-pressed="${S.nadSide==='sell'}" class="${S.nadSide==='sell'?'selected':''}">Sell</button></div><form id="nad-order-form"><label class="nad-amount"><span>Amount <b id="nad-input-unit">${esc(S.nadSide==='sell'?t.symbol:t.quoteSymbol||'MON')}</b></span><input name="amount" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" required aria-label="Trade amount"></label><div class="nad-slippage"><label for="nad-slippage">Slippage</label><select id="nad-slippage" name="slippage"><option value="50">0.5%</option><option value="100" selected>1%</option><option value="300">3%</option><option value="500">5%</option></select></div><small id="nad-penalty" class="r-note" ${t.snipingPenaltyBps>0?'':'hidden'}>${t.snipingPenaltyBps>0?'Early-trade penalty: '+t.snipingPenaltyBps/100+'%':''}</small><div id="nad-quote"></div><div class="r-form-error" role="alert"></div><button type="submit" class="r-btn primary full" ${t.locked||t.tradeSupported===false?'disabled':''}>${t.locked?'Migrating':t.tradeSupported===false?'Quote asset unavailable':(S.nadSide==='sell'?'Sell':'Buy')}</button></form></section><section class="nad-facts"><h2>Token</h2><div class="r-summary"><span>Network</span><b>Monad</b><span>Market</span><b id="nad-market">${phase(t)}</b><span>Creator</span><a href="https://monadvision.com/address/${esc(t.creator)}" target="_blank" rel="noopener noreferrer">${short(t.creator)} ${icon('external')}</a><span>Contract</span><a href="https://monadvision.com/token/${esc(t.address)}" target="_blank" rel="noopener noreferrer">${short(t.address)} ${icon('external')}</a>${t.holders!=null?`<span>Holders</span><b>${quantity(t.holders)}</b>`:''}${t.creatorFeeBps!=null?`<span>Creator fee</span><b>${t.creatorFeeBps/100}%</b>`:''}</div><button class="r-btn subtle full" data-action="nad-post" data-id="${esc(t.id)}">${icon('plus')}Post about ${esc(t.symbol)}</button><a class="nad-source-link" href="https://nad.fun/tokens/${esc(t.id)}" target="_blank" rel="noopener noreferrer">nad.fun ${icon('external')}</a></section></div>`;
+      const previewPainted=!providerTarget(t)&&(paintSnapshot(t.id,S.nadInterval||(providerTarget(S.nadDetail)?'1':'60'))||paintQuote(t,S.nadInterval||(providerTarget(S.nadDetail)?'1':'60')));
       // Cached holders join the same first frame; social reads follow it.
       mountHolders({api,esc,age},$('#nad-holders'),t.id);
       const extras=()=>{if(!current())return;host.insertAdjacentHTML('beforeend','<div id="nad-launch-social"></div>');c.launchPanel?.(t);c.checkout.nad(t);};
@@ -190,7 +190,7 @@ export function nadfunUI(c){
       if(previewPainted)requestAnimationFrame(()=>setTimeout(interactive,0));else interactive();
     }catch(e){if(current())host.innerHTML=(panel?'':pageHeader('Token'))+empty('Token unavailable',esc(e.message),`<button class="r-btn" data-action="${panel?'nad-close':'nad-back'}">${panel?'Close':S.nadReturn?'Back':'Back to Memes'}</button>`);}
   }
-  async function mount(t,seq=chartSequence,interval=S.nadInterval||'60',force=false){
+  async function mount(t,seq=chartSequence,interval=S.nadInterval||(providerTarget(S.nadDetail)?'1':'60'),force=false){
     const target=providerTarget(t),widgetHost=$('#nad-chart');
     if(target&&!providerLine){
       if(!widgetHost?.isConnected||seq!==chartSequence)return;
@@ -199,12 +199,17 @@ export function nadfunUI(c){
       providerCleanup=mountProviderChart(widgetHost,target,{dark:document.documentElement.dataset.theme==='dark',interval,onFailure:fallback});widgetHost.dataset.token=t.id;widgetHost.dataset.interval=interval;
       const foot=widgetHost.closest('.nad-chart-section').querySelector('.r-data-foot');foot.innerHTML='<span id="nad-chart-status">CoinGecko · Monad token</span><button class="r-text-button" data-action="nad-chart-line">Price line</button>';return;
     }
-    const read=target&&providerLine?api('/api/market-chart?'+new URLSearchParams({asset:t.id,kind:'spot',period:interval==='1'||interval==='15'?'1D':'7D',fresh:'1'})).then(data=>({...data,token:t.id,interval})):readChart(t.id,interval,force);
+    if(target&&providerLine){
+      interval=linePeriod;
+      const controls=widgetHost.closest('.nad-chart-section').querySelector('.nad-filters');
+      controls.innerHTML=['1D','7D','1M'].map(p=>`<button data-action="nad-line-period" data-id="${p}" class="${p===linePeriod?'selected':''}">${p}</button>`).join('');
+    }
+    const read=target&&providerLine?api('/api/market-chart?'+new URLSearchParams({asset:t.id,kind:'spot',period:linePeriod,fresh:'1'})).then(data=>({...data,token:t.id,interval})):readChart(t.id,interval,force);
     const [lib,data]=await Promise.all([library(),read]);
-    const points=data.points||closingPrices(data.candles||[]);
+    const points=data.points?compactPoints(data.points):closingPrices(data.candles||[]);
     const host=$('#nad-chart');if(!host?.isConnected||seq!==chartSequence)return;
-    const status=$('#nad-chart-status');if(status)status.textContent=data.freshRead?'CoinGecko · Live read':data.stale?'nad.fun · Last known · Updating':data.refreshing?'nad.fun · Updating…':'nad.fun data';
-    host.setAttribute('aria-busy',String(Boolean(data.refreshing)));host.dataset.interval=interval;host.dataset.token=t.id;
+    const status=$('#nad-chart-status');if(status)status.textContent=data.freshRead?'CoinGecko · '+linePeriod+' price line':data.stale?'nad.fun · Last known · Updating':data.refreshing?'nad.fun · Updating…':'nad.fun data';
+    const periodChanged=host.dataset.interval!==interval;host.setAttribute('aria-busy',String(Boolean(data.refreshing)));host.dataset.interval=interval;host.dataset.token=t.id;
     clearTimeout(chartTimer);
     if(data.refreshing||data.stale||!data.fetchedAt&&data.retryAfter)chartTimer=setTimeout(()=>{
       if(seq===chartSequence&&host.isConnected&&!document.hidden)mount(t,seq,interval,true).catch(()=>{if(status?.isConnected)status.textContent='nad.fun · Update delayed';});
@@ -218,7 +223,7 @@ export function nadfunUI(c){
       if(cover){host.style.position='relative';cover.style.position='absolute';cover.style.inset='0';cover.style.zIndex='2';host.append(cover);requestAnimationFrame(()=>requestAnimationFrame(()=>{if(seq!==chartSequence||!host.isConnected)return;cover.remove();host.removeAttribute('data-preview');}));}else host.removeAttribute('data-preview');
     }
     delete host.dataset.quoteOnly;chartSeries.applyOptions({pointMarkersVisible:points.length===1,pointMarkersRadius:3});chartSeries.setData(points);host.dataset.series='line';chartAt=Date.now();
-    if(initial)fitPriceLine(chartApi,points);
+    if(initial||periodChanged)fitPriceLine(chartApi,points);
   }
   async function launch(){
     const config=await api('/api/nadfun/config');
@@ -263,7 +268,7 @@ export function nadfunUI(c){
       $('[data-meme-cap]',$('.nad-price')).textContent=cap(t);$('[data-meme-price]',$('.nad-price')).textContent='Price '+usd(t.price);
       $('#nad-phase').textContent=phase(t);$('#nad-phase').classList.toggle('good',t.graduated);$('#nad-market').textContent=phase(t);$('#nad-progress').style.width=Math.min(100,t.progressBps/100)+'%';$('#nad-progress-label').textContent=(t.progressBps/100).toFixed(1)+'%';
       if(changed){S.nadQuote=null;$('#nad-quote').innerHTML='';const b=$('#nad-order-form [type=submit]');b.disabled=t.locked||t.tradeSupported===false;b.textContent=t.locked?'Migrating':S.nadSide==='sell'?'Sell':'Buy';notify(t.graduated?'Graduated. DEX trading is ready.':'Token state changed. Get a fresh quote.');}
-      if(chartSeries&&Date.now()-chartAt>90000){chartAt=Date.now();await mount(S.nadDetail,chartSequence,S.nadInterval||'60',true);}
+      if(chartSeries&&Date.now()-chartAt>90000){chartAt=Date.now();await mount(S.nadDetail,chartSequence,S.nadInterval||(providerTarget(S.nadDetail)?'1':'60'),true);}
     }catch{}}
   async function handle(action,id){
     if(!action.startsWith('nad-'))return false;
@@ -287,10 +292,14 @@ export function nadfunUI(c){
     }else if(action==='nad-copy'){await navigator.clipboard.writeText(id);notify('Contract address copied');}
     else if(action==='nad-share'){await navigator.clipboard.writeText(location.origin+'/?view=token&id='+encodeURIComponent(id));notify('Token link copied');}
     else if(action==='nad-post'){closeOverlay();S.composeAsset=id;c.composer();}
+    else if(action==='nad-line-period'){
+      if(id===linePeriod)return true;linePeriod=id;const seq=++chartSequence;clearTimeout(chartTimer);
+      try{await mount(S.nadDetail,seq);}catch(e){if(seq===chartSequence)$('#nad-chart-status').textContent='Chart update delayed';}
+    }
     else if(action==='nad-interval'||action==='nad-chart-retry'||action==='nad-chart-line'){
       if(action==='nad-chart-line')providerLine=true;
-      if(action==='nad-interval'&&id===(S.nadInterval||'60'))return true;
-      if(action==='nad-interval')S.nadInterval=id;resetChart();const seq=chartSequence;document.querySelectorAll('[data-action=nad-interval]').forEach(b=>b.classList.toggle('selected',b.dataset.id===(S.nadInterval||'60')));$('#nad-chart').innerHTML=loading();
+      if(action==='nad-interval'&&id===(S.nadInterval||(providerTarget(S.nadDetail)?'1':'60')))return true;
+      if(action==='nad-interval')S.nadInterval=id;resetChart();const seq=chartSequence;document.querySelectorAll('[data-action=nad-interval]').forEach(b=>b.classList.toggle('selected',b.dataset.id===(S.nadInterval||(providerTarget(S.nadDetail)?'1':'60'))));$('#nad-chart').innerHTML=loading();
       try{await mount(S.nadDetail,seq);}catch(e){if($('#nad-chart')&&seq===chartSequence)$('#nad-chart').innerHTML=`<div class="nad-chart-empty">${esc(e.message)}<button class="r-btn small" data-action="nad-chart-retry">Retry chart</button></div>`;}
     }
     return true;
