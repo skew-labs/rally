@@ -233,3 +233,9 @@ The Price line fallback performs a fresh, bounded public read through `/api/mark
 
 
 Perpetual and prediction price history uses a compact line renderer rather than a provider widget. Fresh LeverUp history retains its Monad oracle identity; supported CoinGecko history remains explicitly a spot reference. The server filters the requested historical window and reduces display payloads to at most 320 actual observations by retaining endpoints and time-bucket extremes. Quiet intervals are not filled with generated prices. The web period selector updates the existing renderer and observers; Compose uses a retained drawing path with actual-time scrubbing. Unmigrated curve history remains on its supported nad.fun path.
+
+## Live chart path
+
+`market_ticks.py` exposes a bounded cursor feed at `/api/market-ticks`. Viewed exact Monad market identities subscribe to existing Perpl, venue, spot-pool and verified nad.fun observations; opening additional charts does not multiply provider HTTP reads. Samples contain an observation ID, time and price, with source and epoch attached to the response. Duplicate and older observations are discarded. A changed source or pool starts a new epoch. Buffers retain 240 observations per active market, expire after ten minutes without readers, and are capped at 256 markets.
+
+`live-price.js` draws retained Canvas paths and animates only the newest segment using `requestAnimationFrame`. Android uses the same canonical sample semantics with retained Compose paths and `withFrameNanos`. Live is time-based; Ticks is observation-order-based. The 220 ms transition affects display geometry only. Historical CoinGecko/GeckoTerminal references remain separate from venue marks; prices never become fabricated fills or return records. Hidden views cancel polling and motion. Reduced-motion settings skip animated transitions.

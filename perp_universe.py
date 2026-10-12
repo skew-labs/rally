@@ -165,6 +165,9 @@ def read_venue(name,fn):
         success=False
     with LOCK:CACHE[name]=value
     if success:
+        import market_ticks
+        for market in value['markets']:
+            market_ticks.record(str(market['id']),'perps',market.get('mark'),market.get('observationAt'),market.get('priceSource') or name,market.get('sourceURL',''),name)
         try:save_snapshot(name,value)
         except Exception:pass
     return success

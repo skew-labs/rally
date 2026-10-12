@@ -251,3 +251,11 @@ html .nad-identity .r-token-art{--token-size:56px;border-radius:14px}
  html .nad-table .nad-progress-cell{width:100%;min-height:44px}
 }
 @media(max-width:359px){html .r-table-wrap:has(.nad-table){padding:0 12px}html .nad-table tbody tr{grid-template-columns:minmax(0,1fr) 76px 76px;column-gap:6px}html .nad-table .r-coin-cell{gap:6px}html .nad-table .r-token-art{--token-size:28px}}
+.r-live-price-canvas{display:block;width:100%;height:100%;touch-action:pan-y}
+.r-chart-live-modes{display:flex;gap:4px;align-items:center;padding:8px 0;min-width:0}
+.r-chart-live-modes button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;padding:9px 14px;border-radius:100px;min-height:40px;cursor:pointer;transition:background .16s,color .16s}
+.r-chart-live-modes button[aria-pressed=true]{background:var(--soft);color:var(--text)}
+.r-live-quote{margin-left:auto;color:var(--text);font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.r-mini-periods{flex-wrap:wrap;gap:4px}
+.r-mini-periods button{min-height:40px}
+@media(prefers-reduced-motion:reduce){.r-chart-live-modes button{transition:none}}

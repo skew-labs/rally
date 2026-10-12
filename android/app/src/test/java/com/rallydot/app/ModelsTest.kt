@@ -4,6 +4,21 @@ import org.junit.Test
 import org.junit.Assert.*
 
 class ModelsTest {
+    @Test fun ticksPreserveChangedPricesInTheSameSecondAndBoundRetention() {
+        val now=System.currentTimeMillis()/1000
+        val data=JSONObject().put("epoch","a").put("points",org.json.JSONArray().apply { repeat(500) { put(JSONObject().put("id",it+1).put("time",now).put("value",it+1.0)) } })
+        val ticks=mergePriceTicks(emptyList(),data,null)
+        assertEquals(240,ticks.size);assertEquals(500.0,ticks.last().value,0.0);assertTrue(ticks.all { it.time==now })
+        assertEquals(ticks,mergePriceTicks(ticks,JSONObject().put("epoch","a").put("points",org.json.JSONArray()),"a"))
+        assertTrue(mergePriceTicks(ticks,JSONObject().put("epoch","b").put("points",org.json.JSONArray()),"a").isEmpty())
+    }
+    @Test fun frameInterpolationDoesNotChangeObservedTickData() {
+        val tick=PriceTick(1,100,12.3456789)
+        val phases=(0..144).map { tickEase(it/144f) }
+        assertEquals(0f,phases.first(),0f);assertEquals(1f,phases.last(),0f)
+        assertTrue(phases.zipWithNext().all { (a,b)->b>=a })
+        assertEquals(PriceTick(1,100,12.3456789),tick)
+    }
     @Test fun providerTokenChartsUseExactContractsAndExcludeUnmigratedCurves() {
         val address="0x"+"a".repeat(40)
         val token=Asset.parse(JSONObject().put("id",address).put("chainId",143).put("nadfun",true).put("graduated",true))

@@ -251,6 +251,9 @@ class Handler(BaseHTTPRequestHandler):
             if who and who['grant']:s.require(who,'markets:read')
             return self.response(stocks.catalog())
         if path=='/api/stocks/portfolio':return self.response(stocks.portfolio(who))
+        if path=='/api/market-ticks':
+            if who and who['grant']:s.require(who,'markets:read')
+            return self.response(__import__('market_ticks').read(params.get('asset',''),params.get('kind','spot'),params.get('after','0')))
         if path=='/api/market-chart':
             if who and who['grant']:s.require(who,'markets:read')
             if params.get('fresh')=='1':return self.response(market_data.fresh_chart(params.get('asset',''),params.get('kind','spot'),params.get('period','1D')))
@@ -317,7 +320,7 @@ class Handler(BaseHTTPRequestHandler):
             if not target:raise s.Problem('Artwork not found',404)
             return self.file(target,'image/webp')
         # Do not expose database, secrets, source Python, logs or research directories.
-        if path not in {'/provider-chart.js','/price-line.js','/holder-ui.js'} and not path.startswith('/assets/') and path not in {'/wallet-ui.js','/wallet.css','/landing.js','/landing.css','/live-app.js','/finance.js','/flow.js','/charts.js','/nadfun.js','/community.js','/community.css','/social.css','/ui.css','/checkout.js','/perp-amount.js','/checkout.css','/feed-ui.js','/feed.css','/market-ui.js','/market-logos.js','/market.css','/theme.js','/live.css','/flow.css','/nadfun.css','/favicon.ico','/swipe.js','/swipe-trade.js','/swipe.css','/swipe-motion.js','/auth-ui.js','/auth.css','/community-token.js','/community-token.css','/creator-ui.js','/launchpad.js','/launch-activity.js','/launch-income.js','/launchpad.css','/experience.js','/experience.css','/motion.js','/design.css','/social-loop.js','/social-loop.css'}:raise s.Problem('File not found',404)
+        if path not in {'/provider-chart.js','/price-line.js','/live-price.js','/holder-ui.js'} and not path.startswith('/assets/') and path not in {'/wallet-ui.js','/wallet.css','/landing.js','/landing.css','/live-app.js','/finance.js','/flow.js','/charts.js','/nadfun.js','/community.js','/community.css','/social.css','/ui.css','/checkout.js','/perp-amount.js','/checkout.css','/feed-ui.js','/feed.css','/market-ui.js','/market-logos.js','/market.css','/theme.js','/live.css','/flow.css','/nadfun.css','/favicon.ico','/swipe.js','/swipe-trade.js','/swipe.css','/swipe-motion.js','/auth-ui.js','/auth.css','/community-token.js','/community-token.css','/creator-ui.js','/launchpad.js','/launch-activity.js','/launch-income.js','/launchpad.css','/experience.js','/experience.css','/motion.js','/design.css','/social-loop.js','/social-loop.css'}:raise s.Problem('File not found',404)
         if not re.fullmatch(r'/(?:assets/(?:(?:tokens|venues|auth)/)?[A-Za-z0-9_.-]+|[A-Za-z0-9_-]+\.(?:js|css)|favicon\.ico)',path):raise s.Problem('Page not found',404)
         target=(s.ROOT/path.lstrip('/')).resolve()
         if not target.is_relative_to(s.ROOT) or not target.is_file():raise s.Problem('File not found',404)

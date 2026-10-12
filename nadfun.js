@@ -1,6 +1,7 @@
 import {mountHolders,warmHolders} from './holder-ui.js';
 import {closingPrices,compactPoints,priceLineOptions,fitPriceLine} from './price-line.js';
 import {providerTarget,mountProviderChart,preconnectProvider} from './provider-chart.js';
+import {streamPrices} from './live-price.js';
 // Social asset discovery and nad.fun's native MON routes use Rally's direct wallet flow.
 export function nadfunUI(c){
   const {S,$,api,esc,icon,usd,age,modal,needAccount,walletReady,notify,navigate,pageHeader,empty,loading}=c;
@@ -14,7 +15,7 @@ export function nadfunUI(c){
   const metrics=(t,compact=false)=>`<b data-meme-cap title="Total-supply valuation (FDV)">${cap(t)}</b><small data-meme-price aria-label="Price ${esc(price(t.price))}" title="${t.price==null?'Price unavailable':esc('$'+t.price)}">${compact?'':'Price '}${price(t.price)}${t.stale&&t.price?' · Last '+esc(age(t.referenceAt)):''}</small>`;
   const phase=t=>t.locked?'Migrating':t.graduated?'DEX':'Bonding curve';
   const marketAction=t=>`<b>${t.locked?'Migrating':t.tradeSupported===false?'Unavailable':'Buy'}</b><small>${t.graduated?'DEX':(t.progressBps/100).toFixed(1)+'% curve'}</small>`;
-  let chartApi,chartSeries,chartSequence=0,pollAt=0,chartAt=0,chartTimer,chartLibrary,providerCleanup,providerLine=false,linePeriod='1D';
+  let chartApi,chartSeries,chartSequence=0,pollAt=0,chartAt=0,chartTimer,chartLibrary,providerCleanup,providerLine=false,linePeriod='1D',livePrices;
   const chartRequests=new Map(),chartCache=new Map(),chartSnapshots=new Map();
   const validSnapshot=(data,id,interval)=>data?.token?.toLowerCase()===id.toLowerCase()&&String(data.interval)===String(interval)&&Number.isFinite(data.fetchedAt)&&Date.now()/1000-data.fetchedAt>=0&&Date.now()/1000-data.fetchedAt<900&&Array.isArray(data.candles)&&data.candles.length<=1200&&data.candles.every((v,i,a)=>Number.isFinite(v.time)&&v.time>0&&v.time<=Date.now()/1000+300&&(!i||v.time>a[i-1].time)&&['open','high','low','close'].every(k=>Number.isFinite(v[k])&&v[k]>=0));
   try{for(const [key,data] of JSON.parse(localStorage.getItem('rally:nad-chart-snapshots')||'[]').slice(-8)){const [id,interval]=key.split(':');if(validSnapshot(data,id,interval))chartCache.set(key,{data,at:0});}}catch{}
@@ -56,7 +57,7 @@ export function nadfunUI(c){
       const key=snapshotKey(id,interval),data=chartCache.get(id.toLowerCase()+':'+interval)?.data;
       if(validSnapshot(data,id,interval)){chartSnapshots.delete(key);chartSnapshots.set(key,{canvas:chartApi.takeScreenshot(),fetchedAt:data.fetchedAt});while(chartSnapshots.size>4)chartSnapshots.delete(chartSnapshots.keys().next().value);}
     }catch{}}
-    chartSequence++;clearTimeout(chartTimer);providerCleanup?.();providerCleanup=null;chartApi?.remove();chartApi=null;chartSeries=null;
+    chartSequence++;clearTimeout(chartTimer);livePrices?.dispose();livePrices=null;providerCleanup?.();providerCleanup=null;chartApi?.remove();chartApi=null;chartSeries=null;
   }
   function paintSnapshot(id,interval){
     const snapshot=chartSnapshots.get(snapshotKey(id,interval)),host=$('#nad-chart');
@@ -192,6 +193,11 @@ export function nadfunUI(c){
   }
   async function mount(t,seq=chartSequence,interval=S.nadInterval||(providerTarget(S.nadDetail)?'1':'60'),force=false){
     const target=providerTarget(t),widgetHost=$('#nad-chart');
+    if(livePrices)return;
+    if(widgetHost&&!widgetHost.closest('.nad-chart-section').querySelector('.r-chart-live-modes')){
+      const modes=document.createElement('div');modes.className='r-chart-live-modes';modes.setAttribute('role','group');modes.setAttribute('aria-label','Chart view');modes.innerHTML='<button data-action="nad-live-mode" data-id="line" aria-pressed="false">Live</button><button data-action="nad-live-mode" data-id="ticks" aria-pressed="false">Ticks</button><button data-action="nad-live-mode" data-id="history" aria-pressed="true">History</button><span class="r-live-quote" hidden></span>';
+      widgetHost.closest('.nad-chart-section').querySelector('.nad-chart-toolbar').before(modes);
+    }
     if(target&&!providerLine){
       if(!widgetHost?.isConnected||seq!==chartSequence)return;
       providerCleanup?.();
@@ -295,6 +301,20 @@ export function nadfunUI(c){
     else if(action==='nad-line-period'){
       if(id===linePeriod)return true;linePeriod=id;const seq=++chartSequence;clearTimeout(chartTimer);
       try{await mount(S.nadDetail,seq);}catch(e){if(seq===chartSequence)$('#nad-chart-status').textContent='Chart update delayed';}
+    }
+    else if(action==='nad-live-mode'){
+      const host=$('#nad-chart'),section=host?.closest('.nad-chart-section');if(!host)return true;
+      if(id==='history'){
+        resetChart();section.querySelector('.r-live-quote').hidden=true;section.querySelector('.nad-chart-toolbar').hidden=false;section.querySelectorAll('[data-action=nad-live-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===id)));
+        const seq=chartSequence;mount(S.nadDetail,seq).catch(()=>{if(seq===chartSequence)$('#nad-chart-status').textContent='Chart update delayed';});
+      }else{
+        section.querySelector('.r-live-quote').hidden=false;if(livePrices)livePrices.setMode(id);else{
+          resetChart();section.querySelector('.nad-chart-toolbar').hidden=true;section.querySelector('.r-data-foot').innerHTML='<span id="nad-chart-status">Waiting for price updates…</span>';
+          let latest;
+          livePrices=streamPrices({host,api,asset:S.nadDetail.id,kind:'spot',mode:id,onStatus:({data,point,error})=>{if(data)latest=data;if(point)section.querySelector('.r-live-quote').textContent=usd(point.value);const status=section.querySelector('#nad-chart-status');if(status)status.textContent=error?'Price updates delayed':`${latest?.source||'Price updates'}${latest?.stale?' · Last known':''}${point?' · '+usd(point.value)+' · '+new Date(point.time*1000).toLocaleTimeString('en-US',{hour12:false}):' · Waiting for data'}`;}});
+        }
+        section.querySelectorAll('[data-action=nad-live-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===id)));
+      }
     }
     else if(action==='nad-interval'||action==='nad-chart-retry'||action==='nad-chart-line'){
       if(action==='nad-chart-line')providerLine=true;

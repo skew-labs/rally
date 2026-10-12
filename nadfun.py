@@ -63,6 +63,9 @@ def refresh_market_references():
                 if observed-MARKET_REFERENCES[token]['referenceAt']>900:MARKET_REFERENCES.pop(token,None)
             while len(MARKET_REFERENCES)>600:MARKET_REFERENCES.pop(min(MARKET_REFERENCES,key=lambda t:MARKET_REFERENCES[t]['referenceAt']))
         all_updates.update(updates)
+        import market_ticks
+        for token,reference in updates.items():
+            market_ticks.record(token,'spot',reference.get('price'),reference['referenceAt'],'nad.fun USD reference','https://nad.fun/tokens/'+token,token)
     with MARKET_REFERENCE_LOCK:REFERENCE_HEALTH.update(state='partial' if failures else 'live',lastAttemptAt=s.now(),failedPages=failures,**({'lastSuccessAt':s.now()} if all_updates else {}))
     if all_updates:
         import market_universe as u

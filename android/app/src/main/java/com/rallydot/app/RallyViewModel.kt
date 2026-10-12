@@ -82,6 +82,13 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         if(data.string("asset")!=id || !data.optBoolean("freshRead") || data.optBoolean("cached"))throw ApiFailure(502,"Chart identity changed")
         return data
     }
+    suspend fun priceTicks(asset: Asset,cursor: Long): JSONObject {
+        val id=if(asset.kind=="prediction")asset.raw.optJSONObject("assetInfo")?.string("chartMarket") ?: asset.id else asset.id
+        val kind=if(asset.kind=="prediction")"perps" else asset.kind
+        val data=api.get("/api/market-ticks?asset="+Uri.encode(id)+"&kind=$kind&after=$cursor",true)
+        if(data.string("asset")!=id || data.string("kind")!=kind || data.string("observationType")!="price_update")throw ApiFailure(502,"Tick identity changed")
+        return data
+    }
     fun warmHolders(asset: Asset) {
         if(!Regex("0x[0-9a-fA-F]{40}").matches(asset.id))return
         val id=asset.id.lowercase();val saved=holderMutable.value[id]

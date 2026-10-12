@@ -50,7 +50,7 @@ class RallyApi(private val context: Context,private val client: OkHttpClient=nat
     fun signOut() { generation++;session=null;store.clear();clearCache() }
     fun clearCache() = synchronized(cache) { cache.clear() }
     suspend fun get(path: String, force: Boolean=false): JSONObject {
-        val live=Regex("[?&]fresh=1(?:&|$)").containsMatchIn(path)
+        val live=path.startsWith("/api/market-ticks?") || Regex("[?&]fresh=1(?:&|$)").containsMatchIn(path)
         synchronized(cache) { cache[path]?.takeIf { !live && !force && System.currentTimeMillis()-it.first < 20000 }?.let { return it.second } }
         val version=generation
         val data=request(path,null)

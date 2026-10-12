@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.11.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.12.apk)
 
 ## Interaction and data
 
@@ -156,3 +156,9 @@ A provider error or the Price line action switches to a current CoinGecko/GeckoT
 Version 0.4.11 opens indexed Monad spot tokens at the official GeckoTerminal 1-minute resolution, with 15-minute, 1-hour and 4-hour controls. The provider handles candle history and rendering. Perpetual and prediction references use the native price line instead of a provider WebView. LeverUp history remains its own Monad oracle source; other supported markets label their CoinGecko spot reference.
 
 Fresh historical reads preserve the selected window and send at most 320 real observations, retaining endpoints and time-bucket extremes. The native renderer retains its drawing path during scrubbing; changing a web period updates the existing chart instance. Curve tokens retain their supported nad.fun history. No synthetic prices fill inactive periods. An embed requires the token to be indexed and the provider to permit access; the Price line fallback remains available.
+
+## Live price observations
+
+Version 0.4.12 adds History, Live and Ticks to native token sheets. Live uses observation time on the horizontal axis; Ticks uses the order of actual received price observations, preserving different prices observed in the same second. Both keep at most 240 samples and draw the most recent 60. The HTTPS cursor feed shares existing Monad collectors and has no wallet or order access. A source or pool change resets the series rather than joining different references.
+
+The cached drawing path is rebuilt only on data or size changes. A 220 ms live-edge transition reads Compose's display frame clock in the drawing phase; it does not recompose the order form each frame or mutate observed prices. High-refresh voting lets Android use supported 120/144 Hz displays, subject to device limits. System disabled-animation settings skip the transition. Polling is lifecycle-bound and pauses in the background. This display cadence is independent of provider observation cadence and end-to-end network latency.

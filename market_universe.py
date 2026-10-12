@@ -213,6 +213,9 @@ def publish_prices(output):
         wrapped=s.GATEWAY.prices.get('0x3bd359c1119da7da1d913d1c4d2b7c461115433a')
         if wrapped:s.GATEWAY.prices['MON']=wrapped
         if accepted:s.GATEWAY.prices_at=max(s.GATEWAY.prices_at,max(v['fetchedAt'] for v in accepted.values()))
+    import market_ticks
+    for a,v in accepted.items():
+        market_ticks.record(a,'spot',v.get('price'),v.get('fetchedAt'),v.get('priceSource') or 'Monad pool reference',v.get('source',''),v.get('pair',a))
     return accepted
 
 def dex_batch(part):

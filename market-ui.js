@@ -1,6 +1,7 @@
 import {mountHolders,warmHolders} from './holder-ui.js';
 import {priceLineOptions,fitPriceLine} from './price-line.js';
 import {providerTarget,mountProviderChart,preconnectProvider} from './provider-chart.js';
+import {streamPrices} from './live-price.js';
 let renderer;
 const library=()=>renderer ||= import(location.origin+'/assets/lightweight-charts-5.2.1.mjs').catch(e=>{renderer=null;throw e;});
 
@@ -19,15 +20,15 @@ export function marketUI(c){
     const poolPrice=pool?.state==='settled'?pool.settlementPrice:referenceFresh?reference.mark:null;
     modal(esc(asset.symbol),`<div class="r-asset-body"><div class="r-asset-summary">${logo(asset)}<div><b>${esc(asset.name||asset.symbol)}</b><small>${pool?'Castora · Price prediction':kind==='perps'?esc(perp.venue)+' · Perpetual':'Monad · Spot'}</small></div></div><div class="r-asset-price"><strong>${usd(pool?poolPrice:perp?.mark??asset.price)}</strong><span>${pool?(pool.state==='settled'?'Resolved pool price':'Perpl mark · Reference price'):kind==='perps'?esc((perp.stale?'Last known · ':'')+(perp.priceSource||'Venue price')):asset.stale?'Stale pool price':'Pool price'}</span></div><div class="r-mini-periods" role="group" aria-label="Chart period">${['1D','7D','1M'].map(p=>`<button data-mini-period="${p}" aria-pressed="${p==='1D'}">${p}</button>`).join('')}</div><div class="r-mini-chart" aria-label="${esc(asset.symbol)} price chart"><div class="r-chart-loading" role="status">Loading chart…</div></div><div class="r-mini-caption" role="status"></div>${kind==='spot'?'<section id="market-holders" class="r-holders"></section>':''}<div class="r-asset-facts"><span>${pool?'Entry stake':kind==='perps'?'Last trade':'24h volume'}</span><b>${pool?esc(pool.stake+' '+pool.stakeAsset):kind==='perps'?usd(perp.last):asset.volume==null?'—':usd(asset.volume)}</b>${asset.liquidity!=null?`<span>Pool liquidity</span><b>${usd(asset.liquidity)}</b>`:''}<span>Updated</span><b>${age(pool?(pool.state==='settled'?pool.completedAt:reference?.observationAt||0):kind==='perps'?perp.observationAt:asset.fetchedAt||S.marketData?.fetchedAt||0)}</b></div></div><div class="r-asset-actions">${perp&&perp.execution!=='wallet_transactions'?`<span class="r-note">${perp.executionBlocker||'Order adapter under verification.'}</span>${perp.orderAdapter?`<button class="r-btn subtle" data-action="venue-order" data-id="${esc(perp.id)}">Order details</button>`:""}<a class="r-btn subtle" href="${esc(perp.sourceURL)}" target="_blank" rel="noopener noreferrer">Open ${esc(perp.venue)}</a>`:pool?`<button class="r-btn primary" style="grid-column:1/-1" data-mini-trade="buy" ${pool.state==='open'?'':'disabled'}>${pool.state==='open'?'Predict price':pool.state==='settled'?'Settled':'Awaiting settlement'}</button>`:`<button class="r-btn primary" data-mini-trade="buy" ${perp&&!perp.open?'disabled':''}>${kind==='perps'?'Buy / Long':'Buy'}</button><button class="r-btn" data-mini-trade="sell" ${perp&&!perp.open?'disabled':''}>${kind==='perps'?'Sell / Short':'Sell'}</button>`}</div>`, 'r-asset-modal');
     if(kind==='spot')mountHolders({api,esc,age},$('#market-holders'),asset.address||asset.id);
-    const instance=S.modal,host=$('.r-mini-chart'),caption=$('.r-mini-caption'),target=providerTarget(asset,kind==='prediction'?'perps':kind);let providerCleanup,useLine=false;
+    const instance=S.modal,host=$('.r-mini-chart'),caption=$('.r-mini-caption'),target=providerTarget(asset,kind==='prediction'?'perps':kind);let providerCleanup,useLine=false,live,chartMode='history';
     const state=reading={instance,host,chart:null,controller:null,sequence:0,resize:null,theme:null,line:null,data:null,period:null};
-    instance.cleanup=()=>{state.sequence++;providerCleanup?.();state.controller?.abort();state.resize?.disconnect();state.theme?.disconnect();state.chart?.remove();if(reading===state)reading=null;};
+    instance.cleanup=()=>{state.sequence++;live?.dispose();providerCleanup?.();state.controller?.abort();state.resize?.disconnect();state.theme?.disconnect();state.chart?.remove();if(reading===state)reading=null;};
     let selectedPeriod='1D',selectedInterval='1';
     const controls=$('.r-mini-periods');
-    function periods(){controls.hidden=target?.kind==='coin'&&!useLine;const embedded=target?.kind==='pool'&&!useLine;controls.setAttribute('aria-label',embedded?'Candle interval':'Chart period');controls.innerHTML=(embedded?['1m','15m','1h','4h']:['1D','7D','1M']).map((p,i)=>`<button ${embedded?'data-mini-interval='+['1','15','60','240'][i]:'data-mini-period='+p} aria-pressed="${embedded?selectedInterval===['1','15','60','240'][i]:selectedPeriod===p}">${p}</button>`).join('');}
+    function periods(){controls.hidden=false;const embedded=target?.kind==='pool'&&!useLine;controls.setAttribute('aria-label','Chart view');controls.innerHTML=`<button data-mini-live="line" aria-pressed="${chartMode==='line'}">Live</button><button data-mini-live="ticks" aria-pressed="${chartMode==='ticks'}">Ticks</button>`+(target?.kind==='coin'&&!useLine?'<button data-mini-period="1D" aria-pressed="'+(chartMode==='history')+'">History</button>':(embedded?['1m','15m','1h','4h']:['1D','7D','1M']).map((p,i)=>`<button ${embedded?'data-mini-interval='+['1','15','60','240'][i]:'data-mini-period='+p} aria-pressed="${chartMode==='history'&&(embedded?selectedInterval===['1','15','60','240'][i]:selectedPeriod===p)}">${p}</button>`).join(''));}
     const theme=()=>{const dark=document.documentElement.dataset.theme==='dark';return {background:{type:'solid',color:dark?'#19191f':'#ffffff'},textColor:dark?'#a3a3b0':'#797980'};};
     async function load(period){
-      selectedPeriod=period;periods();
+      live?.dispose();live=null;chartMode='history';selectedPeriod=period;periods();
       const sequence=++state.sequence;state.controller?.abort();state.controller=new AbortController();
       document.querySelectorAll('[data-mini-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.miniPeriod===period)));
       providerCleanup?.();providerCleanup=null;
@@ -60,9 +61,22 @@ export function marketUI(c){
       }catch(e){if(sequence!==state.sequence||e.name==='AbortError'||!host.isConnected)return;state.resize?.disconnect();state.theme?.disconnect();state.chart?.remove();state.chart=null;state.line=null;host.innerHTML='<div class="r-chart-loading">Chart temporarily unavailable</div>';caption.innerHTML='<button class="r-text-button" data-mini-retry>Retry chart</button>';}
       finally{if(sequence===state.sequence&&host.isConnected)host.removeAttribute('aria-busy');}
     }
+    function showLive(mode){
+      if(live){chartMode=mode;live.setMode(mode);periods();return;}
+      chartMode=mode;periods();state.sequence++;state.controller?.abort();providerCleanup?.();providerCleanup=null;state.resize?.disconnect();state.theme?.disconnect();state.chart?.remove();state.chart=null;state.line=null;
+      host.style.height='200px';host.removeAttribute('aria-busy');caption.textContent='Waiting for price updates…';
+      let latest;
+      live=streamPrices({host,api,asset:pool?String(asset.chartMarket):id,kind:pool?'perps':kind,mode,onStatus:({data,point,error})=>{
+        if(!host.isConnected)return;if(data)latest=data;
+        if(point&&!pool){const price=host.closest('.r-asset-modal').querySelector('.r-asset-price');price.querySelector('strong').textContent=usd(point.value);price.querySelector('span').textContent=(latest?.stale?'Last known · ':'')+(latest?.source||'Price update');}
+        const stamp=point?new Date(point.time*1000).toLocaleTimeString('en-US',{hour12:false}):'';
+        caption.textContent=error?'Price updates delayed':`${latest?.source||'Price updates'}${latest?.stale?' · Last known':''}${point?' · '+usd(point.value)+' · '+stamp:' · Waiting for data'}`;
+      }});
+    }
     $('.r-asset-modal').onclick=e=>{
-      const b=e.target.closest('[data-mini-interval],[data-mini-period],[data-mini-trade],[data-mini-retry],[data-mini-line]');if(!b)return;
-      if(b.hasAttribute('data-mini-line')){useLine=true;load(selectedPeriod);}
+      const b=e.target.closest('[data-mini-live],[data-mini-interval],[data-mini-period],[data-mini-trade],[data-mini-retry],[data-mini-line]');if(!b)return;
+      if(b.hasAttribute('data-mini-live'))showLive(b.dataset.miniLive);
+      else if(b.hasAttribute('data-mini-line')){useLine=true;load(selectedPeriod);}
       else if(b.hasAttribute('data-mini-interval')){if(b.dataset.miniInterval!==selectedInterval){selectedInterval=b.dataset.miniInterval;load(selectedPeriod);}}
       else if(b.hasAttribute('data-mini-period'))load(b.dataset.miniPeriod);
       else if(b.hasAttribute('data-mini-retry'))load(selectedPeriod);

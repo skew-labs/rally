@@ -4,7 +4,7 @@ Rally's Android app renders markets, charts, Swipe, feeds and profiles natively,
 
 ## Install Rally
 
-Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.11.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.11**. Android 9 or later is required.
+Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.12.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.12**. Android 9 or later is required.
 
 When installing a downloaded APK, Android may ask you to allow installation from the app used to download it. Use the official file rather than a re-signed copy from an unknown source.
 
@@ -25,6 +25,8 @@ If an app interruption occurs after submission, the saved pending request can be
 ## Token charts
 
 Indexed spot tokens open CoinGecko/GeckoTerminal charts with 1-minute, 15-minute, 1-hour and 4-hour intervals. Use Price line for a simple historical view when the provider is unavailable. Perpetual and prediction references use a native line with the price source shown beneath it. Inactive periods are not filled with invented trades. Holder rows load independently below the chart.
+
+Choose **Live** for an extending price line or **Ticks** to space real price updates by arrival order. **History** returns to the selected historical or provider chart. The live edge moves smoothly when a new observation arrives and rests between updates. These are price observations, not a record of exchange fills; the source and observation time appear below the chart.
 
 ## Display and motion
 
