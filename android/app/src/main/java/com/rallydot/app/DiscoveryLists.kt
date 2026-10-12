@@ -53,13 +53,13 @@ fun algorithmOwner(f: JSONObject): String {
     Row(Modifier.fillMaxWidth().heightIn(min=80.dp).clickable(onClick=onOpen).padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
         ProfileArtwork(creator.image,creator.name,36.dp)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-            Text(algorithmTitle(feed),fontSize=13.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
-            Text(creator.name+(feed.optJSONObject("research")?.string("wallet")?.takeIf { it.isNotBlank() }?.let { " · "+it.takeLast(4) } ?: ""),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Text(algorithmTitle(feed),fontSize=13.sp,lineHeight=16.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Text(creator.name+(feed.optJSONObject("research")?.string("wallet")?.takeIf { it.isNotBlank() }?.let { " · "+it.takeLast(4) } ?: ""),fontSize=10.sp,lineHeight=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
         }
         Column(Modifier.widthIn(max=116.dp),horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy(4.dp)) {
-            Text(algorithmPercent(roi),fontSize=14.sp,color=if(roi!=null)performanceInk(roi) else MaterialTheme.colorScheme.onSurface,fontWeight=FontWeight.Medium)
-            Text(if(roi!=null)"Sampled wallet ROI" else "No verified return",fontSize=9.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1)
-            Text(algorithmPrice(feed)+(if((feed.number("price") ?: 0.0)>0)" / ${feed.optInt("periodDays",30)}d" else ""),fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Text(algorithmPercent(roi),fontSize=14.sp,lineHeight=18.sp,color=if(roi!=null)performanceInk(roi) else MaterialTheme.colorScheme.onSurface,fontWeight=FontWeight.Medium)
+            Text(if(roi!=null)"Sampled wallet ROI" else "No verified return",fontSize=9.sp,lineHeight=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1)
+            Text(algorithmPrice(feed)+(if((feed.number("price") ?: 0.0)>0)" / ${feed.optInt("periodDays",30)}d" else ""),fontSize=10.sp,lineHeight=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
         }
     }
     HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=.6f))

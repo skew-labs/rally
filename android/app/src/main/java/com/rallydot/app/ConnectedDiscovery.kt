@@ -37,20 +37,20 @@ fun homeAlgorithms(boot: JSONObject?): List<JSONObject> {
     val narrow=androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp<600
     val feeds=homeAlgorithms(state.boot).take(if(narrow)1 else 2);val post=state.pages[key]?.items?.firstOrNull()?.let(Post::parse)
     Column(Modifier.fillMaxWidth().padding(horizontal=20.dp)) {
-        Row(Modifier.fillMaxWidth().clickable { if(wallet.isBlank())vm.showWallet() else onPortfolio() }.padding(top=12.dp,bottom=20.dp),verticalAlignment=Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().clickable { if(wallet.isBlank())vm.showWallet() else onPortfolio() }.padding(top=8.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically) {
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                Text(if(balance?.optBoolean("partial")==true)"Priced balance" else if(wallet.isBlank())"Your Rally" else "Your balance",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(money(balance?.number("valueUSD")),fontSize=30.sp,fontWeight=FontWeight.Medium,letterSpacing=(-.8).sp)
+                Text(if(balance?.optBoolean("partial")==true)"Priced balance" else if(wallet.isBlank())"Your Rally" else "Your balance",fontSize=12.sp,lineHeight=15.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(money(balance?.number("valueUSD")),fontSize=30.sp,lineHeight=38.sp,fontWeight=FontWeight.Medium,letterSpacing=(-.8).sp)
                 val change=balance?.number("change24hPercent")
-                Text(if(wallet.isBlank())"Sign in to see your balance" else if(change!=null)String.format(Locale.US,"%+.2f%% · 24h price change",change) else if(state.portfolio==null)"Updating balances…" else "24h change unavailable",fontSize=11.sp,color=if(change==null)MaterialTheme.colorScheme.onSurfaceVariant else performanceInk(change))
+                Text(if(wallet.isBlank())"Sign in to see your balance" else if(change!=null)String.format(Locale.US,"%+.2f%% · 24h price change",change) else if(state.portfolio==null)"Updating balances…" else "24h change unavailable",fontSize=11.sp,lineHeight=14.sp,color=if(change==null)MaterialTheme.colorScheme.onSurfaceVariant else performanceInk(change))
             }
             Surface(shape=RoundedCornerShape(12.dp),color=MaterialTheme.colorScheme.surfaceContainer) { Box(Modifier.size(44.dp),contentAlignment=Alignment.Center){Icon(Icons.Outlined.ChevronRight,if(wallet.isBlank())"Sign in" else "Open portfolio",Modifier.size(20.dp))} }
         }
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text(if(following)"Your algorithms" else "Algorithms to watch",Modifier.weight(1f),fontSize=15.sp,fontWeight=FontWeight.Medium);TextButton(onClick=onAlgorithms){Text("See all",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)} }
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text(if(following)"Your algorithms" else "Algorithms to watch",Modifier.weight(1f),fontSize=15.sp,lineHeight=19.sp,fontWeight=FontWeight.Medium);TextButton(onClick=onAlgorithms){Text("See all",fontSize=12.sp,lineHeight=15.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)} }
         feeds.forEach { f->AlgorithmListRow(f,discoveryCreator(f,state.boot?.objects("people").orEmpty())) { onAlgorithm(algorithmItem(f)) } }
         if(post!=null)Row(Modifier.fillMaxWidth().clickable { onPost(post) }.padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             ProfileArtwork(post.author.image,post.author.name,28.dp)
-            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) { Text(post.author.name+" · "+if(following)"Following" else "Latest activity",fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis);Text(post.text,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis) }
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) { Text(post.author.name+" · "+if(following)"Following" else "Latest activity",fontSize=10.sp,lineHeight=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis);Text(post.text,fontSize=12.sp,lineHeight=15.sp,maxLines=1,overflow=TextOverflow.Ellipsis) }
             Icon(Icons.Outlined.ChevronRight,null,Modifier.size(16.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -67,7 +67,7 @@ fun homeAlgorithms(boot: JSONObject?): List<JSONObject> {
             Column(Modifier.fillMaxWidth().heightIn(min=100.dp).padding(vertical=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 when(shown) {
                     "Holders"->TokenHolders(vm,asset)
-                    "Community"->if(community==null)Text("No linked community yet",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) else Row(Modifier.fillMaxWidth().clickable { onCommunity(community.string("id")) }.padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(community.string("name"),fontWeight=FontWeight.Medium);Text("${community.optInt("members")} members",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};Icon(Icons.Outlined.ChevronRight,null)}
+                    "Community"->if(community==null)Text("No linked community yet",fontSize=12.sp,lineHeight=15.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) else Row(Modifier.fillMaxWidth().clickable { onCommunity(community.string("id")) }.padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(community.string("name"),fontWeight=FontWeight.Medium);Text("${community.optInt("members")} members",fontSize=12.sp,lineHeight=15.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};Icon(Icons.Outlined.ChevronRight,null)}
                     else->{if(asset.cap!=null)Fact("Market cap","$"+compact(asset.cap));if(asset.raw.number("liquidity")!=null)Fact("Liquidity",money(asset.raw.number("liquidity")));Fact("Market",asset.venue);Fact("Updated",age(asset.time))}
                 }
             }
@@ -78,7 +78,7 @@ fun homeAlgorithms(boot: JSONObject?): List<JSONObject> {
 @Composable fun DetailInformationTabs(tabs: List<String>,selected: String,onSelect: (String)->Unit) {
     Column { Row(Modifier.fillMaxWidth()) { tabs.forEach { label->
         Column(Modifier.weight(1f).selectable(selected==label,onClick={onSelect(label)},role=androidx.compose.ui.semantics.Role.Tab),horizontalAlignment=Alignment.CenterHorizontally) {
-            Box(Modifier.heightIn(min=48.dp).padding(horizontal=4.dp,vertical=12.dp),contentAlignment=Alignment.Center){Text(label,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis,color=if(selected==label)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)}
+            Box(Modifier.heightIn(min=48.dp).padding(horizontal=4.dp,vertical=12.dp),contentAlignment=Alignment.Center){Text(label,fontSize=12.sp,lineHeight=15.sp,maxLines=1,overflow=TextOverflow.Ellipsis,color=if(selected==label)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)}
             HorizontalDivider(thickness=2.dp,color=if(selected==label)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surface)
         }
     } };HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant) }

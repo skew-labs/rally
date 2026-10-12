@@ -78,7 +78,7 @@ if(S.view==='messages'||!['home','discover','leaderboard','explore','feeds','age
 const token = id => S.tokens.find(t=>t.id===id);
 const initials=p=>{const words=String(p?.name||p?.handle||'').trim().split(/\s+/);return (words.length>1?words[0].slice(0,1)+words.at(-1).slice(0,1):words[0].slice(0,2)).toUpperCase();};
 const avatar = p => {
- const brand=profileBrand(p),rallyChannel=p?.avatar===rallyAvatar;
+ const brand=profileBrand(p),rallyChannel=p?.id==='rally'||p?.avatar===rallyAvatar;
  const creatorLogo=p?.communityToken?.logoURI&&p.communityToken.owner===p.id?p.communityToken.logoURI:null;
  const art=rallyChannel?null:(p?.avatar||brand?.asset||creatorLogo),name=p?.name||p?.handle||'Account';
  const tone=[...String(p?.id||p?.handle||name)].reduce((n,c)=>(n+c.charCodeAt(0))%4,0);

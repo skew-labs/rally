@@ -218,7 +218,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Communities",Icons.Outlined
         }
     }
 }
-@Composable fun ProfileArtwork(url: String?,label: String,size: Dp=48.dp) = Artwork(url?.takeUnless { it==ORIGIN+"/assets/community-rally.png" },label,size,character=true)
+@Composable fun ProfileArtwork(url: String?,label: String,size: Dp=48.dp) = Artwork(url?.takeUnless { it==ORIGIN+"/assets/community-rally.png" || it==ORIGIN+"/assets/favicon.svg" },label,size,character=true)
 @Composable fun TokenArtwork(asset: Asset,size: Dp=40.dp) = Artwork(asset.image,asset.symbol,size,fallbackURL=asset.heroImage)
 @Composable fun Artwork(url: String?,label: String,size: Dp=48.dp,round: Boolean=true,character: Boolean=false,fallbackURL: String?=null) {
     val context=LocalContext.current
