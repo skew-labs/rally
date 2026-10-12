@@ -20,7 +20,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
 @Composable fun ProfileEditor(me: JSONObject,save: suspend (JSONObject,Uri?)->Unit,saved: ()->Unit,close: ()->Unit) {
     val id=me.string("id")
     var name by rememberSaveable(id) { mutableStateOf(me.string("name")) }
@@ -53,8 +53,10 @@ import org.json.JSONObject
             Column(Modifier.weight(1f,false).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 Row(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     Artwork(photo ?: if(removed)null else safeImage(me.string("avatar")),name,72.dp)
-                    TextButton(enabled=!pending,onClick={picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}) { Text("Change photo") }
-                    if(photo!=null || !removed && me.string("avatar").isNotBlank())TextButton(enabled=!pending,onClick={photo=null;removed=true}) { Text("Remove") }
+                    FlowRow(Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                        TextButton(enabled=!pending,onClick={picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}) { Text("Change photo") }
+                        if(photo!=null || !removed && me.string("avatar").isNotBlank())TextButton(enabled=!pending,onClick={photo=null;removed=true}) { Text("Remove") }
+                    }
                 }
                 OutlinedTextField(name,{if(it.length<=48)name=it},Modifier.fillMaxWidth(),enabled=!pending,singleLine=true,label={Text("Name")},keyboardOptions=KeyboardOptions(capitalization=KeyboardCapitalization.Words))
                 OutlinedTextField(handle,{if(it.length<=25)handle=it},Modifier.fillMaxWidth(),enabled=!pending,singleLine=true,label={Text("Username")},supportingText={Text("3–24 letters, numbers or underscores")},keyboardOptions=KeyboardOptions(capitalization=KeyboardCapitalization.None,autoCorrectEnabled=false,keyboardType=KeyboardType.Ascii))

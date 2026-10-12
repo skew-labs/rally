@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
@@ -24,6 +27,28 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class ProfileEditingTest {
+ @Test fun photoControlsRemainReachableWithLargeText() {
+  val inst=InstrumentationRegistry.getInstrumentation();val device=UiDevice.getInstance(inst)
+  val me=JSONObject().put("id","qa-photo-layout").put("name","Long Profile Name").put("handle","profile_layout").put("avatar","invalid-image")
+  ActivityScenario.launch(RallyActivity::class.java).use { scenario->
+   scenario.onActivity {activity->activity.setContent {RallyTheme(false){
+    CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density,1.3f)) {
+     ProfileEditor(me,{_,_->},{},{})
+    }
+   }}}
+   assertTrue(device.wait(Until.hasObject(By.text("Change photo")),5000))
+   val change=device.findObject(By.text("Change photo")).visibleBounds
+   val remove=device.findObject(By.text("Remove")).visibleBounds
+   assertTrue(change.width()>0 && remove.width()>0)
+   assertTrue(change.right<=device.displayWidth && remove.right<=device.displayWidth)
+   assertFalse(android.graphics.Rect.intersects(change,remove))
+   device.takeScreenshot(java.io.File(inst.targetContext.getExternalFilesDir(null),"profile-photo-large-text.png"))
+   device.findObject(By.text("Remove")).click()
+   assertTrue(device.wait(Until.gone(By.text("Remove")),2000))
+   assertNotNull(device.findObject(By.text("Change photo")))
+   assertNotNull(device.findObject(By.text("Save")))
+  }
+ }
  @Test fun profileSaveUsesCanonicalResponseWithoutWaitingForBootstrap() {
   val inst=InstrumentationRegistry.getInstrumentation();val app=inst.targetContext.applicationContext as Application
   val credentials=CredentialStore(app,"qa-profile-session",true);val pending=DurablePairing(app,"qa-profile-pairing");credentials.clear();pending.clear()
@@ -60,6 +85,9 @@ class ProfileEditingTest {
    assertTrue(device.wait(Until.hasObject(By.text("Edit profile")),5000))
    val fields=device.findObjects(By.clazz("android.widget.EditText"));assertEquals(3,fields.size)
    fields[0].click();fields[0].text="Edited Name";fields[1].click();fields[1].text="edited_user"
+   device.waitForIdle()
+   val saveBounds=device.findObject(By.text("Save")).visibleBounds
+   assertTrue("Save stays inside the visible viewport with the keyboard open",saveBounds.top>=0 && saveBounds.bottom<=device.displayHeight && saveBounds.height()>0)
    device.takeScreenshot(java.io.File(inst.targetContext.getExternalFilesDir(null),"profile-editor-keyboard.png"))
    device.findObject(By.text("Save")).click()
    assertTrue(device.wait(Until.hasObject(By.text("That username is taken")),5000))

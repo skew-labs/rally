@@ -310,19 +310,31 @@ html .r-compose-fab .icon{color:var(--on-solid);width:23px;height:23px}
 
 /* A compact identity and an editor that keeps its action above the keyboard. */
 html .r-account-card.r-account-identity{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:14px;padding-block:16px 24px}
-html .r-account-identity>div{min-width:0}html .r-account-identity h2{font-size:19px!important;margin:0;line-height:1.3}
-html .r-account-identity p{margin:4px 0 0;font-size:13px}html .r-account-identity small{display:block;margin-top:6px;color:var(--muted);overflow-wrap:anywhere}
+html .r-account-identity>div{min-width:0}html .r-account-identity h2{font-size:19px!important;margin:0;line-height:1.3;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+html .r-account-identity>div>p{margin:4px 0 0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html .r-account-identity .r-account-bio{grid-column:1/-1;margin:0;font-size:14px;line-height:1.5;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+html .r-account-identity>.r-avatar,html .r-account-identity>.r-btn{align-self:start}
+html .r-account-options :is(button,a,summary){min-height:58px;line-height:1.4;gap:12px}
+html .r-account-options .icon{flex-shrink:0}
 html .r-profile-settings summary{display:flex;align-items:center;justify-content:space-between;list-style:none;min-height:60px;cursor:pointer;font-size:14px}
 html .r-profile-settings summary .icon{width:18px;transition:transform 160ms ease}html .r-profile-settings[open] summary .icon{transform:rotate(90deg)}
-html .r-modal.r-profile-editor{width:min(480px,100%);padding:0;max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain}
-html .r-profile-editor .r-modal-head{position:sticky;top:0;margin:0;padding:20px 24px;background:var(--paper);z-index:2}
-#profile-form{padding:0 24px 24px}#profile-form .r-field{margin:0 0 16px}#profile-form .r-field small{font-size:11px;color:var(--muted);margin-top:6px;font-weight:400}
-.r-profile-photo{display:flex;align-items:center;gap:16px;padding:4px 0 24px}.r-profile-photo-pick{display:flex;align-items:center;gap:16px;cursor:pointer;font-size:14px;position:relative;color:var(--text)}
+html .r-modal.r-profile-editor{display:flex;flex-direction:column;width:min(480px,100%);padding:0;max-height:calc(100dvh - 32px);overflow:hidden;overscroll-behavior:contain}
+html .r-profile-editor .r-modal-head{flex:none;margin:0;padding:16px 24px;background:var(--paper)}
+#profile-form{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.r-profile-edit-fields{padding:0 24px;overflow-y:auto;overscroll-behavior:contain;min-height:0;scroll-padding-block:16px}
+.r-profile-edit-footer{flex:none;padding:12px 24px 24px;background:var(--paper);border-top:1px solid var(--line)}
+#profile-form .r-field{margin:0 0 16px}#profile-form .r-field small{display:block;font-size:11px;color:var(--muted);margin-top:6px;font-weight:400}
+#profile-form .r-field :is(input,textarea){min-width:0;max-width:100%}#profile-form textarea{resize:vertical}
+.r-profile-photo{display:flex;align-items:center;gap:16px;padding:8px 0 20px;min-width:0}
+#profile-photo-preview{flex:none;width:72px;height:72px}
+.r-profile-photo-actions{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;min-width:0}
+.r-profile-photo-pick{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 0;cursor:pointer;font-size:13px;position:relative;color:var(--text);white-space:nowrap}
+.r-profile-photo-actions #profile-photo-remove{padding-inline:12px;min-height:44px}
 .r-profile-photo [hidden]{display:none!important}
-.r-profile-photo-pick input{position:absolute;width:1px;height:1px;opacity:0;min-height:0}.r-profile-photo-pick:focus-within{outline:2px solid var(--brand);outline-offset:6px;border-radius:12px}
+.r-profile-photo-pick input{position:absolute;width:1px;height:1px;opacity:0;min-height:0;min-width:0;padding:0;border:0;clip-path:inset(50%)}.r-profile-photo-pick:has(:focus-visible){outline:2px solid var(--brand);outline-offset:3px;border-radius:6px}
 html #profile-photo-preview .r-avatar{width:72px;height:72px;border-radius:50%;object-fit:cover}
 #profile-form .r-form-error:empty{display:none}#profile-form .r-form-error{margin-bottom:12px;line-height:1.5}
-#profile-form [type=submit]{min-height:48px;margin-top:8px}#profile-form[aria-busy=true] .r-profile-photo{pointer-events:none;opacity:.7}
+#profile-form [type=submit]{min-height:48px;margin:0}#profile-form[aria-busy=true] .r-profile-photo{pointer-events:none;opacity:.7}
 @media(min-width:721px){html .r-spot-table td,html .r-perps-table td{height:72px;padding-block:8px}}
 @media(max-width:720px){html .r-spot-table tbody tr,html .r-perps-table tbody tr{min-height:72px;padding-block:10px}}
 html .r-market-table .r-coin-cell{min-height:44px}html .r-market-table tbody tr{cursor:pointer;transition:background-color 100ms ease}
@@ -334,6 +346,6 @@ html .r-asset-modal .r-mini-chart{min-height:240px}
  html .r-modal.r-asset-modal,html .r-modal.r-profile-editor{width:100%;max-height:calc(100dvh - env(safe-area-inset-top) - 12px)}
  html .r-account-card.r-account-identity{grid-template-columns:44px minmax(0,1fr) auto;gap:10px}html .r-account-identity>.r-btn{padding-inline:12px;font-size:12px;min-height:44px}
  html .r-account-identity h2{font-size:17px!important}html .r-account-identity>.r-avatar{width:44px!important;height:44px!important}
- #profile-form{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+ .r-profile-edit-footer{padding-bottom:calc(16px + env(safe-area-inset-bottom))}
 }
 @media(prefers-reduced-motion:reduce){html .r-market-table tbody tr,html .r-profile-settings summary .icon{transition:none}}
