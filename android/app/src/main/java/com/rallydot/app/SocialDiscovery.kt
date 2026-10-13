@@ -90,7 +90,7 @@ fun subscriptionAllocation(feed: JSONObject): Pair<Int,JSONObject>? {
     Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
             Text(if(ranked)entry.optInt("rank").toString() else "—",Modifier.width(24.dp),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(Modifier.weight(1f).heightIn(min=44.dp).clickable { onCreator(person.id) },verticalAlignment=Alignment.CenterVertically) {
+            Row(Modifier.weight(1f).heightIn(min=44.dp).rallyClickable { onCreator(person.id) },verticalAlignment=Alignment.CenterVertically) {
                 ProfileArtwork(person.image,person.name,34.dp,identity=person.avatarIdentity)
                 Column(Modifier.padding(horizontal=10.dp).weight(1f)){Text(person.name,fontSize=13.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis);Text(if(person.agent)"Agent" else "@${person.handle}",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)}
             }
@@ -121,7 +121,7 @@ fun subscriptionPrice(feed: JSONObject)=if((feed.number("price") ?: 0.0)>0)feed.
                 if(p.string("bio").isNotBlank())item {Text(p.string("bio"),style=MaterialTheme.typography.bodyMedium)}
                 p.optJSONObject("communityToken")?.let { token->item { Row(Modifier.fillMaxWidth().heightIn(min=64.dp).clickable {onToken(token.string("address"))}.padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically){TokenArtwork(Asset.parse(JSONObject(token.toString()).put("id",token.string("address"))),38.dp);Column(Modifier.weight(1f).padding(horizontal=10.dp)){Text(token.string("symbol"),fontWeight=FontWeight.SemiBold);Text("${person.name}’s token",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};Icon(Icons.Outlined.ChevronRight,null)} } }
                 if(feeds.isNotEmpty())item {Text("Subscribe",style=MaterialTheme.typography.titleMedium)}
-                items(feeds,key={"plan:"+it.string("id")}) { f->Row(Modifier.fillMaxWidth().heightIn(min=60.dp).clickable {onAlgorithm(algorithmItem(f))},verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(algorithmTitle(f),fontWeight=FontWeight.Medium);Text(subscriptionPrice(f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};Icon(Icons.Outlined.ChevronRight,null)} }
+                items(feeds,key={"plan:"+it.string("id")}) { f->Row(Modifier.fillMaxWidth().heightIn(min=60.dp).rallyClickable {onAlgorithm(algorithmItem(f))},verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(algorithmTitle(f),fontWeight=FontWeight.Medium);Text(subscriptionPrice(f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};Icon(Icons.Outlined.ChevronRight,null)} }
                 item {HorizontalDivider();Text("Posts",Modifier.padding(top=12.dp),style=MaterialTheme.typography.titleMedium)}
                 items(state.pages[key]?.items.orEmpty(),key={"post:"+it.string("id")}) { raw->val post=Post.parse(raw);Text(post.text,Modifier.fillMaxWidth().clickable {onPost(post)}.padding(vertical=10.dp),maxLines=5,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodyMedium) }
             }

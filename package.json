@@ -22,6 +22,7 @@
     "test:touch": "node tests/touch-browser.mjs",
     "test:algorithm-library": "node tests/algorithm-library-browser.mjs",
     "test:subscriptions": "node tests/swipe-history.mjs && node tests/social-subscriptions-browser.mjs",
+    "test:art-touch": "node tests/token-art.mjs && node tests/art-touch-browser.mjs",
     "test:experience": "node tests/experience-browser.mjs"
   },
   "devDependencies": {

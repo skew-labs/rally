@@ -13,9 +13,9 @@ try {
  await page.waitForFunction(()=>{const i=document.querySelector('.nad-table .r-token');return i?.complete&&i.naturalWidth>0&&i.classList.contains('is-loaded');});
  const bounds=await token.evaluate(e=>{const a=e.getBoundingClientRect(),b=e.querySelector('img').getBoundingClientRect();return {width:a.width,height:a.height,image:b.width,imageHeight:b.height};});
  assert.equal(bounds.width,bounds.height);assert.equal(bounds.width,bounds.image);assert.equal(bounds.height,bounds.imageHeight);
- const original=await token.locator('img').getAttribute('data-art-fallback');assert(original);
+ const original=JSON.parse(await token.locator('img').getAttribute('data-art-sources')||'[]').at(-1);assert(original);
  await token.locator('img').evaluate(e=>{e.classList.remove('is-loaded');e.src='/assets/intentional-missing-thumbnail.webp';});
- await page.waitForFunction(original=>{const i=document.querySelector('.nad-table .r-token');return i?.src===original&&i.complete&&i.naturalWidth>0&&i.classList.contains('is-loaded')&&!i.hasAttribute('data-art-fallback');},original);
+ await page.waitForFunction(original=>{const i=document.querySelector('.nad-table .r-token');return i?.src===original&&i.complete&&i.naturalWidth>0&&i.classList.contains('is-loaded')&&JSON.parse(i.dataset.artSources||'[]').length===0;},original);
  const avatar=page.locator('#side-account-profile .r-character-avatar img');await avatar.waitFor();
  assert(await avatar.evaluate(i=>i.complete&&i.naturalWidth===192));
  const faces=await page.locator('.r-people-rail .r-character-avatar img').evaluateAll(images=>images.map(i=>i.getAttribute('src')));
@@ -30,7 +30,7 @@ try {
  await page.waitForFunction(()=>{const i=document.querySelector('.r-agent-card [data-agent-brand=codex]>img');return i?.complete&&i.naturalWidth>0&&i.nextElementSibling.hidden;});
  await page.evaluate(async()=>{await Promise.all(document.getAnimations().filter(a=>a.effect?.getComputedTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})));});
  await page.screenshot({path:out+'/agents.png'});
- await page.goto(origin+'/?view=communities');await page.locator('.cx-grid').waitFor();
+ await page.goto(origin+'/?view=groups');await page.locator('.cx-grid').waitFor();
  assert(await page.locator('.cx-letter-art.r-character-avatar img').first().evaluate(i=>i.complete&&i.naturalWidth===192));
  const community=page.locator('.cx-card:has(.cx-letter-art.r-character-avatar)').first(),id=await community.getAttribute('data-community');
  assert.equal(await community.locator('.r-character-avatar img').getAttribute('src'),await page.locator('#side-communities [data-id="'+id+'"] .r-character-avatar img').getAttribute('src'));

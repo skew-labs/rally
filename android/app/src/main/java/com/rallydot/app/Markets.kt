@@ -88,7 +88,7 @@ import kotlin.math.abs
     }
 }
 @Composable fun AssetRow(asset: Asset,cap: Boolean,onClick: ()->Unit,onBuy: (()->Unit)?=null) {
-    Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=16.dp,vertical=6.dp).heightIn(min=52.dp),verticalAlignment=Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().rallyClickable(onClick).padding(horizontal=16.dp,vertical=6.dp).heightIn(min=52.dp),verticalAlignment=Alignment.CenterVertically) {
         TokenArtwork(asset,36.dp);Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f).padding(end=8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             Text(asset.symbol,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Medium,fontSize=14.sp,lineHeight=18.sp)

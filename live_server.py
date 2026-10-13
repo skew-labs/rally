@@ -70,6 +70,8 @@ class Handler(BaseHTTPRequestHandler):
         super().setup();self.connection.settimeout(30)
     def log_message(self,*args):pass  # Never log bearer tokens, upload URLs, OAuth codes or wallet signatures.
     def response(self,data,status=200,headers=None,mime='application/json'):
+        if status==200 and mime=='application/json' and self.command=='GET' and urlsplit(getattr(self,'path','')).path in {'/api/bootstrap','/api/markets','/api/market-catalog','/api/market-prices','/api/perps','/api/predictions','/api/launchpad/tokens'}:
+            data=token_images.decorate_payload(data)
         body=data if isinstance(data,bytes) else s.dump(data).encode() if mime=='application/json' else data.encode()
         if mime=='application/json' and status==200 and self.command=='GET' and urlsplit(self.path).path in {'/api/bootstrap','/api/posts','/api/markets','/api/market-prices','/api/market-catalog','/api/perps','/api/predictions','/api/market-chart','/api/nadfun/tokens','/api/launchpad/tokens','/api/launchpad/activity','/api/discover','/api/discover/preview','/api/performance/leaderboard'} and len(body)>1500 and re.search(r'(?:^|,)\s*gzip\s*(?:,|$)',self.headers.get('Accept-Encoding','')):
             body=gzip.compress(body,compresslevel=5,mtime=0);headers={**(headers or {}),'Content-Encoding':'gzip','Vary':'Accept-Encoding'}

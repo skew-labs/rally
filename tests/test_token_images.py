@@ -12,8 +12,8 @@ class Artwork(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);(self.root/'assets').mkdir();(self.root/'state').mkdir()
         self.a=patch.object(s,'ROOT',self.root);self.b=patch.object(s,'STATE',self.root/'state');self.a.start();self.b.start()
-        art.CACHE.clear();art.RETRY.clear();self.url='https://storage.nadapp.net/coin/12345678-abcd'
-    def tearDown(self):self.a.stop();self.b.stop();self.tmp.cleanup();art.CACHE.clear();art.RETRY.clear()
+        art.CACHE.clear();art.RETRY.clear();art.registry.cache_clear();self.url='https://storage.nadapp.net/coin/12345678-abcd'
+    def tearDown(self):self.a.stop();self.b.stop();self.tmp.cleanup();art.CACHE.clear();art.RETRY.clear();art.registry.cache_clear()
     def test_only_exact_public_registry_origin_and_path(self):
         self.assertTrue(art.safe(self.url))
         for value in [None,'https://[','http://storage.nadapp.net/coin/12345678','https://storage.nadapp.net.evil.test/coin/12345678','https://storage.nadapp.net@127.0.0.1/coin/12345678','https://storage.nadapp.net:443/coin/12345678','https://storage.nadapp.net/coin/12345678?target=http://localhost','https://storage.nadapp.net/../private','/media/private-upload']:
@@ -31,13 +31,27 @@ class Artwork(unittest.TestCase):
             with self.assertRaises(Exception):art.encode(body)
     def test_missing_cache_never_replaces_original(self):
         tokens=[{'id':'exact-address','logoURI':self.url,'price':1.25,'referenceAt':100}]
-        self.assertIsNone(art.ready(self.url));self.assertEqual(art.decorate(tokens),tokens);self.assertNotIn('logoThumbURI',tokens[0])
+        self.assertIsNone(art.ready(self.url));art.decorate(tokens);self.assertEqual(tokens[0]['logoThumbURI'],self.url);self.assertEqual(tokens[0]['logoCandidates'],[self.url])
     def test_ready_derivative_retains_identity_source_and_price(self):
         import hashlib
         name='token-art-'+'1'*20+'.webp';(self.root/'assets'/name).write_bytes(b'fixture')
         art.CACHE[hashlib.sha256(self.url.encode()).hexdigest()]=name
         original={'id':'exact-address','logoURI':self.url,'price':1.25,'referenceAt':100};token=dict(original)
-        art.decorate([token]);self.assertEqual(token.pop('logoThumbURI'),'/assets/'+name);self.assertEqual(token,original)
+        art.decorate([token]);self.assertEqual(token.pop('logoThumbURI'),'/assets/'+name);self.assertEqual(token.pop('logoCandidates'),['/assets/'+name,self.url]);self.assertEqual(token,original)
+
+    def test_native_and_web_get_registry_artwork_only_for_exact_identity(self):
+        (self.root/'assets/coin.png').write_bytes(b'fixture')
+        (self.root/'assets/token-artwork.json').write_text(json.dumps({'0xabc':'/assets/coin.png','perp:btc':'/assets/coin.png','0xmissing':'/assets/absent.png'}))
+        data={'tokens':[{'id':'0xAbC','symbol':'BTC'},{'id':'0xother','symbol':'BTC'},{'id':'0xmissing','symbol':'BTC'}],'markets':[{'id':'venue-123','baseSymbol':'BTC'}]}
+        art.decorate_payload(data)
+        self.assertEqual(data['tokens'][0]['logoThumbURI'],'/assets/coin.png')
+        self.assertNotIn('logoThumbURI',data['tokens'][1]);self.assertNotIn('logoThumbURI',data['tokens'][2])
+        self.assertEqual(data['markets'][0]['logoCandidates'],['/assets/coin.png'])
+
+    def test_catalog_decoration_does_not_collect_on_request_thread(self):
+        data={'tokens':[{'id':'known','logoURI':self.url}]}
+        with patch.object(art,'collect',side_effect=AssertionError('No image fetch in request')):art.decorate_payload(data)
+        self.assertEqual(data['tokens'][0]['logoCandidates'],[self.url])
     def test_restored_manifest_cannot_reveal_private_media(self):
         import hashlib
         key=hashlib.sha256(self.url.encode()).hexdigest()

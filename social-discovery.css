@@ -83,3 +83,18 @@ html .rs-swipe-history{flex:1;min-height:80px;max-height:180px;display:flex;flex
 .rs-subscribe small{color:inherit;opacity:.84}body[data-view=research] .am-filters button[data-id=paid],body[data-view=research] .am-filters button[data-id=yours]{display:none}
 body[data-view=home] .r-header .r-search-launch{display:none}
 .r-spot-table button[data-action=trade]{background:transparent!important;border-color:transparent!important;color:var(--buy,#0866ff)!important;min-width:44px!important;min-height:44px!important;padding:0 6px!important;font-size:12px!important;box-shadow:none!important}
+
+/* Touch feedback is attached to the pressed control, never to live price updates. */
+html :is(.rs-token-open,.r-coin-cell,.rs-quick-buy,.r-market-buy,.rs-leader-identity,.rs-post-token,.rs-creator-card,.rs-subscribe){touch-action:manipulation;transition:background-color 90ms ease,transform 150ms cubic-bezier(.22,.8,.24,1)}
+html :is(.rs-token-open,.r-coin-cell,.rs-leader-identity,.rs-post-token).r-is-pressed{background:color-mix(in srgb,var(--text) 6%,transparent);border-radius:12px}
+html :is(.rs-quick-buy,.r-market-buy,.rs-creator-card,.rs-subscribe,.r-btn,.r-icon-button).r-is-pressed:not(:disabled){transform:scale(.97)}
+html .rs-token-row:has(.rs-token-open.r-is-pressed){background:color-mix(in srgb,var(--text) 3%,transparent)}
+html .r-token-art>.r-token{transition:opacity 100ms ease-out;object-fit:cover}
+html .r-token-art[data-art-tone]>.r-token-fallback{background:#e9e5fb;color:#6751aa;font-weight:600;letter-spacing:-.4px}
+html .r-token-art[data-art-tone="1"]>.r-token-fallback{background:#e0f0eb;color:#327465}
+html .r-token-art[data-art-tone="2"]>.r-token-fallback{background:#f7e6d9;color:#9a6039}
+html .r-token-art[data-art-tone="3"]>.r-token-fallback{background:#e3edfb;color:#466baf}
+html .r-token-art[data-art-tone="4"]>.r-token-fallback{background:#f5e2ea;color:#a24f76}
+html .r-token-art[data-art-tone="5"]>.r-token-fallback{background:#e9ebd9;color:#687d37}
+html .rs-feed-modes.r-motion-tabs>button[aria-pressed=true]{border-bottom-color:transparent}
+@media(prefers-reduced-motion:reduce){html .r-is-pressed,html .r-token-art>.r-token{transform:none!important;transition:none!important}}

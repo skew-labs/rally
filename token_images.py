@@ -4,9 +4,15 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlsplit
 from PIL import Image
 import service as s
+from functools import lru_cache
 
 LIMIT=3*1024*1024
 LOCK=threading.Lock();CACHE={};RETRY={}
+
+@lru_cache(maxsize=1)
+def registry():
+    try:return json.loads((s.ROOT/'assets/token-artwork.json').read_text())
+    except (OSError,ValueError):return {}
 
 
 def safe(url):
@@ -93,11 +99,29 @@ def once(maximum=32,workers=2):
     return {'attempted':len(pending),'collected':sum(results),'ready':sum(bool(ready(url)) for url in urls),'sources':len(urls)}
 
 
-def decorate(tokens):
+def decorate(tokens,kind='spot'):
     for token in tokens:
+        if not isinstance(token,dict):continue
+        identity=str(token.get('address') or token.get('id') or '').lower()
+        if kind=='perps':identity='perp:'+str(token.get('baseSymbol') or token.get('symbol') or '').lower()
+        art=registry().get(identity)
+        if art and (not art.startswith('/assets/') or not (s.ROOT/art.lstrip('/')).is_file()):art=None
         thumbnail=ready(token.get('logoURI'))
-        if thumbnail:token['logoThumbURI']=thumbnail
+        candidates=list(dict.fromkeys(x for x in [thumbnail,art,token.get('logoURI')] if isinstance(x,str) and x))
+        if candidates:
+            token['logoCandidates']=candidates
+            token['logoThumbURI']=candidates[0]
     return tokens
+
+def decorate_payload(data):
+    """Same exact-identity artwork for web, Android and public discovery reads."""
+    if not isinstance(data,dict):return data
+    for key,kind in [('tokens','spot'),('markets','perps')]:
+        if isinstance(data.get(key),list):decorate(data[key],kind)
+    if isinstance(data.get('marketData'),dict):decorate_payload(data['marketData'])
+    for pool in data.get('pools',[]) if isinstance(data.get('pools'),list) else []:
+        if isinstance(pool,dict) and isinstance(pool.get('assetInfo'),dict):decorate([pool['assetInfo']])
+    return data
 
 
 def background():

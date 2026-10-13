@@ -144,7 +144,12 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Community",Icons.Outlined.P
                             if(from>=0 && to>=0)
                                 (fadeIn(tween(150))+slideInHorizontally(tween(180)) { direction*it/40 }) togetherWith
                                     fadeOut(tween(80)) using SizeTransform(clip=false)
-                            else fadeIn(tween(120)) togetherWith fadeOut(tween(70)) using SizeTransform(clip=false)
+                            else {
+                                val fromTab=initialState.substringBefore(':').toIntOrNull()
+                                val toTab=targetState.substringBefore(':').toIntOrNull()
+                                val step=if(fromTab!=null && toTab!=null)toTab.compareTo(fromTab) else 0
+                                (fadeIn(tween(150))+slideInHorizontally(tween(190)) { step*it/32 }) togetherWith fadeOut(tween(80)) using SizeTransform(clip=false)
+                            }
                         },label="screen") { shown ->
                             screenStates.SaveableStateProvider("$accountId/$shown") {
                                 when {
@@ -222,13 +227,14 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Community",Icons.Outlined.P
     }
 }
 @Composable fun ProfileArtwork(url: String?,label: String,size: Dp=48.dp,identity: String,namespace: String="profile") = Artwork(url?.takeUnless { namespace=="profile" && (it==ORIGIN+"/assets/community-rally.png" || it==ORIGIN+"/assets/favicon.svg") },label,size,characterResource=avatarDrawable(identity,namespace))
-@Composable fun TokenArtwork(asset: Asset,size: Dp=40.dp) = Artwork(asset.image,asset.symbol,size,fallbackURL=asset.heroImage)
-@Composable fun Artwork(url: String?,label: String,size: Dp=48.dp,round: Boolean=true,characterResource: Int?=null,fallbackURL: String?=null) {
+@Composable fun TokenArtwork(asset: Asset,size: Dp=40.dp) = Artwork(asset.image,asset.symbol,size,fallbackURL=asset.heroImage,candidates=asset.artworkSources,identity=asset.id)
+@Composable fun Artwork(url: String?,label: String,size: Dp=48.dp,round: Boolean=true,characterResource: Int?=null,fallbackURL: String?=null,candidates: List<String> = emptyList(),identity: String=label) {
     val context=LocalContext.current
     val density=androidx.compose.ui.platform.LocalDensity.current
     val pixels=with(density) { size.roundToPx() }.coerceAtLeast(1)
-    var failed by remember(url,fallbackURL) { mutableStateOf(false) }
-    val current=if(failed)fallbackURL?.takeIf { it!=url } else url
+    val sources=remember(url,fallbackURL,candidates) { (listOfNotNull(url)+candidates+listOfNotNull(fallbackURL)).distinct().take(4) }
+    var attempt by remember(sources) { mutableIntStateOf(0) }
+    val current=sources.getOrNull(attempt)
     val request=remember(current,context,pixels) {
         val artwork: Any?=when(current) {
             ORIGIN+"/assets/agent-meta.svg"->R.drawable.brand_meta
@@ -237,15 +243,18 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Community",Icons.Outlined.P
         }
         ImageRequest.Builder(context).data(artwork).size(pixels).crossfade(if(android.os.Build.VERSION.SDK_INT>=26 && !android.animation.ValueAnimator.areAnimatorsEnabled())0 else 100).build()
     }
-    var loaded by remember(url,fallbackURL) { mutableStateOf(false) }
+    var loaded by remember(current) { mutableStateOf(false) }
     val companyLogo=url?.startsWith(ORIGIN+"/assets/agent-")==true
-    val background=when { companyLogo->Color.White;characterResource!=null->MaterialTheme.colorScheme.secondaryContainer;else->MaterialTheme.colorScheme.surfaceContainer }
+    val tones=listOf(Color(0xFFE9E5FB),Color(0xFFE0F0EB),Color(0xFFF7E6D9),Color(0xFFE3EDFB),Color(0xFFF5E2EA),Color(0xFFE9EBD9))
+    val inks=listOf(Color(0xFF6751AA),Color(0xFF327465),Color(0xFF9A6039),Color(0xFF466BAF),Color(0xFFA24F76),Color(0xFF687D37))
+    val tone=(identity.hashCode().toLong() and 0xffffffffL).rem(6).toInt()
+    val background=when { companyLogo->Color.White;characterResource!=null->MaterialTheme.colorScheme.secondaryContainer;else->tones[tone] }
     Box(Modifier.size(size).clip(if(round)CircleShape else RoundedCornerShape(12.dp)).background(background),contentAlignment=Alignment.Center) {
         if(!loaded) {
             if(characterResource!=null)Image(androidx.compose.ui.res.painterResource(characterResource),label,Modifier.fillMaxSize().graphicsLayer { translationY=size.toPx()*.04f;scaleX=.95f;scaleY=.95f },contentScale=androidx.compose.ui.layout.ContentScale.Fit)
-            else Text(label.take(3).uppercase(),fontSize=(size.value*.25f).sp,color=if(companyLogo)Color(0xFF727785) else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=FontWeight.Medium)
+            else Text(label.take(2).uppercase(),fontSize=(size.value*.28f).sp,color=if(companyLogo)Color(0xFF727785) else inks[tone],fontWeight=FontWeight.Medium)
         }
-        if(current!=null)AsyncImage(request,contentDescription=label,onSuccess={loaded=true},onError={loaded=false;failed=true},modifier=Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Crop)
+        if(current!=null)AsyncImage(request,contentDescription=label,onSuccess={loaded=true},onError={loaded=false;attempt++},modifier=Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Crop)
     }
 }
 @Composable fun EmptyState(title: String,detail: String?=null,action: String?=null,onAction: ()->Unit={}) {

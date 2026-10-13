@@ -34,14 +34,19 @@ fun age(time: Long): String { val d = (System.currentTimeMillis()/1000 - time).c
 
 data class Asset(val id: String, val name: String, val symbol: String, val image: String?, val price: Double?, val cap: Double?, val change: Double?, val venue: String, val kind: String, val time: Long, val stale: Boolean, val raw: JSONObject) {
     val key get() = "$kind:$venue:$id"
-    val heroImage get() = safeImage(raw.string("logoURI")) ?: image
+    val heroImage get() = safeImage((raw.optJSONObject("assetInfo") ?: raw).string("logoURI")) ?: image
+    val artworkSources get() = buildList {
+        image?.let(::add)
+        raw.optJSONArray("logoCandidates")?.let { values->for(i in 0 until values.length())safeImage(values.optString(i))?.let(::add) }
+        heroImage?.let(::add)
+    }.distinct().take(4)
     val executable get() = when (kind) { "perps" -> raw.string("execution") == "wallet_transactions" && raw.optBoolean("open", false); "prediction" -> raw.string("state") == "open"; else -> !raw.optBoolean("locked") && raw.optBoolean("tradeSupported", true) }
     val freshness get() = stale || time <= 0 || System.currentTimeMillis()/1000-time > 120
     companion object {
         fun parse(j: JSONObject, kind: String = "spot"): Asset {
             val info = j.optJSONObject("assetInfo") ?: j
             val symbol = when(kind) { "prediction" -> j.string("asset"); "perps" -> j.string("baseSymbol", j.string("symbol")); else -> j.string("symbol") }
-            val logo = info.string("logoThumbURI", info.string("logoURI")).ifBlank { if(kind == "perps") "/assets/$symbol.png" else "" }
+            val logo = info.string("logoThumbURI").ifBlank { info.string("logoURI") }.ifBlank { info.optJSONArray("logoCandidates")?.optString(0).orEmpty() }.ifBlank { if(kind == "perps") "/assets/$symbol.png" else "" }
             return Asset(j.string("id", j.string("address")), info.string("name", symbol), symbol, safeImage(logo), if(kind == "perps") j.number("mark") else j.number("price"), j.number("marketCap"), j.number("change"), j.string("venue", if(kind == "prediction") "Castora" else "Monad"), kind, j.optLong("referenceAt", j.optLong("observationAt", j.optLong("fetchedAt"))), j.optBoolean("stale"), j)
         }
     }

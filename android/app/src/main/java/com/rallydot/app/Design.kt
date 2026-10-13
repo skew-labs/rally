@@ -76,6 +76,15 @@ fun Modifier.animatedHeight(height: State<Dp>)=layout { measurable,constraints->
     return highRefresh().graphicsLayer { scaleX=scale.value;scaleY=scale.value }
 }
 
+@Composable fun Modifier.rallyClickable(onClick: ()->Unit): Modifier {
+    val interactions=remember { MutableInteractionSource() }
+    val haptic=androidx.compose.ui.platform.LocalHapticFeedback.current
+    return pressFeedback(interactions).clickable(interactionSource=interactions,indication=null,onClick={
+        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.SegmentTick)
+        onClick()
+    })
+}
+
 @Composable fun RallyBrand() {
     Row(verticalAlignment=Alignment.Bottom) {
         Text("rally",fontFamily=RallyFont,fontWeight=FontWeight.Bold,fontSize=25.sp,letterSpacing=(-1.3).sp,lineHeight=30.sp)
