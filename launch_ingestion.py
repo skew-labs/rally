@@ -38,6 +38,8 @@ def health():
             'verified':s.one('SELECT count(*) AS n FROM nad_tokens')['n']}
 
 def viewed(tokens):
+    import launch_metrics
+    launch_metrics.queue(tokens)
     with LOCK:
         for token in tokens:
             VISIBLE.pop(token['id'],None);VISIBLE[token['id']]=s.now()
@@ -290,7 +292,12 @@ def refresh_visible(limit=32):
 def loops():
     initialize()
     def events():
-        while True:n.sync_once();time.sleep(10)
+        import launch_graduations
+        while True:
+            n.sync_once()
+            try:launch_graduations.replay()
+            except Exception:pass
+            time.sleep(10)
     def verify():
         while True:
             try:verify_once()
@@ -302,6 +309,17 @@ def loops():
             try:refresh_visible()
             except Exception:pass
             VISIBLE_EVENT.wait(15)
+    def metrics():
+        import launch_metrics
+        while True:
+            try:
+                if not launch_metrics.QUEUE:
+                    recent=s.rows("SELECT info FROM nad_tokens ORDER BY json_extract(info,'$.created') DESC LIMIT 8")
+                    launch_metrics.queue([json.loads(r['info']) for r in recent])
+                launch_metrics.refresh_once()
+            except Exception:pass
+            time.sleep(15)
+    threading.Thread(target=metrics,daemon=True,name='launch-daily-metrics').start()
     threading.Thread(target=events,daemon=True,name='launch-finalized-events').start()
     threading.Thread(target=verify,daemon=True,name='launch-identity-verification').start()
     threading.Thread(target=visible,daemon=True,name='launch-visible-prices').start()

@@ -4,7 +4,7 @@ Rally's Android app renders markets, charts, Swipe, feeds and profiles natively,
 
 ## Install Rally
 
-Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.26.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.26**. Android 9 or later is required.
+Download the [signed Android APK](https://rallydot.com/assets/rally-android-0.4.27-15ef58fd4883.apk) from rallydot.com. The current package is `com.rallydot.app`, version **0.4.27**. Android 9 or later is required.
 
 When installing a downloaded APK, Android may ask you to allow installation from the app used to download it. Use the official file rather than a re-signed copy from an unknown source.
 
@@ -25,6 +25,10 @@ Open **Profile → Edit profile** to change your name, username, bio or photo. C
 Open a market, choose Buy or Sell, set the amount and approve the wallet request. Native panels use the server's current transaction plans and follow the resulting transfer or position.
 
 If an app interruption occurs after submission, the saved pending request can be reconciled on return. Do not send a second transaction just because the app was closed. See [Order status](trading.md).
+
+## Find tokens
+
+Open **Tokens → New** for recent launches or **Graduated** for DEX migrations. Rows show market cap (MC), trading volume (Vol), 24-hour price change and elapsed time. The time in Graduated refers to the indexed graduation event; other lists use launch time. Tap **new tokens** when it appears to load arrivals without losing your place while reading.
 
 ## Token charts
 

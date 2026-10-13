@@ -34,6 +34,6 @@ Rally records the transaction hash and checks the actual asset delivery. If the 
 
 ## Token lists
 
-Open **Home → Markets → Tokens** for both DEX tokens and nad.fun launches. Crypto emphasizes liquidity and volume. Trending combines observed volume, positive price momentum, liquidity and available launch participation signals. Graduated contains nad.fun tokens whose onchain state confirms DEX migration. New orders verified launch records by creation time. Token identity, artwork and the original trading route stay attached to each row.
+Open **Home → Markets → Tokens** for both DEX tokens and nad.fun launches. Crypto emphasizes liquidity and volume. Trending combines observed volume, positive price momentum, liquidity and available launch participation signals. Graduated puts the latest indexed DEX migrations first; older tokens without an indexed migration date follow them. Its age label refers to graduation, not token creation. New orders verified launch records by creation time. A new-token prompt loads fresh arrivals without shifting the row you are reading. Token identity, artwork and the original trading route stay attached to each row.
 
 Ranks refresh when you reopen or refresh a list. Prices update without rearranging the rows you are reading. Missing or expired data does not become a zero return or proof that a trade can execute.

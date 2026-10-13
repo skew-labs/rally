@@ -14,9 +14,10 @@ import service as s
 import market_universe as universe
 import nadfun
 import token_images
+import launch_graduations
 
 CATEGORIES = ('crypto', 'trending', 'graduated', 'new')
-VERSION = 'rally.tokens.v1'
+VERSION = 'rally.tokens.v2'
 LOCK = threading.Lock()
 SNAPSHOTS = OrderedDict()
 FRESH_SECONDS = 15
@@ -60,7 +61,10 @@ def normalized(item, now):
         t['rankingFresh'] = False
     else:
         t['rankingFresh'] = bool(t['price'])
-    if t.get('marketCap') is not None:
+    if t.get('nadfun') and t['price'] and number(t.get('totalSupply')) > 0:
+        cap = number(t['price'] * number(t['totalSupply']))
+        t['marketCap'] = cap if cap > 0 else None
+    elif t.get('marketCap') is not None:
         cap = number(t['marketCap'])
         t['marketCap'] = cap if cap > 0 and t['price'] else None
     return t
@@ -82,8 +86,8 @@ def candidates(wanted=None):
     # API service's memory budget when large inventories and charts overlap.
     with closing(universe.db()) as db:
         db.execute('ATTACH DATABASE ? AS rally_launches', (str(s.DB),))
-        sql = ('SELECT a.address,a.info,a.price,n.info AS launch_info FROM assets a '
-               'LEFT JOIN rally_launches.nad_tokens n ON n.address=a.address WHERE a.info IS NOT NULL')
+        sql = ('SELECT a.address,a.info,a.price,n.info AS launch_info,g.stamp AS graduation_stamp,g.block AS graduation_block,g.tx AS graduation_tx FROM assets a '
+               'LEFT JOIN rally_launches.nad_tokens n ON n.address=a.address LEFT JOIN rally_launches.nad_graduations g ON g.address=a.address WHERE a.info IS NOT NULL')
         if wanted is not None:
             sql += ' AND a.address IN ('+','.join('?' for _ in args)+')'
         for row in db.execute(sql, args):
@@ -100,19 +104,22 @@ def candidates(wanted=None):
                 launch = nadfun.public_info(json.loads(row['launch_info']))
                 # Lifecycle and quote-asset restrictions remain contract-derived.
                 if launch.get('graduated') and number(value.get('fetchedAt')) > number(launch.get('referenceAt')):
-                    launch.update({k: value[k] for k in ('price','volume','change','liquidity','marketCap','priceSource') if k in value})
+                    launch.update({k: value[k] for k in ('price','liquidity','marketCap','priceSource') if k in value})
+                    if number(value.get('fetchedAt')) >= number(launch.get('metricsAt')):
+                        launch.update({k:value[k] for k in ('volume','change') if k in value})
                     launch['referenceAt'] = value['fetchedAt']
                 item.update(launch)
+                item.update(launch_graduations.fields(row))
             t = normalized(item, now)
             if t:
                 yield t
-        sql = ('SELECT n.address,n.info FROM rally_launches.nad_tokens n '
-               'LEFT JOIN assets a ON a.address=n.address WHERE a.info IS NULL')
+        sql = ('SELECT n.address,n.info,g.stamp AS graduation_stamp,g.block AS graduation_block,g.tx AS graduation_tx FROM rally_launches.nad_tokens n '
+               'LEFT JOIN assets a ON a.address=n.address LEFT JOIN rally_launches.nad_graduations g ON g.address=n.address WHERE a.info IS NULL')
         if wanted is not None:
             sql += ' AND n.address IN ('+','.join('?' for _ in args)+')'
         for row in db.execute(sql, args):
             seen.add(identity(row['address']))
-            item = normalized(nadfun.public_info(json.loads(row['info'])), now)
+            item = normalized({**nadfun.public_info(json.loads(row['info'])), **launch_graduations.fields(row)}, now)
             if item:
                 yield item
     for ident, t in base.items():
@@ -149,6 +156,11 @@ def rank(t, category, now):
     else:
         score = .65*liquidity + .35*volume
     health = int(not t.get('locked') and t.get('tradeSupported') is not False)
+    if category == 'graduated':
+        # Never substitute creation date, last-seen time, or current read block.
+        stamp = number(t.get('graduatedAt'))
+        verified = t.get('graduationSource') == 'nad.fun finalized event' and 0 < stamp <= now
+        return (-int(verified), -stamp if verified else 0, -number(t.get('graduatedBlock')) if verified else 0, -int(fresh), -health, -score, t['id'])
     if category == 'new':
         return (-created, -health, -int(fresh), -score, t['id'])
     return (-int(fresh), -health, -score, t['id'])

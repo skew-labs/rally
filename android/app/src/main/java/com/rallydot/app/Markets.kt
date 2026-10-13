@@ -56,14 +56,23 @@ import kotlin.math.abs
     LaunchedEffect(query) { delay(280);applied=query.trim() }
     LaunchedEffect(key) { vm.load(key,path,field) }
     LaunchedEffect(key,assets.firstOrNull()?.key) { assets.take(2).filter { it.kind=="spot" }.forEach(vm::warmChart) }
+    var pendingHead by remember(key) { mutableStateOf<JSONObject?>(null) }
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(key,lifecycle) { lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { while(true) { delay(15000);if(category=="Tokens"&&!launch)vm.refreshTokenRows(key) else vm.load(key,path,field,true,retain=true) } } }
+    LaunchedEffect(key,lifecycle) { lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { while(true) { delay(15000)
+        if(category=="Tokens"&&!launch) {
+            vm.refreshTokenRows(key)
+            if(tokenFilter in listOf("New","Graduated"))try {
+                val head=vm.api.get(path,true)
+                val current=vm.state.value.pages[key]?.items.orEmpty()
+                if(head.objects("tokens").firstOrNull()?.string("id")?.let { it!=current.firstOrNull()?.string("id") }==true)pendingHead=head
+            } catch(e:CancellationException) { throw e } catch(_:Exception) {}
+        } else vm.load(key,path,field,true,retain=true) } } }
     val list=rememberLazyListState()
     LaunchedEffect(category,tokenFilter){list.scrollToItem(0)}
     ReportDrawnWhen { page.items.isNotEmpty() || page.error!=null || (!page.loading && state.pages.containsKey(key)) }
     LaunchedEffect(list,key,page.cursor) { snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { index -> if(index>=list.layoutInfo.totalItemsCount-4 && assets.isNotEmpty() && page.cursor!=null && !page.loading && page.error==null)vm.load(key,path+"&cursor="+Uri.encode(page.cursor),field,append=true) } }
     Column(Modifier.fillMaxSize()) {
-        PullToRefreshBox(isRefreshing=page.loading && page.items.isNotEmpty(),onRefresh={vm.load(key,path,field,true)},modifier=Modifier.weight(1f)) {
+        PullToRefreshBox(isRefreshing=page.loading && page.items.isNotEmpty(),onRefresh={pendingHead=null;vm.load(key,path,field,true)},modifier=Modifier.weight(1f)) {
             LazyColumn(state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(bottom=24.dp)) {
                 if(!launch && overview!=null)item(key="overview") { overview() }
                 item(key="controls") {
@@ -76,6 +85,14 @@ import kotlin.math.abs
             if(launch) { Spacer(Modifier.width(8.dp));FilledIconButton(onClick=create,modifier=Modifier.size(52.dp),colors=IconButtonDefaults.filledIconButtonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Icon(Icons.Outlined.Add,"Launch a token") } }
         }
                 }
+                pendingHead?.let { head->item(key="new-tokens") {
+                    val known=page.items.map{it.string("id")}.toSet()
+                    val count=head.objects("tokens").count{it.string("id") !in known}
+                    TextButton(onClick={vm.replaceTokenHead(key,head);pendingHead=null},modifier=Modifier.fillMaxWidth().heightIn(min=44.dp)) {
+                        Icon(Icons.Outlined.ArrowUpward,null,Modifier.size(16.dp));Spacer(Modifier.width(6.dp))
+                        Text(if(count>0)"$count new token"+if(count==1)"" else "s" else "Updated list")
+                    }
+                } }
                 if(page.items.isEmpty() && page.loading)item { LoadingRows() }
                 if(page.error!=null)item { EmptyState("Connection interrupted",page.error,"Retry",{vm.load(key,path,field,true)}) }
                 if(assets.isEmpty() && !page.loading && page.error==null)item { EmptyState("No markets found",if(query.isNotBlank())"Try a token name or address" else "Pull to refresh") }
@@ -83,8 +100,12 @@ import kotlin.math.abs
                     item { Text("Price predictions",Modifier.padding(20.dp),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium) }
                     items(assets,key={it.key}) { a->PredictionRow(a,{onAsset(a)}) }
                 } else {
-                    item { Row(Modifier.padding(horizontal=16.dp,vertical=4.dp)) { Text(if(launch)"New launches" else "Asset",Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(if(category=="Tokens" || launch)"Price / Mcap" else "Price",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.width(64.dp)) } }
-                    items(assets,key={it.key}) { a -> AssetRow(a,a.raw.optBoolean("nadfun") || launch,{onAsset(a)},{onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","buy")))}) }
+                    item { Row(Modifier.padding(horizontal=16.dp,vertical=4.dp)) { Text(if(launch || tokenFilter=="New" && category=="Tokens")"New launches" else if(tokenFilter=="Graduated" && category=="Tokens")"Recently graduated" else "Asset",Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(if(category=="Tokens" || launch)"Market cap / 24h" else "Price",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.width(64.dp)) } }
+                    items(assets,key={it.key}) { a ->
+                        val buy={onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","buy")))}
+                        if(category=="Tokens" && !launch)TokenMarketRow(a,tokenFilter,{onAsset(a)},buy)
+                        else AssetRow(a,a.raw.optBoolean("nadfun") || launch,{onAsset(a)},buy)
+                    }
                 }
                 if(page.cursor!=null)item { TextButton(onClick={vm.load(key,path+"&cursor="+Uri.encode(page.cursor),field,append=true)},modifier=Modifier.fillMaxWidth(),enabled=!page.loading) { Text(if(page.loading)"Loading…" else "Load more") } }
                 else if(page.loading && page.items.isNotEmpty())item { LinearProgressIndicator(Modifier.fillMaxWidth()) }

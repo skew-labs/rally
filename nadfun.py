@@ -95,8 +95,8 @@ def initialize():
     CREATE TABLE IF NOT EXISTS nad_sync(version TEXT PRIMARY KEY,block INTEGER,block_hash TEXT,updated INTEGER);
     CREATE TABLE IF NOT EXISTS nad_drafts(id TEXT PRIMARY KEY,user_id TEXT,wallet TEXT,request_key TEXT UNIQUE,payload TEXT,created INTEGER);
     ''')
-    import launch_ingestion
-    launch_ingestion.initialize()
+    import launch_ingestion,launch_graduations,launch_metrics
+    launch_ingestion.initialize();launch_graduations.initialize();launch_metrics.initialize()
     if LVMON not in s.GATEWAY.token_map:
         quote={'id':LVMON,'address':LVMON,'symbol':'LVMon','name':'LVMon','decimals':18,'chainId':143,'logoURI':None}
         s.GATEWAY.tokens.append(quote);s.GATEWAY.token_map[LVMON]=quote
@@ -251,7 +251,8 @@ def public_info(info):
     age=s.now()-info.get('referenceAt',0);info['stale']=not 0<=age<=180;info['priceAgeSeconds']=max(0,age)
     if age>900 or age<0:info['price']=None;info['marketCap']=None
     info['lastKnown']=bool(info.get('price')) and info['stale']
-    return info
+    import launch_metrics
+    return launch_metrics.overlay(info)
 
 def references(assets):
     import launch_ingestion
@@ -344,6 +345,10 @@ def sync_once():
                 item=event(version,'curve',log)
                 if not item:continue
                 s.write('INSERT OR IGNORE INTO nad_events VALUES(?,?,?,?,?,?,?)',(version,log['transactionHash'],int(log['logIndex'],16),int(log['blockNumber'],16),log['blockHash'],item['name'],s.dump(item['fields'])))
+                if item['name'] in {'Graduate','CurveGraduate'}:
+                    import launch_graduations
+                    header=s.rpc('eth_getBlockByNumber',[log['blockNumber'],False])
+                    launch_graduations.record(version,item,log,header)
                 token=item['fields'].get('token')
                 if token and s.one('SELECT 1 FROM nad_tokens WHERE address=?',(token.lower(),)):
                     # Discovery must not hold the event cursor behind slow reads.

@@ -192,6 +192,11 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         if(orderJob?.isActive==true)return
         orderJob=viewModelScope.launch { try { wallet.renewSession();orderEngine.recover(hash);api.clearCache();refreshBoot() } catch(e:Exception) { message(e.message) } }
     }
+    fun replaceTokenHead(key: String,data: JSONObject) {
+        jobs[key]?.cancel()
+        val items=data.objects("tokens")
+        mutable.update { it.copy(pages=bounded(it.pages+(key to Page(items,data.string("nextCursor").ifBlank { null },data.optInt("total",items.size),at=System.currentTimeMillis())))) }
+    }
     fun refreshTokenRows(key: String) {
         val items=mutable.value.pages[key]?.items.orEmpty().take(60)
         if(items.isEmpty()||jobs["prices:$key"]?.isActive==true)return
