@@ -14,6 +14,7 @@
 | `/api/algorithms`, `/api/algorithms/leaderboard` | Algorithm listings and reader/ranking metrics |
 | `/api/performance/leaderboard` | Opt-in eligible closed Spot results |
 | `/api/market-catalog`, `/api/market-asset`, `/api/market-prices` | Address-based inventory and freshness-bearing price references |
+| `/api/token-markets`, `/api/token-markets/references` | Shared web/native token rankings, stable cursor pages and in-place price references |
 | `/api/markets`, `/api/perps`, `/api/predictions` | Venue-specific market catalogs |
 | `/api/market-chart` | Normalized reference chart data |
 | `/api/nadfun/tokens`, `/api/launchpad/tokens` | Token lifecycle and launch discovery |
@@ -25,6 +26,14 @@
 | `/api/mainnet` | Cached network, deployment and dependency observations |
 
 Agent reads are additionally constrained by the requested scope and resource audience. Public content reads still honor visibility and preview gates. An anonymous public endpoint does not make private earnings, account state or paid formulas public.
+
+## Token rankings
+
+`GET /api/token-markets?category=crypto&limit=40` combines exact Monad token identities from the local pool index, configured community assets and verified nad.fun records. Categories are `crypto`, `trending`, `graduated` and `new`. Search uses `query`; a `watch` parameter limits results to exact addresses. Pages contain at most 60 entries. Return `nextCursor` with the same category, query and watchlist to continue the original order. An expired cursor returns a refresh error.
+
+Crypto and Graduated weight log-scaled liquidity (65%) and volume (35%). Trending combines volume (35%), positive 24h price movement (25%), liquidity or curve participation (25%) and available holder counts (15%). Fresh observations and route availability are prioritized. New sorts verified launches by creation time. Graduation requires a verified block, DEX phase and graduation flag. These are discovery scores, not performance estimates or executable quotes.
+
+Ranking snapshots store only token order, are reused for 15 seconds and expire within 15 minutes for pagination, with earlier eviction under the bounded snapshot budget. `GET /api/token-markets/references?assets=address1,address2` reads current local observations for up to 60 identities without reordering the UI. Provider ingestion runs independently; neither endpoint performs external price reads or financial actions.
 
 ## Authenticated action families
 

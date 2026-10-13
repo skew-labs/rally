@@ -58,4 +58,8 @@ with tempfile.TemporaryDirectory(prefix='rally-social-loop-') as directory:
         sys.path.insert(0,str(root/'tests'))
         from social_subscription_fixture import install
         install()
+    if os.environ.get('RALLY_TOKEN_MARKET_FIXTURE')=='1':
+        sys.path.insert(0,str(root/'tests'))
+        from token_market_fixture import install
+        install()
     ThreadingHTTPServer(('127.0.0.1',port),app.Handler).serve_forever()

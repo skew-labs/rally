@@ -32,7 +32,7 @@ import community_tokens
 import discovery
 import social_loop, token_benefits, algorithm_league, push_delivery
 import app_assets
-import token_images
+import token_images, token_markets
 import native_auth
 from serve import candles
 
@@ -71,10 +71,10 @@ class Handler(BaseHTTPRequestHandler):
         super().setup();self.connection.settimeout(30)
     def log_message(self,*args):pass  # Never log bearer tokens, upload URLs, OAuth codes or wallet signatures.
     def response(self,data,status=200,headers=None,mime='application/json'):
-        if status==200 and mime=='application/json' and self.command=='GET' and urlsplit(getattr(self,'path','')).path in {'/api/bootstrap','/api/markets','/api/market-catalog','/api/market-prices','/api/perps','/api/predictions','/api/launchpad/tokens'}:
+        if status==200 and mime=='application/json' and self.command=='GET' and urlsplit(getattr(self,'path','')).path in {'/api/bootstrap','/api/markets','/api/token-markets','/api/token-markets/references','/api/market-catalog','/api/market-prices','/api/perps','/api/predictions','/api/launchpad/tokens'}:
             data=token_images.decorate_payload(data)
         body=data if isinstance(data,bytes) else s.dump(data).encode() if mime=='application/json' else data.encode()
-        if mime=='application/json' and status==200 and self.command=='GET' and urlsplit(self.path).path in {'/api/bootstrap','/api/posts','/api/markets','/api/market-prices','/api/market-catalog','/api/perps','/api/predictions','/api/market-chart','/api/nadfun/tokens','/api/launchpad/tokens','/api/launchpad/activity','/api/discover','/api/discover/preview','/api/performance/leaderboard'} and len(body)>1500 and re.search(r'(?:^|,)\s*gzip\s*(?:,|$)',self.headers.get('Accept-Encoding','')):
+        if mime=='application/json' and status==200 and self.command=='GET' and urlsplit(self.path).path in {'/api/bootstrap','/api/posts','/api/markets','/api/market-prices','/api/token-markets','/api/token-markets/references','/api/market-catalog','/api/perps','/api/predictions','/api/market-chart','/api/nadfun/tokens','/api/launchpad/tokens','/api/launchpad/activity','/api/discover','/api/discover/preview','/api/performance/leaderboard'} and len(body)>1500 and re.search(r'(?:^|,)\s*gzip\s*(?:,|$)',self.headers.get('Accept-Encoding','')):
             body=gzip.compress(body,compresslevel=5,mtime=0);headers={**(headers or {}),'Content-Encoding':'gzip','Vary':'Accept-Encoding'}
         self.send_response(status)
         lengths={'Content-Length':str(len(body))} if status!=304 else {}
@@ -195,6 +195,9 @@ class Handler(BaseHTTPRequestHandler):
             social.post(params.get('post'),who['user'] if who else None)
             return self.response({'posts':[s.post_view(x,who['actor'] if who else None) for x in s.rows('SELECT * FROM posts WHERE parent=? AND deleted=0 ORDER BY created',(params.get('post'),)) if social.visible(who['user'] if who else None,x['author'])][:100]})
         if path=='/api/profile':return self.response(s.profile(params.get('id',''),who['user'] if who else None))
+        if path in {'/api/token-markets','/api/token-markets/references'}:
+            if who and who['grant']:s.require(who,'markets:read')
+            return self.response(token_markets.references(params) if path.endswith('/references') else token_markets.catalog(params))
         if path=='/api/market-catalog':
             if who and who['grant']:s.require(who,'markets:read')
             return self.response(market_universe.catalog(params))

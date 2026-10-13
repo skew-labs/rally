@@ -2,9 +2,11 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.24.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.25.apk)
 
 ## Interaction and data
+
+Markets combines spot assets and meme launches under **Tokens**, with **Crypto, Trending, Graduated and New** filters. The same server ranking and stable cursors power web and Android; the asset retains its curve or DEX execution path.
 
 Token comments and replies are available below the chart. Community lists those conversations with character avatars, names, @handles and compact token tags. Mentions link existing profiles. New comments appear behind a refresh action so reading does not jump. Saved feed subscriptions can be opened, renewed or removed; paid access still requires the server-verified entitlement.
 
@@ -199,6 +201,6 @@ Token detail keeps price history above Comments, Holders and Details tabs. The c
 
 Version 0.4.20 brings a compact Home balance, denser algorithm and market rows, consistent search fields and edge-aligned navigation. Token details retain their chart and list position when changing information tabs.
 
-### 0.4.24 — social subscriptions
+### 0.4.25 — social subscriptions
 
 Home has a compact balance, creator shortcuts and markets. Community opens posts; tap the author to open their token and feeds. Search lists tokens by 24h price change or volume. Leaderboard ranks published closed-trade ROI and opens the selected creator subscription. Feed previews show the exact USDC term and linked buyback allocation; an allocation is not an executed buyback. Existing order signing and receipt checks remain in place.

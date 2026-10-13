@@ -4,7 +4,7 @@ Buy or sell a token through the available Monad routes without leaving its marke
 
 ## Open a token
 
-Go to **Home → Markets → Spot**, or open a token attached to a post. The detail panel shows its chart, market information and, where an index is available, holders.
+Go to **Home → Markets → Tokens**, or open a token attached to a post. The detail panel shows its chart, market information and, where an index is available, holders.
 
 Token identity is the network and contract address. Names and tickers can be shared by different tokens. Check the address when selecting an unfamiliar asset.
 
@@ -31,3 +31,9 @@ An ERC-20 payment asset can require a separate allowance to its route contract. 
 ## After submission
 
 Rally records the transaction hash and checks the actual asset delivery. If the result remains pending or unknown, reconcile that same hash before trying again. See [Order status](trading.md).
+
+## Token lists
+
+Open **Home → Markets → Tokens** for both DEX tokens and nad.fun launches. Crypto emphasizes liquidity and volume. Trending combines observed volume, positive price momentum, liquidity and available launch participation signals. Graduated contains nad.fun tokens whose onchain state confirms DEX migration. New orders verified launch records by creation time. Token identity, artwork and the original trading route stay attached to each row.
+
+Ranks refresh when you reopen or refresh a list. Prices update without rearranging the rows you are reading. Missing or expired data does not become a zero return or proof that a trade can execute.

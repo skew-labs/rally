@@ -192,6 +192,20 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         if(orderJob?.isActive==true)return
         orderJob=viewModelScope.launch { try { wallet.renewSession();orderEngine.recover(hash);api.clearCache();refreshBoot() } catch(e:Exception) { message(e.message) } }
     }
+    fun refreshTokenRows(key: String) {
+        val items=mutable.value.pages[key]?.items.orEmpty().take(60)
+        if(items.isEmpty()||jobs["prices:$key"]?.isActive==true)return
+        val version=api.sessionVersion
+        jobs["prices:$key"]=viewModelScope.launch {
+            try {
+                val data=api.get("/api/token-markets/references?assets="+Uri.encode(items.joinToString(","){it.string("id")}),true)
+                if(version!=api.sessionVersion)return@launch
+                val values=data.objects("tokens").associateBy{it.string("id")}
+                mutable.update { state->val page=state.pages[key] ?: return@update state
+                    state.copy(pages=state.pages+(key to page.copy(items=page.items.map{values[it.string("id")] ?: it}))) }
+            }catch(e:CancellationException){throw e}catch(_:Exception){}
+        }
+    }
     fun load(key: String,path: String,field: String,force: Boolean=false,append: Boolean=false,retain: Boolean=false) {
         if(!force && !append && (mutable.value.pages[key]?.at ?: 0) > System.currentTimeMillis()-20000) return
         if(!force && jobs[key]?.isActive==true)return

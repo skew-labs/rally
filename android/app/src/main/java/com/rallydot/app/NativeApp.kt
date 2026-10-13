@@ -56,7 +56,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Community",Icons.Outlined.P
     var dark by rememberSaveable { mutableStateOf(settings.getBoolean("dark",systemDark)) }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var home by rememberSaveable { mutableStateOf("Markets") }
-    var marketCategory by rememberSaveable { mutableStateOf("Memes") }
+    var marketCategory by rememberSaveable { mutableStateOf("Tokens") }
     var extra by rememberSaveable { mutableStateOf<String?>(null) }
     var asset by remember { mutableStateOf<Asset?>(null) }
     var post by remember { mutableStateOf<Post?>(null) }

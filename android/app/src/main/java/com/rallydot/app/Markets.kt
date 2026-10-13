@@ -41,14 +41,15 @@ import org.json.JSONObject
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun MarketsScreen(vm: RallyViewModel,onAsset: (Asset)->Unit,launch: Boolean=false,create: ()->Unit={},initialCategory: String="Memes",overview: (@Composable ()->Unit)?=null) {
+@Composable fun MarketsScreen(vm: RallyViewModel,onAsset: (Asset)->Unit,launch: Boolean=false,create: ()->Unit={},initialCategory: String="Tokens",overview: (@Composable ()->Unit)?=null) {
     val state by vm.state.collectAsStateWithLifecycle()
-    var category by rememberSaveable(initialCategory) { mutableStateOf(initialCategory) }
+    var category by rememberSaveable(initialCategory) { mutableStateOf(if(initialCategory in listOf("Perps","Prediction"))initialCategory else "Tokens") }
+    var tokenFilter by rememberSaveable(initialCategory) { mutableStateOf(if(initialCategory=="Memes")"Trending" else "Crypto") }
     var query by rememberSaveable { mutableStateOf("") }
     var applied by rememberSaveable { mutableStateOf("") }
     val field=when { launch->"tokens";category=="Perps"->"markets";category=="Prediction"->"pools";else->"tokens" }
-    val path=when { launch->"/api/launchpad/tokens?limit=24&query="+Uri.encode(applied);category=="Memes"->"/api/nadfun/tokens?sort=cap&limit=24&query="+Uri.encode(applied);category=="Spot"->"/api/market-catalog?limit=40&query="+Uri.encode(applied);category=="Perps"->"/api/perps";else->"/api/predictions" }
-    val key="markets:$launch:$category:$applied"
+    val path=when { launch->"/api/launchpad/tokens?limit=24&query="+Uri.encode(applied);category=="Tokens"->"/api/token-markets?category="+tokenFilter.lowercase(java.util.Locale.ROOT)+"&limit=40&query="+Uri.encode(applied);category=="Perps"->"/api/perps";else->"/api/predictions" }
+    val key="markets:$launch:$category:$tokenFilter:$applied"
     val page=state.pages[key] ?: Page(loading=true)
     val kind=when(category){"Perps"->"perps";"Prediction"->"prediction";else->"spot"}
     val assets=remember(page.items,query,kind) { page.items.map { Asset.parse(it,kind) }.filter { query.isBlank() || it.name.contains(query,true) || it.symbol.contains(query,true) || it.id.contains(query,true) } }
@@ -56,16 +57,20 @@ import kotlin.math.abs
     LaunchedEffect(key) { vm.load(key,path,field) }
     LaunchedEffect(key,assets.firstOrNull()?.key) { assets.take(2).filter { it.kind=="spot" }.forEach(vm::warmChart) }
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(key,lifecycle) { lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { while(true) { delay(30000);vm.load(key,path,field,true,retain=true) } } }
+    LaunchedEffect(key,lifecycle) { lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { while(true) { delay(15000);if(category=="Tokens"&&!launch)vm.refreshTokenRows(key) else vm.load(key,path,field,true,retain=true) } } }
     val list=rememberLazyListState()
+    LaunchedEffect(category,tokenFilter){list.scrollToItem(0)}
     ReportDrawnWhen { page.items.isNotEmpty() || page.error!=null || (!page.loading && state.pages.containsKey(key)) }
-    LaunchedEffect(list,key,page.cursor) { snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { index -> if(index>=list.layoutInfo.totalItemsCount-4 && assets.isNotEmpty() && page.cursor!=null && !page.loading && page.error==null)vm.load(key,path+if(category=="Spot" && !launch)"&offset="+page.cursor else "&cursor="+Uri.encode(page.cursor),field,append=true) } }
+    LaunchedEffect(list,key,page.cursor) { snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { index -> if(index>=list.layoutInfo.totalItemsCount-4 && assets.isNotEmpty() && page.cursor!=null && !page.loading && page.error==null)vm.load(key,path+"&cursor="+Uri.encode(page.cursor),field,append=true) } }
     Column(Modifier.fillMaxSize()) {
         PullToRefreshBox(isRefreshing=page.loading && page.items.isNotEmpty(),onRefresh={vm.load(key,path,field,true)},modifier=Modifier.weight(1f)) {
             LazyColumn(state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(bottom=24.dp)) {
                 if(!launch && overview!=null)item(key="overview") { overview() }
                 item(key="controls") {
-        if(!launch)ScrollableTabRow(selectedTabIndex=listOf("Memes","Spot","Perps","Prediction").indexOf(category),edgePadding=16.dp,containerColor=MaterialTheme.colorScheme.background,divider={},indicator={}) { listOf("Memes","Spot","Perps","Prediction").forEach { label -> Tab(selected=category==label,onClick={category=label;query="";applied=""},text={Text(label,color=if(category==label)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=if(category==label)FontWeight.SemiBold else FontWeight.Normal)}) } }
+        if(!launch)ScrollableTabRow(selectedTabIndex=listOf("Tokens","Perps","Prediction").indexOf(category),edgePadding=16.dp,containerColor=MaterialTheme.colorScheme.background,divider={},indicator={}) { listOf("Tokens","Perps","Prediction").forEach { label -> Tab(selected=category==label,onClick={category=label;query="";applied=""},text={Text(label,color=if(category==label)MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,fontWeight=if(category==label)FontWeight.SemiBold else FontWeight.Normal)}) } }
+        if(!launch && category=="Tokens")Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=16.dp,vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)) { listOf("Crypto","Trending","Graduated","New").forEach { label->
+            TextButton(onClick={tokenFilter=label},modifier=Modifier.heightIn(min=40.dp),contentPadding=PaddingValues(horizontal=12.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(containerColor=if(tokenFilter==label)MaterialTheme.colorScheme.onSurface else Color.Transparent,contentColor=if(tokenFilter==label)MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurfaceVariant)){Text(label,fontSize=12.sp,maxLines=1)}
+        } }
         Row(Modifier.padding(horizontal=16.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically) {
             RallySearch(query,{query=it},if(launch)"Find a launch" else "Search tokens",Modifier.weight(1f))
             if(launch) { Spacer(Modifier.width(8.dp));FilledIconButton(onClick=create,modifier=Modifier.size(52.dp),colors=IconButtonDefaults.filledIconButtonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Icon(Icons.Outlined.Add,"Launch a token") } }
@@ -78,10 +83,10 @@ import kotlin.math.abs
                     item { Text("Price predictions",Modifier.padding(20.dp),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium) }
                     items(assets,key={it.key}) { a->PredictionRow(a,{onAsset(a)}) }
                 } else {
-                    item { Row(Modifier.padding(horizontal=16.dp,vertical=4.dp)) { Text(if(launch)"New launches" else "Asset",Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(if(category=="Memes" || launch)"Market cap" else "Price",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.width(64.dp)) } }
-                    items(assets,key={it.key}) { a -> AssetRow(a,category=="Memes" || launch,{onAsset(a)},{onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","buy")))}) }
+                    item { Row(Modifier.padding(horizontal=16.dp,vertical=4.dp)) { Text(if(launch)"New launches" else "Asset",Modifier.weight(1f),style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Text(if(category=="Tokens" || launch)"Price / Mcap" else "Price",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.width(64.dp)) } }
+                    items(assets,key={it.key}) { a -> AssetRow(a,a.raw.optBoolean("nadfun") || launch,{onAsset(a)},{onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","buy")))}) }
                 }
-                if(page.cursor!=null)item { TextButton(onClick={vm.load(key,path+if(category=="Spot" && !launch)"&offset="+page.cursor else "&cursor="+Uri.encode(page.cursor),field,append=true)},modifier=Modifier.fillMaxWidth(),enabled=!page.loading) { Text(if(page.loading)"Loading…" else "Load more") } }
+                if(page.cursor!=null)item { TextButton(onClick={vm.load(key,path+"&cursor="+Uri.encode(page.cursor),field,append=true)},modifier=Modifier.fillMaxWidth(),enabled=!page.loading) { Text(if(page.loading)"Loading…" else "Load more") } }
                 else if(page.loading && page.items.isNotEmpty())item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             }
         }

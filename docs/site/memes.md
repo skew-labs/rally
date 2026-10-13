@@ -4,7 +4,7 @@ Discover nad.fun launches, follow their bonding-curve progress and trade through
 
 ## Find new tokens
 
-Open **Home → Markets → Memes** or the **Launch** section. Token cards show the indexed image, contract identity, available price or market-cap reference, and launch progress.
+Open **Home → Markets → Tokens** or the **Launch** section. Token cards show the indexed image, contract identity, available price or market-cap reference, and launch progress.
 
 Market cap describes an implied token valuation. It is not the amount you can withdraw from liquidity or the proceeds of selling your balance.
 
