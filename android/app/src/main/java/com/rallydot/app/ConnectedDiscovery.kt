@@ -46,7 +46,7 @@ fun homeAlgorithms(boot: JSONObject?): List<JSONObject> {
                 Text(if(balance?.optBoolean("partial")==true)"Priced balance" else "Balance",fontSize=11.sp,lineHeight=14.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     Text(money(balance?.number("valueUSD")),fontSize=27.sp,lineHeight=34.sp,fontWeight=FontWeight.Medium,letterSpacing=(-.8).sp)
-                    balance?.number("change24hPercent")?.let { change->Text(String.format(Locale.US,"%+.2f%%",change),fontSize=11.sp,color=performanceInk(change)) }
+                    val change=balance?.number("change24hPercent");Text(if(change==null)"0.00%" else String.format(Locale.US,"%+.2f%%",change),fontSize=11.sp,color=if(change==null)MaterialTheme.colorScheme.onSurfaceVariant else performanceInk(change))
                 }
             }
             TextButton(onClick={if(wallet.isBlank())vm.showWallet() else onPortfolio()}){Text(if(wallet.isBlank())"Connect" else "Wallet",fontSize=12.sp)}
@@ -71,16 +71,17 @@ fun homeAlgorithms(boot: JSONObject?): List<JSONObject> {
     }
 }
 
-@Composable fun TokenInformation(vm: RallyViewModel,asset: Asset,onCommunity: (String)->Unit) {
+@Composable fun TokenInformation(vm: RallyViewModel,asset: Asset,onAuthor: (String)->Unit={},onToken: (String)->Unit={},onCommunity: (String)->Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
-    var section by rememberSaveable(asset.key) { mutableStateOf(if(asset.kind=="spot")"Holders" else "Details") }
+    var section by rememberSaveable(asset.key) { mutableStateOf("Comments") }
     val community=state.boot?.objects("communities")?.firstOrNull { it.optJSONObject("token")?.string("address")?.equals(asset.id,true)==true }
     Column(Modifier.fillMaxWidth()) {
-        DetailInformationTabs(if(asset.kind=="spot")listOf("Holders","Community","Details") else listOf("Details","Community"),section,{section=it})
+        DetailInformationTabs(if(asset.kind=="spot")listOf("Comments","Holders","Details") else listOf("Comments","Details"),section,{section=it})
         // Only the lower pane changes. Price history and the order draft stay alive.
         Crossfade(section,animationSpec=tween(140),label="Token information") { shown->
             Column(Modifier.fillMaxWidth().heightIn(min=100.dp).padding(vertical=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 when(shown) {
+                    "Comments"->TokenConversation(vm,asset,onAuthor,onToken)
                     "Holders"->TokenHolders(vm,asset)
                     "Community"->if(community==null)Text("No linked community yet",fontSize=12.sp,lineHeight=15.sp,color=MaterialTheme.colorScheme.onSurfaceVariant) else Row(Modifier.fillMaxWidth().clickable { onCommunity(community.string("id")) }.padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(community.string("name"),fontWeight=FontWeight.Medium);Text("${community.optInt("members")} members",fontSize=12.sp,lineHeight=15.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};Icon(Icons.Outlined.ChevronRight,null)}
                     else->{if(asset.cap!=null)Fact("Market cap","$"+compact(asset.cap));if(asset.raw.number("liquidity")!=null)Fact("Liquidity",money(asset.raw.number("liquidity")));Fact("Market",asset.venue);Fact("Updated",age(asset.time))}

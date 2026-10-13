@@ -234,6 +234,16 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         mutable.update { it.copy(busy=true) }
         viewModelScope.launch { try { val data=api.post(path,body,key);api.clearCache();done(data);bootstrap() } catch(e:Exception) { message(e.message ?: "Could not complete this action") } finally { mutable.update { it.copy(busy=false) } } }
     }
+    fun useFeed(id: String, done: ()->Unit = {}) {
+        val owner=me?.string("id") ?: run { showWallet();return }
+        val version=api.sessionVersion
+        action("/api/feeds/use",JSONObject().put("id",id)) {
+            if(owner==me?.string("id") && version==api.sessionVersion) {
+                mutable.update { state->val boot=JSONObject(state.boot.toString()).put("activeFeed",id);boot.objects("feeds").firstOrNull { it.string("id")==id }?.apply { put("subscribed",id!="latest");put("subscriptionSaved",id!="latest") };state.copy(boot=boot) }
+                done()
+            }
+        }
+    }
     fun react(post: Post) {
         val account=me?.string("id") ?: run { showWallet();return }
         if(mutable.value.reactions[post.id]?.pending==true)return

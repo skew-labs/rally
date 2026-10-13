@@ -15,7 +15,7 @@ export function marketUI(c){
   function details(id,kind='spot'){
     const pool=kind==='prediction'?S.predictions?.pools.find(p=>String(p.id)===String(id)):null;
     const perp=kind==='perps'?S.perps?.markets.find(m=>String(m.id)===String(id)):null;
-    const asset=pool?.assetInfo||(perp?finance.perplAsset(perp):token(id));
+    const asset=pool?.assetInfo||(perp?finance.perplAsset(perp):token(id)||S.posts.find(p=>p.asset===id)?.assetInfo);
     if(!asset)return;
     const reference=pool&&S.perps?.markets.find(m=>m.venue==='Perpl'&&String(m.id)===String(pool.assetInfo?.chartMarket));
     const referenceFresh=reference&&!reference.stale&&reference.mark>0&&Date.now()/1000-reference.observationAt<=60;

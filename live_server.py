@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlsplit
 import service as s
 import settlement
+import feed_subscriptions
 import venues
 import stocks
 import journey
@@ -179,7 +180,7 @@ class Handler(BaseHTTPRequestHandler):
             if who and who['grant']:s.require(who,'markets:read')
             return self.response(mainnet_status.status())
         if path=='/api/bootstrap':
-            data=s.bootstrap(who,include_markets=params.get('markets')!='0');data['auth']['agentWallet']=agent_wallet.config(who,self.agent_device(),self.public_origin());return self.response(data)
+            data=feed_subscriptions.decorate(s.bootstrap(who,include_markets=params.get('markets')!='0'),who);data['auth']['agentWallet']=agent_wallet.config(who,self.agent_device(),self.public_origin());return self.response(data)
         if path=='/api/posts':return self.response(s.get_feed(who,params))
         if path=='/api/feed':return self.response(journey.preview(who,params))
         if path=='/api/activity':return self.response(journey.activity(who))
@@ -507,6 +508,7 @@ class Handler(BaseHTTPRequestHandler):
             tx=transaction_preflight.funded(quote['transaction'])
             still_current()
             return self.response({'transaction':tx,'expires':q['expires']})
+        if path in {'/api/feeds/use','/api/feed-subscriptions'}:return self.response(feed_subscriptions.update(who,data))
         if path=='/api/payments/checkout':return self.response(settlement.checkout(who,data))
         if path=='/api/community-tokens/approval/check':return self.response(community_tokens.approval_check(who,data))
         if path.startswith('/api/community-tokens/'):

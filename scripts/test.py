@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 root=Path(__file__).resolve().parents[1]
-tests=['test_social_discovery.py','test_nad_charts.py','test_community_discovery.py','test_wallet_research.py','test_social_loop.py','test_algorithms.py','test_auth.py','test_discovery.py','test_launch_activity.py','test_loading.py','test_token_images.py','test_launch_ingestion.py','test_execution.py','test_privy.py','test_native_auth.py','test_wallet_assets.py','test_preflight.py']
+tests=['test_token_discussions.py','test_social_discovery.py','test_nad_charts.py','test_community_discovery.py','test_wallet_research.py','test_social_loop.py','test_algorithms.py','test_auth.py','test_discovery.py','test_launch_activity.py','test_loading.py','test_token_images.py','test_launch_ingestion.py','test_execution.py','test_privy.py','test_native_auth.py','test_wallet_assets.py','test_preflight.py']
 for name in tests:
     with tempfile.TemporaryDirectory(prefix='rally-tests-') as directory:
         env={**os.environ,'RALLY_TESTING':'1','RALLY_STATE_DIR':directory,

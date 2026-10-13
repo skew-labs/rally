@@ -1,3 +1,4 @@
+import {mountDiscussion} from './token-discussion.js';
 // Shared discovery presentation. No execution, wallet or permission changes.
 export function algorithmRow(c,f,title,roi){
  const {S,esc,avatar}=c,creator=S.boot.people?.find(p=>p.id===f.owner)||{id:f.owner,...f.creator,name:f.creator?.name||'Rally',handle:f.creator?.handle||'rally'};
@@ -11,7 +12,7 @@ export function detailTabs(c,{host,holders,facts,asset,social}){
  if(!host||host.querySelector(':scope>.rc-detail-tabs'))return;
  const {esc,S}=c,community=(S.boot?.communities||[]).find(x=>[x.token?.address,x.token?.asset?.id].some(a=>a&&String(a).toLowerCase()===String(asset.id).toLowerCase()));
  const root=document.createElement('section');root.className='rc-detail-tabs';
- const tabs=[...(holders?[['holders','Holders']]:[]),['community','Community'],...(facts?[['details','Details']]:[])];
+ const tabs=[['comments','Comments'],...(holders?[['holders','Holders']]:[]),['community','Community'],...(facts?[['details','Details']]:[])];
  root.innerHTML=`<div class="rc-info-tabs" role="tablist" aria-label="Token information">${tabs.map(([id,label],i)=>`<button role="tab" id="rc-tab-${id}" aria-controls="rc-pane-${id}" aria-selected="${i===0}" tabindex="${i===0?0:-1}" data-info-tab="${id}">${label}</button>`).join('')}</div>${tabs.map(([id],i)=>`<div class="rc-info-pane" role="tabpanel" id="rc-pane-${id}" aria-labelledby="rc-tab-${id}" ${i?'hidden':''}></div>`).join('')}`;
  if(holders)root.querySelector('#rc-pane-holders').append(holders);
  if(facts)root.querySelector('#rc-pane-details').append(facts);
@@ -19,10 +20,11 @@ export function detailTabs(c,{host,holders,facts,asset,social}){
  pane.innerHTML=community?`<button class="rc-community-link" data-action="community" data-id="${esc(community.id)}"><span><b>${esc(community.name)}</b><small>${Number(community.members)||0} members</small></span><span aria-hidden="true">↗</span></button>`:`<p class="rc-quiet">No linked community yet</p>`;
  if(social)pane.append(social);
  if(facts?.tagName==='DETAILS')facts.open=true;
- const select=button=>{root.querySelectorAll('[role=tab]').forEach(b=>{const selected=b===button;b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1;root.querySelector('#'+b.getAttribute('aria-controls')).hidden=!selected;});};
+ const loadComments=mountDiscussion(c,root.querySelector('#rc-pane-comments'),asset);
+ const select=button=>{if(button.dataset.infoTab==='comments')loadComments();root.querySelectorAll('[role=tab]').forEach(b=>{const selected=b===button;b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1;root.querySelector('#'+b.getAttribute('aria-controls')).hidden=!selected;});};
  root.addEventListener('click',e=>{const button=e.target.closest('[data-info-tab]');if(button)select(button);});
  root.addEventListener('keydown',e=>{const button=e.target.closest('[data-info-tab]');if(!button||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const buttons=[...root.querySelectorAll('[role=tab]')],index=buttons.indexOf(button),next=buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length];select(next);next.focus();});
- host.append(root);return root;
+ host.append(root);loadComments();return root;
 }
 
 // Existing nad.fun form and its submit handler are reused unchanged.

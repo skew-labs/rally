@@ -181,7 +181,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Community",Icons.Outlined.P
                 }
             }
         }
-        asset?.let { selected -> AssetSheet(selected,vm,{asset=null},openBrowser,{asset=null;community=it;tab=1}) }
+        asset?.let { selected -> AssetSheet(selected,vm,{asset=null},openBrowser,{asset=null;community=it;tab=1},{asset=null;creator=it},{asset=null;showAsset(it)}) }
         post?.let { selected -> PostSheet(selected,vm,{post=null},::showAsset,openBrowser,{post=null;creator=it}) }
         creator?.let { id->CreatorSheet(id,vm,{creator=null},{creator=null;showAsset(it)},{creator=null;algorithm=it},{creator=null;post=it}) }
         algorithm?.let { selected -> AlgorithmSheet(selected,vm,{algorithm=null},openBrowser,{algorithm=null;showAsset(it)},{algorithm=null;tab=1;community=null;extra=null}) }
@@ -189,7 +189,7 @@ val Tabs=listOf(Tab("Home",Icons.Outlined.Home),Tab("Community",Icons.Outlined.P
         data.walletPanel?.let { WalletAssetsSheet(vm,it,{vm.showWalletPanel(null)}) }
         if(data.walletOpen)WalletLoginSheet(vm,{vm.showWallet(false)},openBrowser)
         if(launching)LaunchSheet(vm,{launching=false})
-        if(composing)ComposeSheet(vm,community,{composing=false})
+        if(composing)ComposeSheet(vm,community,{composing=false},conversation=tab==1 && community==null)
     }
 }
 @Composable fun HomeSections(selected: String,onSelect: (String)->Unit) {

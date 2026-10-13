@@ -23,7 +23,7 @@ def value_snapshot(snapshot, gateway):
     result = copy.deepcopy(snapshot)
     prices = {t['id']: t for t in gateway.markets().get('tokens', [])}
     total = prior = covered = Decimal(0)
-    priced = unpriced = 0
+    priced = unpriced = covered_assets = 0
     with localcontext() as ctx:
         ctx.prec = 96
         for h in result['holdings']:
@@ -42,14 +42,22 @@ def value_snapshot(snapshot, gateway):
             priced += 1
             total += value
             change = decimal(token.get('change'))
-            if change is not None and change > -100:
+            if change is not None and change > -100 and not token.get('stale') and not h.get('staleBalance'):
                 prior += value / (1 + change / 100)
                 covered += value
-        change = ((covered / prior - 1) * 100) if prior and covered == total and not unpriced else None
+                covered_assets += 1
+        covered_change = ((covered / prior - 1) * 100) if prior else None
+        complete = bool(result.get('complete') and not result['unavailable'] and not unpriced)
+        change = covered_change if complete and covered == total else None
+        coverage = covered / total * 100 if total else None
     # A price basket change is not account PnL (deposits and positions are excluded).
     result['valuation'] = {
         'valueUSD': format(total, 'f') if priced or (not unpriced and result.get('complete')) else None,
         'change24hPercent': format(change, 'f') if change is not None else None,
+        'coveredChange24hPercent': format(covered_change, 'f') if covered_change is not None else None,
+        'changeCoveragePercent': format(coverage, 'f') if coverage is not None else None,
+        'changeCoveredAssets': covered_assets,
+        'changeStatus': 'complete' if change is not None else 'partial' if covered_change is not None else 'empty' if complete and not priced else 'missing',
         'changeBasis': 'current_holdings_price_change', 'pricedAssets': priced,
         'unpricedAssets': unpriced, 'partial': bool(unpriced or result['unavailable'] or not result.get('complete')),
         'includes': 'wallet_tokens', 'currency': 'USD',

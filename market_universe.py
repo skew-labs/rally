@@ -196,6 +196,7 @@ def token_lists():
 
 def publish_prices(output):
     """Publish each successful batch. Failed/older reads cannot erase prices."""
+    from daily_change import preserve
     accepted={};observed=s.now()
     with s.LOCK:
         for a,v in output.items():
@@ -206,7 +207,7 @@ def publish_prices(output):
             if old.get('fetchedAt',0)>stamp:continue
             # Preserve the more liquid reference while it is fresh.
             if old.get('pair')!=v.get('pair') and observed-old.get('fetchedAt',0)<120 and old.get('liquidity',0)>v.get('liquidity',0):continue
-            accepted[a]=v
+            accepted[a]=preserve(v,old,observed)
         # Persist before exposing the new snapshot, including after restarts.
         with db() as c:
             for a,v in accepted.items():c.execute('UPDATE assets SET price=?,updated=? WHERE address=?',(s.dump(v),v['fetchedAt'],a))

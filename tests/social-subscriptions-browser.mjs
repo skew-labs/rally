@@ -19,8 +19,8 @@ try{
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',route=>{const req=route.request(),u=new URL(req.url());if(u.origin!==origin)return route.abort();if(req.method()!=='GET' && req.method()!=='HEAD'){writes.push(u.pathname);return route.abort();}return route.continue();});
   const fit=async name=>{await page.evaluate(async()=>{await Promise.all(document.getAnimations().filter(a=>a.effect?.getComputedTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})));});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' horizontal overflow');if(process.env.RALLY_EVIDENCE_DIR)await page.screenshot({path:path.join(process.env.RALLY_EVIDENCE_DIR,`${name}-${width}-${theme}.png`)});};
-  await page.goto(origin+'/?view=communities');await page.locator('#timeline .r-post').first().waitFor();assert.equal(await page.locator('.rs-community-head h1').innerText(),'Community');
-  await fit('community');await page.locator('.rs-post-token').first().waitFor();
+  await page.goto(origin+'/?view=communities');await page.locator('#timeline .rd-comment').first().waitFor();assert.equal(await page.locator('.rs-community-head h1').innerText(),'Community');
+  await fit('community');await page.locator('.rd-creator-token').first().waitFor();
   await page.locator('#timeline [data-action=profile][data-id=reader]').first().click();await page.locator('.r-profile-banner').waitFor();await page.locator('.rs-profile-subscribe').waitFor();await fit('creator');
   await page.locator('.rs-profile-subscribe').click();await page.locator('.am-preview-modal .rs-allocation').waitFor();await page.waitForFunction(()=>!document.querySelector('.am-preview-foot button')?.disabled);assert.match(await page.locator('.am-preview-modal').innerText(),/20% buyback allocation/);assert.match(await page.locator('.am-preview-foot').innerText(),/Subscribe · 2.5 USDC/);await fit('subscription');
   await page.goto(origin+'/?view=leaderboard');await page.locator('.rs-leader-row').first().waitFor();assert.match(await page.locator('#leader-results').innerText(),/2.5 USDC \/ 30d/);await fit('leaderboard');

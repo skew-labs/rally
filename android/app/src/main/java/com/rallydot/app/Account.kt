@@ -117,12 +117,18 @@ import org.json.JSONObject
 @Composable fun AlgorithmSheet(item: JSONObject,vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit,onToken: (String)->Unit={},onOpenFeed: ()->Unit={}) {
     val initial=item.optJSONObject("feed") ?: item;val id=initial.string("id",item.string("id")).removePrefix("feed:")
     var benefitOwner by remember {mutableStateOf<String?>(null)}
+    var awaitingSubscription by remember(id,vm.me?.string("id")) { mutableStateOf(false) }
     var preview by remember(id) { mutableStateOf<JSONObject?>(null) };var error by remember(id) { mutableStateOf<String?>(null) };val scope=rememberCoroutineScope()
     val feed=preview?.optJSONObject("feed") ?: initial
     val price=feed.number("price") ?: 0.0
     val app by vm.state.collectAsStateWithLifecycle()
     val sheet=rememberModalBottomSheetState(skipPartiallyExpanded=true)
     LaunchedEffect(id,app.order.completed) { try { preview=vm.api.get("/api/discover/preview?id="+Uri.encode("feed:$id"),app.order.completed) } catch(e:Exception){error=e.message} }
+    LaunchedEffect(awaitingSubscription,app.order.completed,preview) {
+        if(awaitingSubscription && app.order.completed && app.order.label=="Subscription active" && preview?.optJSONObject("feed")?.optBoolean("access")==true) {
+            awaitingSubscription=false;vm.useFeed(id){scope.launch{sheet.hide();close();onOpenFeed()}}
+        }
+    }
     if(benefitOwner!=null){ModalBottomSheet(onDismissRequest={benefitOwner=null},containerColor=MaterialTheme.colorScheme.surface){Box(Modifier.fillMaxWidth().heightIn(max=650.dp)){TokenBenefitsScreen(vm,benefitOwner!!)}};return}
     ModalBottomSheet(onDismissRequest=close,sheetState=sheet,containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
         Column(Modifier.fillMaxWidth().heightIn(max=720.dp).padding(horizontal=20.dp,vertical=12.dp)) {
@@ -147,7 +153,7 @@ import org.json.JSONObject
             TextButton(onClick={benefitOwner=feed.string("owner")}){Text("Community token benefits")}
             OrderStatus(vm)
             }
-            Button(onClick={ if(price>0 && !feed.optBoolean("access"))vm.subscribe(JSONObject(feed.toString()).put("id",id)) else vm.action("/api/feeds/use",JSONObject().put("id",id)) { scope.launch { sheet.hide();close();onOpenFeed() } } },enabled=preview!=null && !app.busy && !app.order.blocksOrder,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(price>0 && !feed.optBoolean("access"))"Subscribe · "+feed.string("price")+" USDC" else if(price>0)"Open feed" else "Open feed") }
+            Button(onClick={ if(price>0 && !feed.optBoolean("access")){awaitingSubscription=true;vm.subscribe(JSONObject(feed.toString()).put("id",id))} else vm.useFeed(id) { scope.launch { sheet.hide();close();onOpenFeed() } } },enabled=preview!=null && !app.busy && !app.order.blocksOrder,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(16.dp)) { Text(if(price>0 && !feed.optBoolean("access"))"Subscribe · "+feed.string("price")+" USDC" else if(price>0 || app.boot?.objects("feeds")?.any {it.string("id")==id && it.optBoolean("subscribed")}==true)"Open feed" else "Subscribe free") }
         }
     }
 }

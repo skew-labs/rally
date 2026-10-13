@@ -30,13 +30,13 @@ export function journeyUI(c) {
   const {S,$,api,esc,icon,avatar,token,logo,safeURL,postCard,pageHeader,empty,loading,boot,navigate,notify,modal,closeModal,closeTrade}=c;
   const date=n=>new Date(n*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'});
   const txLink=tx=>tx?`<a class="r-receipt-link" href="https://monadvision.com/tx/${esc(tx)}" target="_blank" rel="noopener noreferrer">Transaction ${icon('external')}</a>`:'';
-  const feedAction=(f,compact=false)=>`<button class="r-btn ${compact?'r-feed-use':S.boot.activeFeed===f.id?'subtle':'primary'}" data-action="${f.access?'use-feed':'subscribe-feed'}" data-id="${esc(f.id)}">${S.boot.activeFeed===f.id?compact?'Selected':'Open feed':f.access?compact?'Use':'Use algorithm':compact?'Subscribe':'Subscribe · '+esc(f.price)+' USDC'}</button>`;
+  const feedAction=(f,compact=false)=>`<button class="r-btn ${compact?'r-feed-use':S.boot.activeFeed===f.id?'subtle':'primary'}" data-action="${f.access?'use-feed':'subscribe-feed'}" data-id="${esc(f.id)}">${S.boot.activeFeed===f.id?compact?'Selected':'Open feed':f.access?compact?'Open':'Subscribe free':compact?'Subscribe':'Subscribe · '+esc(f.price)+' USDC'}</button>`;
   const amount=n=>Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
   const percent=n=>(Number(n)>0?'+':'')+Number(n).toLocaleString('en-US',{maximumFractionDigits:1})+'%';
   const walletName=w=>w.slice(0,6)+'…'+w.slice(-4);
   let walletLimit=4,liveLimit=3;
   const feedPrice=f=>Number(f.priceRaw)?'$'+esc(f.price):'Free';
-  const getLabel=f=>S.boot.activeFeed===f.id||f.access&&Number(f.priceRaw)?'Open feed':f.access?f.research?.wallet?'Track wallet':'Open feed':'Subscribe · '+esc(f.price)+' USDC';
+  const getLabel=f=>S.boot.activeFeed===f.id||f.access&&Number(f.priceRaw)?'Open feed':f.access?f.subscribed?'Open feed':'Subscribe free':'Subscribe · '+esc(f.price)+' USDC';
   function art(f){const t=f.research?.tokens?.[0];return t?logo({...t,...S.tokens.find(a=>a.id===t.id)},true):`<span class="am-feed-art">${icon(feedPresentation(f).icon)}</span>`;}
   function marketCard(f,index){
     return algorithmRow(c,f,feedTitle(f),feedReturn(f));
@@ -52,10 +52,9 @@ export function journeyUI(c) {
   }
   function picker(){
     const selected=S.boot.activeFeed;
-    modal('Your feeds',`<label class="r-algorithm-search">${icon('search')}<input id="algorithm-picker-search" type="search" placeholder="Find a subscribed feed" aria-label="Search algorithms" autocomplete="off"></label><div id="algorithm-picker-list"></div><a class="r-algorithm-picker-market" href="?view=leaderboard" data-nav="leaderboard">Find creators${icon('chevron')}</a>`,'r-algorithm-picker');
-    const input=$('#algorithm-picker-search'),host=$('#algorithm-picker-list');
-    const paint=()=>{const q=input.value.trim().toLowerCase(),list=S.boot.feeds.filter(f=>(f.name+' '+f.creator?.handle+' '+feedPresentation(f).description).toLowerCase().includes(q));host.innerHTML=list.map(f=>`<div class="r-algorithm-option"><button data-action="${f.access?'use-feed':'feed-detail'}" data-id="${esc(f.id)}" aria-pressed="${f.id===selected}" aria-label="${f.access?'Use':'Preview'} ${esc(f.name)}. ${esc(feedTerms(f))}"><span class="r-algorithm-option-mark">${icon(feedPresentation(f).icon)}</span><span><b>${esc(feedTitle(f))}</b><small>${esc(feedPresentation(f).description)}</small></span><span class="r-algorithm-option-price">${f.id===selected?icon('check'):esc(feedTerms(f))}</span></button><button class="r-algorithm-option-preview" data-action="feed-detail" data-id="${esc(f.id)}" aria-label="Preview ${esc(f.name)}">${icon('chevron')}</button></div>`).join('')||'<p class="r-algorithm-empty">No algorithms found</p>';};
-    input.addEventListener('input',paint);input.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){$('button',host)?.focus();e.preventDefault();}});paint();
+    modal('Subscriptions',`<div id="algorithm-picker-list"></div><a class="r-algorithm-picker-market" href="?view=leaderboard" data-nav="leaderboard">Find creators${icon('chevron')}</a>`,'r-algorithm-picker rs-subscriptions-modal');
+    const host=$('#algorithm-picker-list'),list=S.boot.feeds.filter(f=>f.subscriptionSaved||f.subscribed);
+    host.innerHTML=list.map(f=>{const p=S.boot.people.find(p=>p.id===f.owner)||{...f.creator,id:f.owner,name:f.creator?.name||'Rally'};return `<div class="rs-subscription-row"><button data-action="${f.access?'use-feed':'algorithm-preview'}" data-id="${esc(f.id)}" aria-label="${f.access?'Open':'Renew'} ${esc(feedTitle(f))}">${avatar(p)}<span><b>${esc(p.name)}</b><small>${esc(feedTitle(f))}</small><small>${f.accessExpires?'Until '+date(f.accessExpires):f.access?feedTerms(f):'Expired'}</small></span><span class="rs-subscription-open">${f.access?'Open':'Renew'}${icon('chevron')}</span></button><button class="r-icon-button" data-action="subscription-remove" data-id="${esc(f.id)}" aria-label="Remove ${esc(feedTitle(f))} from my feeds">${icon('close')}</button></div>`;}).join('')||'<div class="rs-subscription-empty"><b>Your subscriptions go here</b><p>Pick a creator. Their feed is one tap away.</p></div>';
   }
   function feedControls(){
     return `<div class="am-controls"><label class="r-algorithm-search">${icon('search')}<input id="algorithm-market-search" type="search" placeholder="Find your next move" aria-label="Search algorithms" autocomplete="off" value="${esc(S.feedQuery||'')}"></label><div class="am-toolbar"><div class="am-filters" role="group" aria-label="Algorithm filter">${[['all','All'],['free','Free'],['paid','Paid'],['yours','Yours']].map(([id,label])=>`<button data-action="feed-filter" data-id="${id}" aria-pressed="${(S.feedFilter||'all')===id}">${label}</button>`).join('')}</div></div></div>`;
@@ -184,7 +183,7 @@ export function journeyUI(c) {
     try{await c.finance.resume();const d=await api('/api/activity');if(S.view!=='activity'||S.boot.me?.id!==viewer)return;S.activity=d;
       let intent;try{intent=JSON.parse(localStorage.getItem('rally:subscription-intent')||'null');}catch{}
       const subscribed=d.entries.find(e=>e.kind==='payment'&&e.state==='paid'&&e.id===intent?.id&&intent.user===viewer);
-      if(subscribed){await api('/api/feeds/use',{id:subscribed.feed});localStorage.removeItem('rally:subscription-intent');notify('Subscribed. Your feed is ready.');}
+      if(subscribed){await api('/api/feeds/use',{id:subscribed.feed});localStorage.removeItem('rally:subscription-intent');await boot();S.mode='for-you';closeModal();notify('Subscribed');await navigate('communities');return;}
       await boot();paintActivity();}
     catch(e){if(S.view==='activity')$('#page').innerHTML=pageHeader('Activity','<button class="r-btn small" data-action="share-fill">Share a trade</button>')+empty('Activity unavailable',esc(e.message),'<button class="r-btn" data-action="refresh-activity">Retry</button>');}
   }
@@ -201,6 +200,7 @@ export function journeyUI(c) {
     else if(action==='wallet-research'){await walletResearch();}
     else if(action==='research-feeds'){closeModal();S.feedFilter='free';S.feedQuery='';await navigate('research');}
     else if(action==='algorithm-picker'){picker();}
+    else if(action==='subscription-remove'){el.disabled=true;await api('/api/feed-subscriptions',{id,active:false});await boot();await c.refresh();picker();notify('Removed from your feeds');}
     else if(action==='feed-filter'){S.feedFilter=id;paintFeeds();}
     else if(action==='feed-sort'){S.feedSort=id;paintFeeds();}
     else if(action==='feed-more-wallets'){walletLimit=S.boot.feeds.length;paintFeeds();}

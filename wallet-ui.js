@@ -1,4 +1,5 @@
 // Wallet snapshots render independently of market discovery and order history.
+import {dailyBalance} from './balance-display.js';
 export function walletUI(c){
  const {S,$,api,esc,icon,usd,pct,age,modal,notify,pageHeader,empty,logo}=c;
  let request;const qrCache=new Map();
@@ -17,8 +18,8 @@ export function walletUI(c){
   const v=p?.valuation,change=v?.change24hPercent,value=v?.valueUSD!=null?usd(v.valueUSD):'—',number=host.querySelector('[data-balance-value]');
   host.querySelector('[data-balance-label]').textContent=(v?.partial?'Priced balance':'Wallet balance')+' · USD';
   if(number.textContent!==value){number.textContent=value;if(!matchMedia('(prefers-reduced-motion:reduce)').matches)number.animate([{opacity:.5,transform:'translateY(3px)'},{opacity:1,transform:'none'}],{duration:180,easing:'cubic-bezier(.22,.8,.24,1)'});}
-  const label=host.querySelector('[data-balance-change]');label.className='r-wallet-change '+(change==null?'':Number(change)>=0?'positive':'negative');
-  const text=change!=null?pct(change)+' <span>24h price change</span>':!p||p.refreshing?'Updating balances…':'24h price change unavailable';if(label.innerHTML!==text)label.innerHTML=text;
+  const daily=dailyBalance(v,pct),label=host.querySelector('[data-balance-change]');label.className='r-wallet-change '+daily.tone;label.title=daily.description;label.setAttribute('aria-label',daily.text+' · '+daily.description);
+  const text=daily.text+' <span>24h</span>';if(label.innerHTML!==text)label.innerHTML=text;
   const note=host.querySelector('[data-balance-note]');note.textContent=v?.unpricedAssets?`${v.unpricedAssets} asset${v.unpricedAssets===1?'':'s'} without a current price`:p?.error?'Last known balances · Refreshing':p?.unavailable?.length?'Some balances are temporarily unavailable':'';note.hidden=!note.textContent;
  }
  async function profile(){const host=$('#profile-balance');if(!host||!S.boot.wallet)return;const owner=identity();host.innerHTML=hero(cached());paintHero(host,cached());for(let i=0;i<12&&host.isConnected&&owner===identity();i++){try{const p=await snapshot();if(!host.isConnected||owner!==identity())return;paintHero(host,p);if(!p.refreshing)return;}catch{return;}await new Promise(r=>setTimeout(r,i?1500:350));}}

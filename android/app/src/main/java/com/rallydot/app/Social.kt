@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
@@ -38,44 +39,52 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun FeedScreen(vm: RallyViewModel,community: String?=null,onPost: (Post)->Unit,onAsset: (String)->Unit,compose: ()->Unit,onAlgorithm: ()->Unit={},onFeedPreview: (JSONObject)->Unit={onAlgorithm()},onCreator: (String)->Unit={},onGroups: ()->Unit={}) {
     val state by vm.state.collectAsStateWithLifecycle()
-    var mode by rememberSaveable(community){mutableStateOf("For you")}
-    var chosen by rememberSaveable(vm.me?.string("id")){mutableStateOf<String?>(null)}
+    var mode by rememberSaveable(community){mutableStateOf("Latest")}
+    var chosen by rememberSaveable(vm.me?.string("id"),state.boot?.string("activeFeed")){mutableStateOf<String?>(null)}
     var choosing by rememberSaveable { mutableStateOf(false) }
     val feed=chosen ?: state.boot?.string("activeFeed","latest") ?: "latest"
-    val key="feed:${community.orEmpty()}:$feed:$mode";val path="/api/posts?mode="+when(mode){"Following"->"following";"Trades"->"trades";else->"for-you"}+"&feed="+Uri.encode(feed)+(community?.let { "&community="+Uri.encode(it) } ?: "")
+    val key="feed:${community.orEmpty()}:$feed:$mode";val path="/api/posts?mode="+when(mode){"Following"->"following";"Trades"->"trades";else->"for-you"}+"&feed="+Uri.encode(feed)+(if(community==null)"&discussion=1" else "")+(community?.let { "&community="+Uri.encode(it) } ?: "")
     val page=state.pages[key] ?: Page(loading=true)
+    var fresh by remember(key){mutableIntStateOf(0)}
+    val currentItems by rememberUpdatedState(page.items)
+    val owner=androidx.lifecycle.compose.LocalLifecycleOwner.current
+    LaunchedEffect(key,owner){owner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED){while(true){delay(12000);try{val latest=vm.api.get(path+"&observe=0",true);val known=currentItems.map{it.string("id")}.toSet();fresh=latest.objects("posts").count{it.string("id") !in known}}catch(e:CancellationException){throw e}catch(_:Exception){}}}}
     LaunchedEffect(key,state.pages.containsKey(key)) { if(!state.pages.containsKey(key))vm.load(key,path,"posts") }
     val list=rememberLazyListState()
     LaunchedEffect(list,key,page.cursor) { snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { if(it>=page.items.size-3 && page.cursor!=null && !page.loading && page.error==null)vm.load(key,path+"&cursor="+Uri.encode(page.cursor),"posts",append=true) } }
     PullToRefreshBox(isRefreshing=page.loading && page.items.isNotEmpty(),onRefresh={vm.load(key,path,"posts",true)}) {
-        if(page.loading && page.items.isEmpty())LoadingRows() else LazyColumn(state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(bottom=24.dp)) {
+        LazyColumn(state=list,modifier=Modifier.highRefresh(),contentPadding=PaddingValues(bottom=24.dp)) {
             item {
                 Row(Modifier.padding(horizontal=16.dp,vertical=4.dp).fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    TextButton(onClick={choosing=true},modifier=Modifier.weight(1f).heightIn(min=48.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.onSurface,containerColor=Color.Transparent)) { Icon(Icons.Outlined.Layers,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(if(feed=="latest")"My feeds" else state.boot?.objects("feeds")?.firstOrNull { it.string("id")==feed }?.string("name") ?: "My feeds",Modifier.weight(1f,false),maxLines=1,overflow=TextOverflow.Ellipsis);Spacer(Modifier.width(8.dp));Icon(Icons.Outlined.ExpandMore,null,Modifier.size(18.dp)) }
+                    TextButton(onClick={choosing=true},modifier=Modifier.weight(1f).heightIn(min=48.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.onSurface,containerColor=Color.Transparent)) { Icon(Icons.Outlined.Layers,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(if(feed=="latest")"Subscriptions" else state.boot?.objects("feeds")?.firstOrNull { it.string("id")==feed }?.string("name") ?: "Subscriptions",Modifier.weight(1f,false),maxLines=1,overflow=TextOverflow.Ellipsis);Spacer(Modifier.width(8.dp));Icon(Icons.Outlined.ExpandMore,null,Modifier.size(18.dp)) }
                     Spacer(Modifier.width(8.dp));if(community==null)IconButton(onClick=onGroups){Icon(Icons.Outlined.PeopleOutline,"Browse communities")};FilledIconButton(onClick=compose,colors=IconButtonDefaults.filledIconButtonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Icon(Icons.Outlined.Edit,"Create post") }
                 }
             }
-            if(community==null)item { Segmented(listOf("For you","Following","Trades"),mode,{mode=it},Modifier.padding(horizontal=20.dp,vertical=8.dp)) }
+            if(community==null)item { Segmented(listOf("Latest","Following","Trades"),mode,{mode=it},Modifier.padding(horizontal=20.dp,vertical=8.dp)) }
+            if(fresh>0)item { TextButton(onClick={fresh=0;vm.load(key,path,"posts",true)},modifier=Modifier.fillMaxWidth()){Text("$fresh new comments")} }
+            if(page.loading && page.items.isEmpty())item { LoadingRows() }
             if(page.error!=null)item { EmptyState("Couldn't refresh",page.error,"Retry",{vm.load(key,path,"posts",true)}) }
-            items(page.items,key={it.string("id")},contentType={"post"}) { j->val original=remember(j) { Post.parse(j) };val p=original.withReaction(state.reactions[original.id]);PostCard(p,{onPost(p)},{onAsset(p.tradeTarget())},{vm.react(p)},onRecord={onAsset("signals:"+p.author.id)},onAuthor={onCreator(p.author.id)},onCreatorToken={onAsset(it)},reactionPending=state.reactions[p.id]?.pending==true) }
-            if(page.items.isEmpty() && !page.loading && page.error==null)item { EmptyState("No posts yet",action="Create a post",onAction=compose) }
+            items(page.items,key={it.string("id")},contentType={"post"}) { j->val original=remember(j) { Post.parse(j) };val p=original.withReaction(state.reactions[original.id]);Column(Modifier.animateItem()){TokenCommentRow(p,{onPost(p)},{onAsset(p.tradeTarget())},{vm.react(p)},{onCreator(p.author.id)},onCreatorToken=onAsset,onMention=onCreator,reactionPending=state.reactions[p.id]?.pending==true)} }
+            if(page.items.isEmpty() && !page.loading && page.error==null)item { EmptyState("No conversations yet",action="Start a conversation",onAction=compose) }
             if(page.cursor!=null)item { TextButton(onClick={vm.load(key,path+"&cursor="+Uri.encode(page.cursor),"posts",append=true)},modifier=Modifier.fillMaxWidth(),enabled=!page.loading) { Text(if(page.loading)"Loading…" else "Load more") } }
         }
     }
     if(choosing)ModalBottomSheet(onDismissRequest={choosing=false},sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=MaterialTheme.colorScheme.surface) {
         Column(Modifier.fillMaxWidth().heightIn(max=560.dp).padding(horizontal=20.dp,vertical=8.dp)) {
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Your feeds",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);TextButton(onClick={choosing=false;onAlgorithm()}){Text("Find creators")}}
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Subscriptions",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);TextButton(onClick={choosing=false;onAlgorithm()}){Text("Find creators")}}
             LazyColumn(contentPadding=PaddingValues(bottom=24.dp)) {
-                items(state.boot?.objects("feeds").orEmpty(),key={it.string("id")}) { option->
+                item { TextButton(onClick={vm.useFeed("latest"){chosen="latest";choosing=false}},modifier=Modifier.fillMaxWidth()){Text("All conversations")} }
+                if(state.boot?.objects("feeds").orEmpty().none { it.optBoolean("subscriptionSaved") })item { Text("Your subscriptions appear here.",Modifier.padding(vertical=24.dp),color=MaterialTheme.colorScheme.onSurfaceVariant) }
+                items(state.boot?.objects("feeds").orEmpty().filter { it.optBoolean("subscriptionSaved") },key={it.string("id")}) { option->
                     val id=option.string("id");val access=option.optBoolean("access") || (option.number("price") ?: 0.0)==0.0
                     Row(Modifier.fillMaxWidth().heightIn(min=72.dp).clickable(enabled=!state.busy) {
                         if(!access){choosing=false;onFeedPreview(JSONObject().put("id",id).put("feed",option))}
                         else if(vm.me==null){chosen=id;choosing=false}
-                        else vm.action("/api/feeds/use",JSONObject().put("id",id)){chosen=id;choosing=false}
+                        else vm.useFeed(id){chosen=id;mode="Latest";choosing=false}
                     }.padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Layers,null,tint=MaterialTheme.colorScheme.onSurfaceVariant);Spacer(Modifier.width(12.dp))
+                        val creator=discoveryCreator(option,state.boot?.objects("people").orEmpty());ProfileArtwork(creator.image,creator.name,32.dp,identity=creator.avatarIdentity);Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) { Text(option.string("name"),maxLines=1,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.titleMedium);Text(if((option.number("price") ?: 0.0)>0)option.string("price")+" USDC" else "Free",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
-                        Icon(if(id==feed)Icons.Outlined.Check else if(access)Icons.Outlined.ChevronRight else Icons.Outlined.Lock,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(if(!access)"Renew" else "Open",fontSize=12.sp,color=MaterialTheme.colorScheme.primary);IconButton(onClick={vm.action("/api/feed-subscriptions",JSONObject().put("id",id).put("active",false)){if(chosen==id)chosen="latest"}},enabled=!state.busy){Icon(Icons.Outlined.Close,"Remove subscription",Modifier.size(18.dp))}
                     }
                 }
             }
@@ -146,7 +155,7 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
             item { val shown=post.withReaction(state.reactions[post.id]);PostCard(shown,{}, {close();onAsset(post.tradeTarget())}, {vm.react(shown)},true,onAuthor={onCreator(post.author.id)},onCreatorToken={close();onAsset(it)},onRecord={close();onAsset("signals:"+post.author.id)},reactionPending=state.reactions[post.id]?.pending==true) }
             post.media?.takeIf { it.string("mime").startsWith("video") }?.let { media -> item { NativeVideo(safeImage(media.string("url")) ?: "") } }
             if(post.source.isNotBlank())item { TextButton(onClick={openBrowser(post.source)},Modifier.padding(horizontal=16.dp)) { Icon(Icons.Outlined.OpenInNew,null,Modifier.size(16.dp));Spacer(Modifier.width(8.dp));Text("Source") } }
-            items(page.items,key={it.string("id")}) { j->PostCard(Post.parse(j),{}, {}, {}) }
+            items(page.items,key={it.string("id")}) { j->val p=Post.parse(j).withReaction(state.reactions[j.string("id")]);TokenCommentRow(p,{reply="@${p.author.handle} "},{onAsset(p.tradeTarget())},{vm.react(p)},{onCreator(p.author.id)},onMention=onCreator,onCreatorToken=onAsset) }
             item { Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) { OutlinedTextField(reply,{reply=it},Modifier.fillMaxWidth(),placeholder={Text("Reply")},shape=RoundedCornerShape(16.dp));Button(onClick={vm.action("/api/posts",JSONObject().put("text",reply).put("parent",post.id)) { reply="";vm.load(key,path,"posts",true) }},enabled=reply.isNotBlank() && !state.busy,modifier=Modifier.align(Alignment.End)) { Text("Reply") } } }
         }
     }
@@ -158,7 +167,7 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
     AndroidView(factory={PlayerView(it).apply { this.player=player;useController=true }},modifier=Modifier.fillMaxWidth().aspectRatio(16f/9))
 }
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun ComposeSheet(vm: RallyViewModel,community: String?,close: ()->Unit) {
+@Composable fun ComposeSheet(vm: RallyViewModel,community: String?,close: ()->Unit,conversation: Boolean=false) {
     val state by vm.state.collectAsStateWithLifecycle()
     val draftKey=vm.draftKey(community)
     val initial=remember(draftKey) { vm.draft(draftKey) }
@@ -169,14 +178,24 @@ fun Post.tradeTarget(): String = raw.optJSONObject("verifiedTrade")?.let { fill 
     var published by remember { mutableStateOf(false) }
     val currentDraft by rememberUpdatedState(PostDraft(text,asset,file,media,requestKey,signalEnabled,signalTarget,signalStop,signalDirection))
     DisposableEffect(draftKey) { onDispose { if(!published)vm.saveDraft(draftKey,currentDraft) } }
+    var choosingToken by remember { mutableStateOf(false) };var tokenQuery by remember { mutableStateOf("") }
+    LaunchedEffect(choosingToken,tokenQuery){if(choosingToken){delay(200);vm.load("compose-tokens:$tokenQuery","/api/market-catalog?scope=discovery&limit=8&query="+Uri.encode(tokenQuery),"tokens")}}
     val pending=state.busy || uploading
     val sheet=rememberModalBottomSheetState(skipPartiallyExpanded=true)
     ModalBottomSheet(onDismissRequest={if(!pending)close()},sheetState=sheet,containerColor=MaterialTheme.colorScheme.surface,contentWindowInsets={WindowInsets.safeDrawing}) {
         Column(Modifier.fillMaxWidth().heightIn(max=720.dp).verticalScroll(rememberScrollState()).imePadding().padding(24.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Create post",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);Button(onClick={scope.launch { error=null;try { if(file!=null && media==null) { uploading=true;media=vm.api.upload(Uri.parse(file)).string("id") };uploading=false;vm.action("/api/posts",JSONObject().put("text",text).put("asset",asset.ifBlank { JSONObject.NULL }).put("community",community ?: JSONObject.NULL).put("media",media ?: JSONObject.NULL).apply { if(signalEnabled)put("signal",JSONObject().put("direction",signalDirection).put("target",signalTarget).put("invalidation",signalStop).put("hours",24)) },requestKey) { published=true;vm.discardDraft(draftKey);vm.refreshSocial();scope.launch { sheet.hide();close();vm.message("Published") } } } catch(e:Exception){error=e.message} finally { uploading=false } }},enabled=(text.isNotBlank() || file!=null) && text.length<=2000 && !pending) { Text(if(uploading)"Uploading…" else if(state.busy)"Publishing…" else "Publish") } }
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text("Create post",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge);Button(onClick={scope.launch { error=null;try { if(file!=null && media==null) { uploading=true;media=vm.api.upload(Uri.parse(file)).string("id") };uploading=false;vm.action("/api/posts",JSONObject().put("text",text).put("asset",asset.ifBlank { JSONObject.NULL }).put("community",community ?: JSONObject.NULL).put("media",media ?: JSONObject.NULL).apply { if(signalEnabled)put("signal",JSONObject().put("direction",signalDirection).put("target",signalTarget).put("invalidation",signalStop).put("hours",24)) },requestKey) { published=true;vm.discardDraft(draftKey);vm.refreshSocial();scope.launch { sheet.hide();close();vm.message("Published") } } } catch(e:Exception){error=e.message} finally { uploading=false } }},enabled=(text.isNotBlank() || file!=null) && text.length<=2000 && (!conversation || asset.isNotBlank()) && !pending) { Text(if(uploading)"Uploading…" else if(state.busy)"Publishing…" else "Publish") } }
             OutlinedTextField(text,{text=it;requestKey="android-"+java.util.UUID.randomUUID()},Modifier.fillMaxWidth().heightIn(min=180.dp),enabled=!pending,placeholder={Text("What's happening?")},shape=RoundedCornerShape(18.dp),supportingText={Text("${text.length} / 2000")})
-            OutlinedTextField(asset,{asset=it;requestKey="android-"+java.util.UUID.randomUUID()},Modifier.fillMaxWidth(),enabled=!pending,singleLine=true,label={Text("Token address (optional)")},shape=RoundedCornerShape(16.dp))
-            Row(verticalAlignment=Alignment.CenterVertically){Text("Add a price signal",Modifier.weight(1f));Switch(checked=signalEnabled,enabled=!pending,onCheckedChange={signalEnabled=it;requestKey="android-"+java.util.UUID.randomUUID()})}
+            if(conversation) {
+                val selected=state.boot?.optJSONObject("markets")?.objects("tokens")?.firstOrNull {it.string("id")==asset} ?: state.pages["compose-tokens:$tokenQuery"]?.items.orEmpty().map { Asset.parse(it) }.firstOrNull {it.id==asset}?.raw
+                TextButton(onClick={choosingToken=!choosingToken},enabled=!pending){Icon(Icons.Outlined.Search,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(selected?.string("symbol") ?: if(asset.isBlank())"Choose a token" else asset.take(8)+"…")}
+                if(choosingToken){
+                    OutlinedTextField(tokenQuery,{tokenQuery=it},Modifier.fillMaxWidth(),singleLine=true,placeholder={Text("Token name or address")})
+                    val tokens=state.pages["compose-tokens:$tokenQuery"]?.items.orEmpty().map { Asset.parse(it) }.filter {tokenQuery.isBlank() || (it.symbol+it.name+it.id).contains(tokenQuery,true)}.take(8)
+                    tokens.forEach { t->Row(Modifier.fillMaxWidth().heightIn(min=48.dp).clickable{asset=t.id;choosingToken=false;requestKey="android-"+java.util.UUID.randomUUID()},verticalAlignment=Alignment.CenterVertically){TokenArtwork(t,28.dp);Text(t.symbol,Modifier.padding(start=10.dp),fontSize=13.sp)} }
+                }
+            } else OutlinedTextField(asset,{asset=it;requestKey="android-"+java.util.UUID.randomUUID()},Modifier.fillMaxWidth(),enabled=!pending,singleLine=true,label={Text("Token address (optional)")},shape=RoundedCornerShape(16.dp))
+            if(!conversation)Row(verticalAlignment=Alignment.CenterVertically){Text("Add a price signal",Modifier.weight(1f));Switch(checked=signalEnabled,enabled=!pending,onCheckedChange={signalEnabled=it;requestKey="android-"+java.util.UUID.randomUUID()})}
             if(signalEnabled){
                 Segmented(listOf("Upside","Downside"),if(signalDirection=="up")"Upside" else "Downside",{signalDirection=if(it=="Upside")"up" else "down";requestKey="android-"+java.util.UUID.randomUUID()})
                 OutlinedTextField(signalTarget,{signalTarget=it;requestKey="android-"+java.util.UUID.randomUUID()},Modifier.fillMaxWidth(),label={Text("Target · USD")},enabled=!pending,singleLine=true)

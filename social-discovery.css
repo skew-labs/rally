@@ -22,7 +22,7 @@
 .rs-token-open .negative{color:var(--red,#d62f49)}
 .rs-token-numbers{text-align:right;font-variant-numeric:tabular-nums;max-width:45%}
 .rs-quick-buy{border:0;background:transparent;color:var(--buy,#0866ff);font-size:12px;font-weight:600;min-width:44px;min-height:44px;padding:0 6px;border-radius:12px}
-.rs-quick-buy:hover{background:color-mix(in srgb,#0866ff 9%,transparent)}
+
 #token-search-more{text-align:center;padding:16px}
 .rs-home-people{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;padding:2px 0 10px}
 .rs-creator-card{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:8px;row-gap:4px;align-items:center;flex:0 0 194px;scroll-snap-align:start;text-align:left;padding:10px;background:var(--soft);border:0;border-radius:14px;color:var(--text);min-width:0}
@@ -63,7 +63,7 @@
 .rs-post-token{display:flex;align-items:center;gap:7px;max-width:100%;background:none;border:0;padding:3px 0;min-height:44px;color:var(--muted);font-size:11px}.rs-post-token .r-token-art{width:24px;height:24px;flex:none}.rs-post-token span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rs-post-token b{color:var(--text);font-weight:500}.rs-post-token svg{width:14px;height:14px;flex:none}
 .rs-profile-subscribe{margin:12px 0}.rs-community-head+.r-composer-launch{margin-top:0;padding-top:12px;padding-bottom:12px}
 .rx-home-head{padding-top:18px;padding-bottom:4px}.rx-home-head h1{font-size:28px}.rx-home-tabs{max-width:420px;background:none;gap:18px;padding:0;min-height:44px}.rx-home-tabs button{background:none;border-radius:0;border-bottom:2px solid transparent;min-height:44px;padding:0 4px;font-size:13px}.rx-home-tabs button[aria-current=page]{background:none;border-bottom-color:var(--text)}
-.r-market-buy{background:transparent!important;color:var(--buy,#0866ff)!important;border-color:transparent!important;font-size:12px!important;min-width:44px!important}
+
 .r-swipe-card[data-kind=post] .r-swipe-content{justify-content:flex-start}.r-swipe-card .r-swipe-art{max-height:120px;min-height:60px}.r-swipe-card .r-swipe-caption{flex:0 1 auto}.r-swipe-card .r-swipe-engagement{margin-top:12px}.r-swipe-card .r-swipe-content{gap:14px}
 .rs-token-open,.rs-creator-card,.rs-subscribe,.rs-quick-buy{transition:background-color .16s ease,opacity .12s ease,transform .12s ease}.rs-creator-card:active,.rs-subscribe:active{transform:scale(.98)}
 @media(max-width:760px){
@@ -82,7 +82,7 @@ html .rs-swipe-history{flex:1;min-height:80px;max-height:180px;display:flex;flex
 
 .rs-subscribe small{color:inherit;opacity:.84}body[data-view=research] .am-filters button[data-id=paid],body[data-view=research] .am-filters button[data-id=yours]{display:none}
 body[data-view=home] .r-header .r-search-launch{display:none}
-.r-spot-table button[data-action=trade]{background:transparent!important;border-color:transparent!important;color:var(--buy,#0866ff)!important;min-width:44px!important;min-height:44px!important;padding:0 6px!important;font-size:12px!important;box-shadow:none!important}
+
 
 /* Touch feedback is attached to the pressed control, never to live price updates. */
 html :is(.rs-token-open,.r-coin-cell,.rs-quick-buy,.r-market-buy,.rs-leader-identity,.rs-post-token,.rs-creator-card,.rs-subscribe){touch-action:manipulation;transition:background-color 90ms ease,transform 150ms cubic-bezier(.22,.8,.24,1)}
@@ -98,3 +98,10 @@ html .r-token-art[data-art-tone="4"]>.r-token-fallback{background:#f5e2ea;color:
 html .r-token-art[data-art-tone="5"]>.r-token-fallback{background:#e9ebd9;color:#687d37}
 html .rs-feed-modes.r-motion-tabs>button[aria-pressed=true]{border-bottom-color:transparent}
 @media(prefers-reduced-motion:reduce){html .r-is-pressed,html .r-token-art>.r-token{transform:none!important;transition:none!important}}
+
+/* A clear trading action, shared by compact market rows and token search. */
+html :is(.rs-quick-buy,.r-market-buy,.r-spot-table button[data-action=trade],.r-perps-table button[data-action=perpl-order]){background:#075de3!important;color:#fff!important;border:0!important;border-radius:12px!important;min-width:48px!important;min-height:44px!important;padding:0 10px!important;font-size:12px!important;font-weight:600!important;box-shadow:none!important;opacity:1!important}
+@media(hover:hover){html :is(.rs-quick-buy,.r-market-buy,.r-spot-table button[data-action=trade]):hover:not(:disabled){background:#064dbc!important}}
+html :is(.rs-quick-buy,.r-market-buy,.r-spot-table button[data-action=trade]).r-is-pressed:not(:disabled){background:#0645a8!important}
+html :is(.rs-quick-buy,.r-market-buy,.r-spot-table button[data-action=trade]):disabled{background:var(--soft)!important;color:var(--muted)!important;cursor:default}
+html :is(.rs-quick-buy,.r-market-buy):focus-visible{outline:2px solid var(--text);outline-offset:3px}

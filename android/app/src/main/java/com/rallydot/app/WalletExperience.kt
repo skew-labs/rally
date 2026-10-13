@@ -49,7 +49,7 @@ import java.util.Locale
             Text(text,fontSize=(if(text.length>13)34 else if(text.length>10)38 else 44).sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis,letterSpacing=(-1).sp)
         }
         val change=value?.number("change24hPercent")
-        Text(if(change!=null)String.format(Locale.US,"%+.2f%% · 24h price change",change) else if(p==null || p.optBoolean("refreshing"))"Updating balances…" else "24h price change unavailable",color=if(change==null)MaterialTheme.colorScheme.onSurfaceVariant else if(change>=0)Gain else Sell,style=MaterialTheme.typography.bodyMedium)
+        Text(if(change!=null)String.format(Locale.US,"%+.2f%% · 24h",change) else "0.00% · 24h",color=if(change==null)MaterialTheme.colorScheme.onSurfaceVariant else if(change>=0)Gain else Sell,style=MaterialTheme.typography.bodyMedium)
         Row(Modifier.fillMaxWidth().padding(vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             Button(onClick=onSend,modifier=Modifier.weight(1f).heightIn(min=50.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.onSurface,contentColor=MaterialTheme.colorScheme.surface)) { Icon(Icons.Outlined.NorthEast,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text("Send") }
             OutlinedButton(onClick=onDeposit,modifier=Modifier.weight(1f).heightIn(min=50.dp),shape=RoundedCornerShape(100.dp)) { Icon(Icons.Outlined.Add,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text("Deposit") }

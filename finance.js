@@ -36,7 +36,7 @@ export function financeUI(c) {
   });}
   function subscribe(id,trigger=null){return needAccount(async()=>{
     if(!S.boot.wallet){if(!await walletReady())return;}
-    const invoice=await api('/api/payments/checkout',{feed:id});if(invoice.tx){await activity();return;}if(paymentRequest()){paymentReview(invoice);return;}await review({...invoice,summary:{action:'pay',amount:invoice.amount,asset:'USDC'}},trigger,'payment');
+    const invoice=await api('/api/payments/checkout',{feed:id});localStorage.setItem('rally:subscription-intent',JSON.stringify({id:invoice.id,user:S.boot.me.id}));if(invoice.tx){await activity();return;}if(paymentRequest()){paymentReview(invoice);return;}await review({...invoice,summary:{action:'pay',amount:invoice.amount,asset:'USDC'}},trigger,'payment');
   });}
   function paymentReview(invoice){
     modal('Subscribe to '+esc(invoice.feedName),fields([['Access','30 days'],['Total',invoice.amount+' USDC'],['Creator receives',(invoice.creatorAmount||invoice.amount)+' USDC'],['Community buyback',invoice.communityTerms?invoice.buybackAmount+' USDC':null],['Burn',invoice.communityTerms?invoice.communityTerms.burnBps/100+'% of tokens bought':null],['Network','Monad'],['Renewal','Manual']])+`<p class="r-note">Access opens after finality.${invoice.communityTerms?' Buybacks wait for liquidity and price protection.':''}</p><div id="payment-readiness" class="r-payment-readiness" role="status">Checking wallet balance…</div><div class="r-form-error" role="alert"></div><button class="r-btn primary full" id="financial-submit">Pay in wallet</button>`);

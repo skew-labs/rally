@@ -105,6 +105,7 @@ def initialize():
         CREATE INDEX IF NOT EXISTS posts_timeline ON posts(created DESC,id DESC) WHERE deleted=0 AND parent IS NULL;
         CREATE INDEX IF NOT EXISTS posts_threads ON posts(parent,created) WHERE deleted=0;
         CREATE INDEX IF NOT EXISTS posts_author ON posts(author,created);
+        CREATE INDEX IF NOT EXISTS posts_token_roots ON posts(asset,created DESC) WHERE deleted=0 AND parent IS NULL;
         CREATE INDEX IF NOT EXISTS reactions_post ON reactions(post,kind);
         CREATE INDEX IF NOT EXISTS follows_target ON follows(target);
         CREATE INDEX IF NOT EXISTS accounts_owner ON accounts(owner);
@@ -240,7 +241,7 @@ def post_view(p,viewer=None):
     if p['media']:
         import media_pipeline
         p['media'] = media_pipeline.describe(p['media']) if one('SELECT id FROM media WHERE id=?',(p['media'],)) else None
-    return __import__('social_loop').enrich(social.extras(p,viewer))
+    return __import__('token_discussions').decorate(__import__('social_loop').enrich(social.extras(p,viewer)),viewer)
 
 
 def get_feed(who,params):
@@ -255,7 +256,9 @@ def get_feed(who,params):
         bump='max(created,coalesce((SELECT max(r.created) FROM reposts r WHERE r.post=posts.id AND r.owner=?),0))';bump_args=[author]
     elif mode=='following' and viewer:
         bump='max(created,coalesce((SELECT max(r.created) FROM reposts r WHERE r.post=posts.id AND r.owner IN (SELECT target FROM follows WHERE user_id=?)),0))';bump_args=[viewer]
-    sql='SELECT posts.*,'+bump+' AS feedAt FROM posts WHERE deleted=0 AND parent IS NULL'+guard
+    discussion,discussion_args=__import__('token_discussions').selection(params,viewer)
+    sql='SELECT posts.*,'+bump+' AS feedAt FROM posts WHERE deleted=0 AND '+discussion+guard
+    args=discussion_args+args
     if community:sql+=' AND community=?';args.append(community)
     if author:sql+=' AND (author=? OR id IN (SELECT post FROM reposts WHERE owner=?))';args.extend([author,author])
     if mode=='following':
@@ -298,6 +301,7 @@ def get_feed(who,params):
 
 def publish(who,data,key=''):
     require(who,'replies:write' if data.get('parent') else 'posts:write')
+    data=__import__('token_discussions').prepare(who,data)
     text=str(data.get('text','')).strip();media=data.get('media');parent=data.get('parent');asset=data.get('asset');community=data.get('community')
     if not community and not parent:
         import community_tokens
@@ -336,6 +340,7 @@ def publish(who,data,key=''):
         import social
         social.notify(who['actor'],social.post(parent,who['user'])['author'],'reply',ident)
     audit('post.publish',who,ident)
+    __import__('token_discussions').notify(who,one('SELECT * FROM posts WHERE id=?',(ident,)))
     return post_view(one('SELECT * FROM posts WHERE id=?',(ident,)),who['actor'])
 
 

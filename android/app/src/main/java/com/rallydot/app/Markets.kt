@@ -100,7 +100,7 @@ import kotlin.math.abs
         }
         if(onBuy!=null) {
             Spacer(Modifier.width(8.dp))
-            TextButton(onClick=onBuy,enabled=asset.executable&&!asset.stale,modifier=Modifier.width(52.dp).heightIn(min=44.dp).semantics { contentDescription=if(asset.kind=="perps")"Buy / Long ${asset.symbol}" else "Buy ${asset.symbol}" },contentPadding=PaddingValues(4.dp),shape=RoundedCornerShape(10.dp),colors=ButtonDefaults.textButtonColors(containerColor=Color.Transparent,contentColor=if(MaterialTheme.colorScheme.surfaceContainer.luminance()<.5f)Color(0xFF8CB8FF) else Color(0xFF0055DD))) { Text(if(asset.kind=="perps")"Long" else "Buy",fontSize=12.sp,maxLines=1) }
+            TextButton(onClick=onBuy,enabled=asset.executable&&!asset.stale,modifier=Modifier.width(52.dp).heightIn(min=44.dp).semantics { contentDescription=if(asset.kind=="perps")"Buy / Long ${asset.symbol}" else "Buy ${asset.symbol}" },contentPadding=PaddingValues(4.dp),shape=RoundedCornerShape(10.dp),colors=ButtonDefaults.textButtonColors(containerColor=Color(0xFF075DE3),contentColor=Color.White,disabledContainerColor=MaterialTheme.colorScheme.surfaceContainer,disabledContentColor=MaterialTheme.colorScheme.onSurfaceVariant)) { Text(if(asset.kind=="perps")"Long" else "Buy",fontSize=12.sp,maxLines=1) }
         }
     }
     HorizontalDivider(Modifier.padding(horizontal=16.dp),color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=.6f))
@@ -168,7 +168,7 @@ import kotlin.math.abs
     }
 }
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun AssetSheet(asset: Asset,vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit,onCommunity: (String)->Unit={}) {
+@Composable fun AssetSheet(asset: Asset,vm: RallyViewModel,close: ()->Unit,openBrowser: (String)->Unit,onCommunity: (String)->Unit={},onAuthor: (String)->Unit={},onToken: (String)->Unit={}) {
     val sheet=rememberModalBottomSheetState(skipPartiallyExpanded=true)
     val scope=rememberCoroutineScope()
     val focus=androidx.compose.ui.platform.LocalFocusManager.current
@@ -338,7 +338,7 @@ import kotlin.math.abs
                         }
 
                     }
-                    if(!trade)TokenInformation(vm,asset) { id->scope.launch { sheet.hide();close();onCommunity(id) } }
+                    if(!trade)TokenInformation(vm,asset,onAuthor,onToken) { id->scope.launch { sheet.hide();close();onCommunity(id) } }
                     if(asset.kind=="prediction") { Fact("Entry stake",asset.raw.string("stake")+" "+asset.raw.string("stakeAsset"));Fact("Status",asset.raw.string("state").replace('_',' ')) }
                     if(trade) {
                         val quantity=asset.kind=="perps" && asset.venue in listOf("Perpl","Drake")

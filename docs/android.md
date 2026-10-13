@@ -2,9 +2,11 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.23.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.24.apk)
 
 ## Interaction and data
+
+Token comments and replies are available below the chart. Community lists those conversations with character avatars, names, @handles and compact token tags. Mentions link existing profiles. New comments appear behind a refresh action so reading does not jump. Saved feed subscriptions can be opened, renewed or removed; paid access still requires the server-verified entitlement.
 
 - Five destinations use Rally's floating bottom navigation on phones and a navigation rail on wider displays. Bundled Inter fonts, navigation artwork and the light/dark color palette match the mobile web product. System insets and the on-screen keyboard are included in screen and sheet layout.
 - Swipe uses a native vertical pager with one adjacent page prepared. Spot connects public social posts to their exact asset; Perps and Prediction use actual venue markets and pools; Memes opens the nad.fun token deck. Horizontal drags move the card with the finger and settle in the same direction; short drags return to the current page. Buy and Sell open a sheet over the current screen. Landscape switches social cards to two columns, and large text reduces the preview while preserving the actions.
@@ -193,10 +195,10 @@ Version 0.4.19 bundles six distinct default characters. The immutable account ID
 
 Home starts Home with a compact balance, relevant algorithms and recent public activity before the token list. Phones show one algorithm shortcut; wider displays show two. See all opens the full algorithm market. Creator identity, sampled wallet ROI (when available) and subscription price share one row. Missing performance remains a dash.
 
-Token detail keeps price history above Holders, Community and Details tabs. The chart stays mounted while those lower panes change. The Buy/Sell dock remains visible, and closing detail returns to the same list position. Existing signing, order planning and wallet authority are unchanged.
+Token detail keeps price history above Comments, Holders and Details tabs. The chart stays mounted while those lower panes change. The Buy/Sell dock remains visible, and closing detail returns to the same list position. Existing signing, order planning and wallet authority are unchanged.
 
 Version 0.4.20 brings a compact Home balance, denser algorithm and market rows, consistent search fields and edge-aligned navigation. Token details retain their chart and list position when changing information tabs.
 
-### 0.4.23 — social subscriptions
+### 0.4.24 — social subscriptions
 
 Home has a compact balance, creator shortcuts and markets. Community opens posts; tap the author to open their token and feeds. Search lists tokens by 24h price change or volume. Leaderboard ranks published closed-trade ROI and opens the selected creator subscription. Feed previews show the exact USDC term and linked buyback allocation; an allocation is not an executed buyback. Existing order signing and receipt checks remain in place.

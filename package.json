@@ -23,7 +23,8 @@
     "test:algorithm-library": "node tests/algorithm-library-browser.mjs",
     "test:subscriptions": "node tests/swipe-history.mjs && node tests/social-subscriptions-browser.mjs",
     "test:art-touch": "node tests/token-art.mjs && node tests/art-touch-browser.mjs",
-    "test:experience": "node tests/experience-browser.mjs"
+    "test:experience": "node tests/experience-browser.mjs",
+    "test:conversations": "node tests/conversation-browser.mjs"
   },
   "devDependencies": {
     "@openzeppelin/contracts": "5.4.0",

@@ -40,7 +40,7 @@ class SocialSubscriptionJourneyTest {
   fun tap(selector:BySelector){repeat(5){assertTrue("Missing $selector",device.wait(Until.hasObject(selector),15000));try{device.findObject(selector).click();return}catch(_:StaleObjectException){Thread.sleep(100)}};error("Unstable target $selector")}
   try { ActivityScenario.launch(RallyActivity::class.java).use { scenario->
    scenario.onActivity { activity->val vm=RallyViewModel(app,RallyApi(app,client,credentials),DurablePairing(app,"qa-social-subscriptions-pairing"));store.put("vm",vm);activity.setContent{RallyApp(vm,{throw AssertionError("No external browser")},null)} }
-   tap(By.desc("Community"));assertTrue(device.wait(Until.hasObject(By.text("My feeds")),5000));val feedLabel=device.findObject(By.text("My feeds")).visibleBounds;assertTrue("Feed name clipped",feedLabel.width()>feedLabel.height()*2.5);assertTrue(device.wait(Until.hasObject(By.text("QA community observation")),15000))
+   tap(By.desc("Community"));assertTrue(device.wait(Until.hasObject(By.text("Subscriptions")),5000));val feedLabel=device.findObject(By.text("Subscriptions")).visibleBounds;assertTrue("Feed name clipped",feedLabel.width()>feedLabel.height()*2.5);assertTrue(device.wait(Until.hasObject(By.text("QA community observation")),15000))
    tap(By.text("QA creator"));assertTrue(device.wait(Until.hasObject(By.text("Subscribe")),15000));tap(By.text("Early discovery"))
    assertTrue(device.wait(Until.hasObject(By.text("Subscribe · 2.5 USDC")),15000));assertTrue(device.wait(Until.hasObject(By.text("Buyback allocation")),10000));assertTrue(device.hasObject(By.text("20%")))
    val button=device.findObject(By.text("Subscribe · 2.5 USDC"));assertTrue(button.visibleBounds.right<=device.displayWidth);assertTrue(button.visibleBounds.left>=0)
