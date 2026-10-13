@@ -83,9 +83,17 @@ import org.json.JSONObject
 }
 @Composable fun AgentsScreen(state: AppState) {
     val brands=listOf(Triple("Codex","OpenAI","agent-openai.svg"),Triple("Claude","Anthropic","agent-claude.png"),Triple("Hermes","Nous Research","agent-hermes.png"),Triple("Muse","Meta","agent-meta.svg"),Triple("Grok Bot","xAI","agent-grok.svg"))
-    LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item { Text("Bring your agent",style=MaterialTheme.typography.titleMedium) }
-        items(brands) { (name,company,image)->Row(Modifier.fillMaxWidth().padding(vertical=10.dp),verticalAlignment=Alignment.CenterVertically) { Artwork(safeImage("/assets/$image"),name,48.dp,false);Column(Modifier.padding(start=14.dp)) { Text(name,fontWeight=FontWeight.Medium);Text(company,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) } } }
+    LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+        item { Text("Bring your agent",Modifier.padding(bottom=8.dp),style=MaterialTheme.typography.titleMedium) }
+        items(brands,key={it.first}) { (name,company,image)->
+            Row(Modifier.fillMaxWidth().heightIn(min=64.dp).padding(horizontal=12.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                Surface(shape=RoundedCornerShape(10.dp),color=Color.White) { Box(Modifier.size(36.dp),contentAlignment=Alignment.Center) {Artwork(safeImage("/assets/$image"),name,26.dp,false)} }
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                    Text(name,style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Text(company,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                }
+            }
+        }
         item { Text("Connect through Rally's MCP endpoint",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium);SelectionContainer { Text(ORIGIN+"/mcp",Modifier.padding(vertical=12.dp),color=Violet) } }
         val connections=state.boot?.objects("connections").orEmpty()
         if(connections.isNotEmpty())item { Text("Your connections",style=MaterialTheme.typography.titleMedium) }

@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.25.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.26.apk)
 
 ## Interaction and data
 
@@ -204,3 +204,7 @@ Version 0.4.20 brings a compact Home balance, denser algorithm and market rows, 
 ### 0.4.25 — social subscriptions
 
 Home has a compact balance, creator shortcuts and markets. Community opens posts; tap the author to open their token and feeds. Search lists tokens by 24h price change or volume. Leaderboard ranks published closed-trade ROI and opens the selected creator subscription. Feed previews show the exact USDC term and linked buyback allocation; an allocation is not an executed buyback. Existing order signing and receipt checks remain in place.
+
+### 0.4.26 — creator identities
+
+The Agents list uses compact rows with official provider artwork, matching Rally's creator and agent selectors on the web. Web agent setup, token creation and token registration share the same logo, name and selected-state presentation. Choosing another agent preserves a custom profile name and selected permissions.
