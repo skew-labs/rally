@@ -49,7 +49,7 @@ html .r-swipe-token>.r-token-art{--token-size:inherit;width:100%;height:100%;fle
 html .r-swipe-token .r-token,html .r-swipe-token .r-token-fallback{width:100%;height:100%;border-radius:50%;object-fit:contain}
 html .r-swipe-art .r-swipe-token{--token-size:68px}
 html .r-swipe-art>span:last-child:not(.r-swipe-token){font-size:32px;font-weight:550;letter-spacing:-1px;min-width:0;overflow:hidden;text-overflow:ellipsis}
-html .r-swipe-card:not([data-swipe-post]) .r-swipe-content{justify-content:safe center}
+html .r-swipe-card:not([data-swipe-post]) .r-swipe-content{justify-content:flex-start;overflow:hidden}
 html .r-swipe-caption{display:flex;flex-direction:column;flex:0 0 auto;min-height:0}
 html .r-swipe-copy{display:-webkit-box;-webkit-line-clamp:var(--swipe-lines,6);-webkit-box-orient:vertical;overflow:hidden;font-size:17px;line-height:1.55;letter-spacing:-.2px;overflow-wrap:anywhere;flex:0 0 auto;overscroll-behavior-y:contain;scrollbar-width:thin}
 html .r-swipe-expand{align-self:flex-start;min-height:44px;color:var(--muted);font-size:13px;font-weight:600;padding:7px 0;flex-shrink:0}
@@ -306,17 +306,35 @@ html .sa-card .r-swipe-content{display:flex;flex-direction:column;gap:20px;paddi
 @media(max-width:760px){html .r-swipe-tabs button{font-size:11px}html .sa-card .r-swipe-content{padding:20px;gap:12px}.sa-identity h1{font-size:21px}.sa-art{width:52px;height:52px;min-width:52px}.sa-result{padding:16px 0}.sa-result>b{font-size:17px;margin-top:16px}.sa-description{font-size:14px}.sa-terms{font-size:12px}.sa-terms small{font-size:10px}}
 @media(max-height:700px){html .sa-card .r-swipe-content{gap:8px;padding:16px}.sa-result{padding:8px 0}.sa-result>strong{font-size:36px}.sa-result>b{margin-top:10px}.sa-identity h1{font-size:19px}.sa-identity .sa-art{width:44px;height:44px;min-width:44px}}
 
-/* Mobile tools and market tabs each get their own full-width row. */
+/* Keep mobile category controls on one row; secondary tools sit below the card. */
 @media(max-width:760px){
  html body[data-view="swipe"] .r-swipe{grid-template-rows:auto minmax(0,1fr) 44px}
- html .r-swipe-head{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:4px 8px;padding:0 0 8px}
- html .r-swipe-heading{display:block;grid-column:2;grid-row:1;text-align:center;font-size:16px;font-weight:550}
- html .r-swipe-head>[data-action="swipe-exit"]{grid-column:1;grid-row:1}
- html .r-swipe-head>[data-action="theme"]{grid-column:3;grid-row:1}
+ html .r-swipe-head{display:block;padding:0 0 8px}
+ html .r-swipe-heading{display:none}
+ html .r-swipe-head>[data-action="swipe-exit"]{position:absolute;bottom:0;left:0}
+ html .r-swipe-head>[data-action="theme"]{position:absolute;bottom:0;right:44px}
  html .r-swipe-tabs{grid-column:1/-1;grid-row:2;width:100%;max-width:none;border-radius:12px}
  html .r-swipe-tabs button{font-size:12px;min-width:0;min-height:44px;padding:8px 2px;line-height:18px;white-space:nowrap;border-radius:9px}
  html .r-swipe-tab-pill{border-radius:9px}
+ html .r-swipe-progress{padding-left:48px;padding-right:44px}
+ html .r-swipe-progress #swipe-status{display:none}
+ html .r-swipe-progress>[data-action="swipe-refresh"]{position:absolute;right:0;bottom:0}
  html body[data-view="swipe"][data-swipe-keyboard] .r-swipe{grid-template-rows:auto minmax(0,1fr) 0}
  html body[data-view="swipe"][data-swipe-keyboard] .r-swipe-tabs{display:none}
 }
 @media(max-height:500px) and (max-width:599px){html body[data-view="swipe"] .r-swipe{grid-template-rows:auto minmax(0,1fr) 0}}
+
+/* One identity, one chart, one order dock. The chart may shrink, never overflow. */
+html .r-swipe-content>.r-swipe-market{flex:none;gap:8px}
+html .r-swipe-content>.r-swipe-market .r-swipe-price b{font-size:20px;line-height:1.2}
+html .r-swipe-content>.r-swipe-market .r-swipe-token{--token-size:40px}
+html .r-swipe-card:not([data-swipe-post]) .rs-swipe-history{flex:1 1 0;min-height:40px;max-height:none;overflow:hidden}
+html .r-swipe-content>.rs-swipe-history svg{min-height:0;flex:1 1 0;overflow:hidden}
+html .r-swipe-content>.rs-swipe-history small{flex:none;line-height:16px}
+@media(max-width:380px){html .r-swipe-card{padding:14px;gap:10px}html .r-swipe-content>.r-swipe-market .r-swipe-price b{font-size:17px}}
+@media(max-height:500px) and (max-width:599px){html .r-swipe-head>[data-action="swipe-exit"],html .r-swipe-head>[data-action="theme"]{display:none}}
+
+/* A post's text must not collapse while its children keep painting over the chart. */
+html .r-swipe-card[data-swipe-post] .r-swipe-caption{flex:none}
+html .r-swipe-card[data-swipe-post] .rs-swipe-history{flex:0 0 100px;min-height:100px;overflow:hidden}
+@container swipe-card (max-height:480px){html .r-swipe-card[data-swipe-post] .rs-swipe-history{flex-basis:64px;min-height:64px}}

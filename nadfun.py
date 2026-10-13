@@ -496,10 +496,10 @@ def simulate_creation(p,block='latest'):
     token,out=decode([v.typ(o) for o in outputs],bytes.fromhex(result[2:]))
     if token!=p['summary']['token'] or out!=0:raise s.Problem('Token creation result differs from the reviewed address',409,'nad_creation_mismatch')
 
-def chart(token,interval='60'):
+def chart(token,interval='60',wait=True):
     if interval not in {'1','5','15','60','240','1D'}:raise s.Problem('Invalid chart interval')
     info=token_info(token,False)
-    return CHART_CACHE.get(info['address'],interval,lambda:_chart(info,interval))
+    return CHART_CACHE.get(info['address'],interval,lambda:_chart(info,interval),wait=wait)
 
 def _chart(info,interval):
     result=api('/trade/chart/'+info['address']+'?'+urlencode({'resolution':interval,'from':s.now()-86400*7,'to':s.now(),'countback':200,'chart_type':'price_usd'}))

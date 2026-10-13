@@ -133,7 +133,7 @@ fun subscriptionPrice(feed: JSONObject)=if((feed.number("price") ?: 0.0)>0)feed.
     var points by remember(asset.key){mutableStateOf(vm.cachedChart(asset,"1D")?.let(::chartPoints).orEmpty())}
     LaunchedEffect(asset.key) { try { points=chartPoints(vm.chart(asset,"1D")) }catch(e:CancellationException){throw e}catch(_:Exception){} }
     Box(modifier.fillMaxWidth().heightIn(min=60.dp,max=190.dp)) {
-        if(points.size>1)PriceChart(points,{})
+        if(points.size>1)PriceChart(points,{},interactive=false)
         else Text("Open chart",Modifier.align(Alignment.Center),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

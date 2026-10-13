@@ -227,7 +227,7 @@ class Handler(BaseHTTPRequestHandler):
                 data=nadfun.token_info(params.get('token'));token_images.decorate([data]);return self.response(data)
             if path=='/api/nadfun/references':
                 data=nadfun.references(params.get('assets',''));token_images.decorate(data['tokens']);return self.response(data)
-            if path=='/api/nadfun/chart':return self.response(nadfun.chart(params.get('token'),params.get('interval','60')))
+            if path=='/api/nadfun/chart':return self.response(nadfun.chart(params.get('token'),params.get('interval','60'),wait=params.get('preview')!='1'))
             if path=='/api/nadfun/config':return self.response({'chainId':143,'version':'v2','creationFeeMON':s.units(nadfun.creation_fee(),18),'creatorFeeBps':100,'initialBuy':'0','quoteAsset':'MON','fetchedAt':s.now()})
             if path=='/api/nadfun/drafts':return self.response(nadfun.drafts(who))
         if path=='/api/perps':

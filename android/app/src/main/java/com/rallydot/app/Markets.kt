@@ -152,7 +152,7 @@ import kotlin.math.abs
         if(assets.isEmpty()) { if(page.loading)LoadingRows() else EmptyState("Swipe is unavailable",page.error,"Retry",{vm.load(key,"/api/nadfun/tokens?sort=cap&limit=24","tokens",true)}) }
         else {
             NativeSwipeDeck(keys,Modifier.weight(1f),onPage={index->
-                assets.drop(index).take(2).forEach(vm::warmChart)
+                assets.drop(index).take(2).forEach(vm::warmSwipeChart)
                 if(index>=assets.size-4 && page.cursor!=null && !page.loading && page.error==null)
                     vm.load(key,"/api/nadfun/tokens?sort=cap&limit=24&cursor="+Uri.encode(page.cursor),"tokens",append=true)
             }) { index ->
@@ -430,16 +430,16 @@ import kotlin.math.abs
     }
 }
 @Composable fun Fact(label: String,value: String) { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(label,Modifier.weight(1f),maxLines=2,overflow=TextOverflow.Ellipsis,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium);Text(value,style=MaterialTheme.typography.bodyMedium,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(start=12.dp).weight(1f),textAlign=androidx.compose.ui.text.style.TextAlign.End) } }
-@Composable fun PriceChart(points: List<ChartPoint>,onScrub: (ChartPoint?)->Unit) {
+@Composable fun PriceChart(points: List<ChartPoint>,onScrub: (ChartPoint?)->Unit,interactive: Boolean=true) {
     val color=Color(0xFF9178FF)
     val pointer=remember(points) { mutableStateOf<Offset?>(null) }
     val scrub by rememberUpdatedState(onScrub)
-    Box(Modifier.fillMaxSize().semantics { contentDescription="Price line chart, ${points.size} observations" }.pointerInput(points) {
+    Box(Modifier.fillMaxSize().semantics { contentDescription="Price line chart, ${points.size} observations" }.then(if(interactive)Modifier.pointerInput(points) {
         detectDragGestures(onDragEnd={pointer.value=null;scrub(null)},onDragCancel={pointer.value=null;scrub(null)}) { change,_ ->
             change.consume();pointer.value=change.position
             scrub(nearestChartPoint(points,change.position.x/size.width))
         }
-    }.drawWithCache {
+    } else Modifier).drawWithCache {
         val low=points.minOf { it.value };val high=points.maxOf { it.value }
         val range=(high-low).takeIf { it>0 } ?: (abs(high)*.01f).coerceAtLeast(.0000001f)
         val start=points.first().time;val duration=(points.last().time-start).coerceAtLeast(1)

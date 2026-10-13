@@ -108,6 +108,13 @@ class Charts(unittest.TestCase):
             with self.assertRaises(s.Problem): n.chart(A,'bad')
         identity.assert_not_called()
 
+    def test_preview_forwards_nonblocking_read(self):
+        with patch.object(n, 'token_info', return_value={'address':A}), patch.object(n.CHART_CACHE, 'get', return_value={}) as get:
+            n.chart(A, '60', wait=False)
+            self.assertFalse(get.call_args.kwargs['wait'])
+            n.chart(A, '60')
+            self.assertTrue(get.call_args.kwargs['wait'])
+
     def test_rate_spacing_and_chart_priority_are_preserved(self):
         stamp=[1000.0];starts=[]
         class Response:

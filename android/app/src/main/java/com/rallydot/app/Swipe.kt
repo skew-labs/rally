@@ -59,11 +59,11 @@ import kotlin.math.abs
     }
 }
 
-@Composable private fun SocialSwipeCard(item: JSONObject,mode: String,index: Int,total: Int,vm: RallyViewModel,onAsset: (Asset)->Unit,onPost: (Post)->Unit) {
+@Composable internal fun SocialSwipeCard(item: JSONObject,mode: String,index: Int,total: Int,vm: RallyViewModel,onAsset: (Asset)->Unit,onPost: (Post)->Unit) {
     val post=remember(item,mode) { if(mode=="Spot")Post.parse(item) else null }
     val fixed=remember(item,mode) { if(post==null)Asset.parse(item,if(mode=="Perps")"perps" else "prediction") else null }
     val asset by produceState<Asset?>(fixed,item,mode) { value=fixed;if(post!=null && post.asset.isNotBlank())try { value=vm.resolveAsset(post.asset) } catch(e:CancellationException){throw e} catch(_:Exception){value=null} }
-    LaunchedEffect(asset?.key) { asset?.let(vm::warmChart) }
+
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if(maxHeight<320.dp) {
             Row(Modifier.fillMaxSize().padding(14.dp),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -81,26 +81,28 @@ import kotlin.math.abs
                 }
             }
         } else {
-        val short=maxHeight<420.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
+        val short=maxHeight<420.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale>=1.3f
         Column(Modifier.fillMaxSize().padding(if(short)14.dp else 18.dp),verticalArrangement=Arrangement.spacedBy(if(short)8.dp else 14.dp)) {
+            Column(Modifier.weight(1f).fillMaxWidth().then(if(post!=null || mode=="Prediction")Modifier.verticalScroll(rememberScrollState()) else Modifier),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             if(post!=null) {
                 Row(verticalAlignment=Alignment.CenterVertically) { ProfileArtwork(post.author.image,post.author.name,36.dp,identity=post.author.avatarIdentity);Column(Modifier.weight(1f).padding(start=10.dp)) { Text(post.author.name,style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis);Text("@${post.author.handle} · ${age(post.created)}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis) };if(post.author.agent)Text("Agent",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant) }
                 Text(post.text,Modifier.clickable { onPost(post) },maxLines=if(short)3 else if(post.media!=null)4 else 7,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodyLarge)
-                if(!short && post.media!=null) { val media=post.media;val poster=safeImage(media.string("poster",media.string("url")));if(poster!=null)AsyncImage(poster,"Post media",Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(16.dp)).clickable { onPost(post) },contentScale=androidx.compose.ui.layout.ContentScale.Fit) else Spacer(Modifier.weight(1f)) }
-                else if(!short && asset!=null)SwipePriceHistory(vm,asset!!,Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
+                if(!short && post.media!=null) { val media=post.media;val poster=safeImage(media.string("poster",media.string("url")));if(poster!=null)AsyncImage(poster,"Post media",Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(16.dp)).clickable { onPost(post) },contentScale=androidx.compose.ui.layout.ContentScale.Fit) else Spacer(Modifier.height(4.dp)) }
+                else if(asset!=null)SwipePriceHistory(vm,asset!!,Modifier.height(if(short)96.dp else 150.dp)) else Spacer(Modifier.height(4.dp))
                 if(!short)TextButton(onClick={onPost(post)},contentPadding=PaddingValues(0.dp)) { Text("Read more",color=MaterialTheme.colorScheme.onSurfaceVariant,fontSize=12.sp) }
             } else {
                 Text(if(mode=="Prediction")"Price prediction" else "Perpetual",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                fixed?.let { a->Row(verticalAlignment=Alignment.CenterVertically) { TokenArtwork(a,if(short)44.dp else 64.dp);Text(a.symbol,Modifier.padding(start=14.dp),fontSize=if(short)22.sp else 30.sp,fontWeight=FontWeight.SemiBold) };Text(money(a.price),fontSize=if(short)26.sp else 38.sp,fontWeight=FontWeight.Medium) }
-                if(!short && fixed!=null && mode!="Prediction")SwipePriceHistory(vm,fixed,Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
+                fixed?.let { a->Row(verticalAlignment=Alignment.CenterVertically) { TokenArtwork(a,if(short)44.dp else 64.dp);Text(a.symbol,Modifier.weight(1f).padding(start=14.dp),maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=if(short)22.sp else 30.sp,fontWeight=FontWeight.SemiBold) };Text(money(a.price),fontSize=if(short)26.sp else 38.sp,fontWeight=FontWeight.Medium) }
+                if(fixed!=null && mode!="Prediction")SwipePriceHistory(vm,fixed,Modifier.weight(1f)) else Spacer(Modifier.height(4.dp))
                 if(mode=="Prediction") { Fact("Pool", "#"+item.string("id"));Fact("Entry stake",item.string("stake")+" "+item.string("stakeAsset"));Fact("Status",item.string("state").replace('_',' ')) }
+            }
             }
             val a=asset
             if(a!=null) {
                 HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
-                Row(verticalAlignment=Alignment.CenterVertically) { TokenArtwork(a,32.dp);Column(Modifier.weight(1f).padding(start=10.dp)) { Text(a.symbol,fontWeight=FontWeight.SemiBold,fontSize=14.sp);Text(a.venue,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Column(horizontalAlignment=Alignment.End) { Text(if(a.raw.optBoolean("nadfun") && a.cap!=null)"$"+compact(a.cap) else money(a.price),fontWeight=FontWeight.Medium,fontSize=15.sp);Text(if(a.freshness)"Last known" else if(a.raw.optBoolean("nadfun"))"Market cap" else "Reference price",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) } }
+                if(post!=null)Row(verticalAlignment=Alignment.CenterVertically) { TokenArtwork(a,32.dp);Column(Modifier.weight(1f).padding(start=10.dp)) { Text(a.symbol,fontWeight=FontWeight.SemiBold,fontSize=14.sp);Text(a.venue,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) };Column(horizontalAlignment=Alignment.End) { Text(if(a.raw.optBoolean("nadfun") && a.cap!=null)"$"+compact(a.cap) else money(a.price),fontWeight=FontWeight.Medium,fontSize=15.sp);Text(if(a.freshness)"Last known" else if(a.raw.optBoolean("nadfun"))"Market cap" else "Reference price",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) } }
                 if(mode=="Prediction")Button(onClick={onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","buy")))},enabled=a.executable,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(100.dp),colors=ButtonDefaults.buttonColors(containerColor=Buy,contentColor=Color.White)) { Text(if(a.executable)"Predict price" else item.string("state").replace('_',' ')) }
-                else TradeButtons(if(mode=="Perps")"Buy / Long" else "Buy",if(mode=="Perps")"Sell / Short" else "Sell",{onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","buy")))},{onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","sell")))},a.executable)
+                else TradeButtons(if(mode=="Perps")"Long" else "Buy",if(mode=="Perps")"Short" else "Sell",{onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","buy")))},{onAsset(a.copy(raw=JSONObject(a.raw.toString()).put("nativeSide","sell")))},a.executable)
             } else if(post!=null)Button(onClick={onPost(post)},Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(100.dp)) { Text("Discuss") }
         }
         }

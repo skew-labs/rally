@@ -59,7 +59,13 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         chartReads.remove(key)?.second?.cancel()
         val pending=viewModelScope.async(start=CoroutineStart.LAZY) {
             val result=if(asset.raw.optBoolean("nadfun")) {
-                val candles=api.get("/api/nadfun/chart?token="+Uri.encode(asset.id)+"&interval="+if(period=="1D")"15" else "60")
+                val path="/api/nadfun/chart?token="+Uri.encode(asset.id)+"&interval="+(if(period=="1D")"15" else "60")+"&preview=1"
+                var candles=api.get(path,true)
+                for(attempt in 0 until 4) {
+                    if(!candles.optBoolean("refreshing") || candles.objects("candles").isNotEmpty())break
+                    delay(candles.optLong("retryAfter",2).coerceIn(2,8)*1000)
+                    candles=api.get(path,true)
+                }
                 nadChart(candles,asset.id,if(period=="1D")1 else 7)
             } else {
                 if(asset.kind=="spot" && asset.id.startsWith("0x"))api.get("/api/market-asset?address="+Uri.encode(asset.id))
@@ -75,6 +81,7 @@ class RallyViewModel @JvmOverloads constructor(application: Application,val api:
         return pending
     }
     fun cachedChart(asset: Asset,period: String): JSONObject?=chartSnapshots[asset.key+":"+period]?.takeIf { System.currentTimeMillis()-it.first<20_000 }?.second
+    fun warmSwipeChart(asset: Asset) { chartRead(asset,"1D").start() }
     fun warmChart(asset: Asset) { if(asset.raw.optBoolean("nadfun")&&!asset.raw.optBoolean("graduated"))chartRead(asset,"1D").start();warmHolders(asset) }
     suspend fun freshChart(asset: Asset,period: String,hourly: Boolean=false): JSONObject {
         val id=if(asset.kind=="prediction")asset.raw.optJSONObject("assetInfo")?.string("chartMarket") ?: asset.id else asset.id

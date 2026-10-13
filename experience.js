@@ -11,7 +11,7 @@ export function experienceUI(c){
  const boardKey=()=>`${S.boot.me?.id||'guest'}|${S.discoverScope||'all'}|${S.discoverQuery||''}`;
  let primed;
  let homeController;
- const homeActivity=new Map();
+ const homeActivity=new Map();let homeBoard;
  function homeOverview(){
   const head=$('#page>.rx-home-head');if(!head||section()!=='markets'||$('#home-overview'))return;
   const all=S.boot.feeds||[],following=new Set((S.boot.people||[]).filter(p=>p.following).map(p=>p.id));
@@ -24,11 +24,13 @@ export function experienceUI(c){
   const paint=p=>{if(!current()||!wallet||p?.wallet?.toLowerCase()!==wallet.toLowerCase())return;const v=p.valuation,change=v?.change24hPercent;balance.querySelector('small').textContent=v?.partial?'Priced balance':'Your balance';balance.querySelector('strong').textContent=v?.valueUSD!=null?usd(v.valueUSD):'—';const note=balance.querySelector('span');const daily=dailyBalance(v,pct);note.textContent=daily.text+' · 24h';note.className=daily.tone;note.title=daily.description;note.setAttribute('aria-label',daily.text+' · '+daily.description);};
   if(wallet){paint(S.portfolio);(async()=>{for(let i=0;i<12&&current();i++){const p=await api('/api/portfolio',undefined,{signal:request.signal});if(!current())return;S.portfolio=p;paint(p);if(!p.refreshing)return;await new Promise(r=>setTimeout(r,i?1500:350));}})().catch(()=>{if(current()&&!S.portfolio)balance.querySelector('span').textContent='0.00% · 24h';});}
   const activity=$('#home-activity'),paintActivity=d=>{if(!current())return;const posts=(d.posts||[]).slice(0,1);S.posts=[...(S.posts||[]),...posts.filter(p=>!S.posts?.some(x=>x.id===p.id))];activity.innerHTML=posts.map(p=>`<button class="rc-activity-row" data-action="open-post" data-id="${esc(p.id)}">${avatar(p.author)}<span><small>${esc(p.author.name)} <i>${p.verifiedTrade?esc(p.verifiedTrade.label||p.verifiedTrade.side||'Trade'):'Posted'}</i></small><b>${esc(p.verifiedTrade?[p.verifiedTrade.quantity,p.verifiedTrade.symbol].filter(Boolean).join(' '):p.text.slice(0,180))}</b></span>${icon('chevron')}</button>`).join('');};
-  api('/api/performance/leaderboard',undefined,{signal:request.signal}).then(d=>{if(!current())return;for(const e of d.entries){const node=host.querySelector('[data-home-owner="'+CSS.escape(e.author.id)+'"] [data-home-return]');if(node&&e.performance.roi!=null){node.textContent=pct(e.performance.roi)+' · 30d ROI';node.classList.add(e.performance.roi>=0?'positive':'negative');}}}).catch(()=>{});
+  const paintBoard=d=>{if(!current())return;for(const e of d.entries||[]){const node=host.querySelector('[data-home-owner="'+CSS.escape(e.author.id)+'"] [data-home-return]');if(node&&e.performance.roi!=null){node.textContent=pct(e.performance.roi)+' · 30d ROI';node.classList.remove('positive','negative');node.classList.add(e.performance.roi>=0?'positive':'negative');}}};
+  if(homeBoard?.owner===owner&&Date.now()-homeBoard.at<30000)paintBoard(homeBoard.data);
+  else api('/api/performance/leaderboard',undefined,{signal:request.signal}).then(d=>{if(current()){homeBoard={owner,data:d,at:Date.now()};paintBoard(d);}}).catch(()=>{});
   const key=owner+':'+[...following].join(','),cached=homeActivity.get(key);if(cached&&Date.now()-cached.at<30000){paintActivity(cached.data);return;}
   api('/api/posts?mode='+(following.size?'following':'for-you')+'&feed=latest',undefined,{signal:request.signal}).then(d=>{if(current()){homeActivity.clear();homeActivity.set(key,{data:d,at:Date.now()});paintActivity(d);}}).catch(()=>{});
  }
- const invalidate=()=>{pages.clear();boards.clear();primed?.controller.abort();primed=null;};
+ const invalidate=()=>{pages.clear();boards.clear();homeActivity.clear();homeBoard=null;primed?.controller.abort();primed=null;};
  function prime(){return;
   if(primed)return;
   const request=new AbortController();
@@ -141,7 +143,9 @@ export function experienceUI(c){
  async function handle(action,id,el){
   if(await social.handle(action,id,el))return true;
   if(action==='home-section'){
-   S.homeSection=id;closeModal();
+   if(id==='markets'||id==='feed')S.homeSection=id;
+   if(id==='swipe')S.swipeReturn=S.view==='explore'?'explore':'home';
+   closeModal();
    await navigate(id==='launch'?'launchpad':id==='swipe'?'swipe':id==='feed'?'communities':'home');return true;
   }
   if(action==='discover-preview'){await preview(id);return true;}

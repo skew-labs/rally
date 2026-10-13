@@ -2,7 +2,7 @@
 
 Rally for Android is a Kotlin and Jetpack Compose application. Navigation, markets, launch discovery, Swipe, token sheets, price charts, community feeds, discovery, algorithm previews, rankings and profiles render inside the application. The main interface does not wrap the website or launch a Trusted Web Activity. Privy manages its internal wallet infrastructure. The package is `com.rallydot.app`, with Android 9 (API 28) as the minimum and API 36 as the target.
 
-[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.27-15ef58fd4883.apk)
+[Download the signed APK](https://rallydot.com/assets/rally-android-0.4.28-6640cfd9d362.apk)
 
 ## Interaction and data
 
@@ -212,3 +212,9 @@ The Agents list uses compact rows with official provider artwork, matching Rally
 ### 0.4.27 — token discovery
 
 Token rows show compact market cap (`$9.92M MC`), volume, 24-hour price change and launch age. Graduated uses finalized graduation dates where indexed; unknown dates never become a fabricated recent graduation. New uses creation order. New and Graduated poll for arrivals and offer a refresh action without moving the row being read. Daily nad.fun metrics load independently of prices and order quotes.
+
+### 0.4.28 — Swipe fit and chart gestures
+
+Swipe keeps perpetual identity and price above the chart, with Long and Short at the bottom. The chart uses the available height and does not capture the vertical gesture used to move between cards. Post text stays in its own scrolling area. Web previews share a bounded next-card request, and curve-history previews use nonblocking reads with bounded retries. Home navigation restores Markets after leaving Swipe.
+
+Verification: 96 native unit tests; three Android instrumentation tests including 320dp width and 130% text; eight web viewport/theme cases covering Swipe, Home, post previews and algorithm previews. These checks exercise layout and navigation, not financial execution or a device refresh-rate benchmark.
