@@ -1,5 +1,5 @@
 // Public indexed observations only. These snapshots never authorize a trade.
-const cache=new Map(),pending=new Map(),listeners=new Map();
+const cache=new Map(),pending=new Map(),listeners=new Map(),warmedAt=new Map();
 const storageKey='rally:holder-snapshots:v1',now=()=>Date.now()/1000;
 const address=/^0x[0-9a-f]{40}$/i;
 function valid(p,id){
@@ -24,16 +24,14 @@ export function cachedHolders(asset){
 export function warmHolders(c,asset,foreground=false){
  const id=String(asset).toLowerCase();if(!address.test(id))return Promise.resolve(null);
  const saved=cachedHolders(id);if(saved?.fetchedAt&&now()-saved.fetchedAt<60&&!saved.refreshing)return Promise.resolve(saved);
+ if(document.hidden||c.active&&!c.active())return Promise.resolve(saved);
  if(pending.has(id))return pending.get(id);
+ // Hover/touch intent gets one read, not an indexing poll for every passed row.
+ if(!foreground&&now()-(warmedAt.get(id)||0)<15)return Promise.resolve(saved);
  if(pending.size>=(foreground?4:3))return Promise.resolve(saved);
- const task=(async()=>{
-  for(let i=0;i<20;i++){
-   const p=remember(id,await c.api('/api/token-holders?asset='+id));
-   if(!p.refreshing&&!p.waiting)return p;
-   await new Promise(r=>setTimeout(r,i===0?400:i===1?800:i===2?1500:2500));
-  }
-  return cachedHolders(id);
- })().finally(()=>pending.delete(id));pending.set(id,task);return task;
+ if(!foreground){warmedAt.delete(id);warmedAt.set(id,now());while(warmedAt.size>64)warmedAt.delete(warmedAt.keys().next().value);}
+ const task=Promise.resolve().then(()=>c.api('/api/token-holders?asset='+id))
+  .then(p=>remember(id,p)).finally(()=>pending.delete(id));pending.set(id,task);return task;
 }
 function html(c,p){
  if(!p)return '<div class="r-holders-title"><h3>Holders</h3><small>Updating…</small></div><div class="r-holder-skeleton" aria-label="Loading holders"><i></i><i></i><i></i></div>';
@@ -51,6 +49,7 @@ export function mountHolders(c,host,asset){
  paint(cachedHolders(id));
  const update=p=>{if(host.isConnected)paint({...p,stale:!!p.stale||!!p.fetchedAt&&now()-p.fetchedAt>=90});else listeners.get(id)?.delete(update);};
  if(!listeners.has(id))listeners.set(id,new Set());listeners.get(id).add(update);
- const refresh=async()=>{for(let i=0;i<20&&host.isConnected;i++){const p=await warmHolders(c,id,true);if(p)return;await new Promise(r=>setTimeout(r,500));}};
+ const active=()=>host.isConnected&&host.dataset.holderAsset===id;
+ const refresh=async()=>{for(let i=0;i<20&&active();i++){const p=await warmHolders({...c,active},id,true);if(p&&!p.refreshing&&!p.waiting)return;await new Promise(r=>setTimeout(r,i===0?400:i===1?800:i===2?1500:2500));}};
  return refresh().catch(()=>{if(!cachedHolders(id)&&host.isConnected)host.innerHTML='<h3>Holders</h3><p class="r-note">Temporarily unavailable.</p>';}).finally(()=>{listeners.get(id)?.delete(update);if(!listeners.get(id)?.size)listeners.delete(id);});
 }
