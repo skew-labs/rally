@@ -1,0 +1,249 @@
+/* The social app owns its frame. Trading and settlement components keep their
+   existing behavior; these rules replace the old dashboard presentation. */
+@font-face{font-family:Rally Sans;src:url('/assets/landing-manrope.woff2') format('woff2');font-style:normal;font-weight:200 800;font-display:swap}
+html:has(body.rally-social){--r-font:'Rally Sans',-apple-system,BlinkMacSystemFont,sans-serif;font-family:var(--r-font);--sn-header:72px;--sn-read:660px}
+html[data-theme=light]:has(body.rally-social){--canvas:#fff;--paper:#fff;--bg:#fff;--panel:#f6f7f8;--soft:#f2f3f4;--raised:#eef0f2;--line:#eceef0;--text:#242529;--secondary-ink:#50545a;--muted:#73767c;--faint:#73767c;--primary:#242529;--solid:#242529;--solid-hover:#3b3c40;--on-solid:#fff;--accent:#7055e8;--link:#6548db;--brand:#7055e8;--r-nav-active:#f1eefb;--sn-mint:#e3f1e9;--sn-lilac:#ede8fa;--sn-peach:#faf0e7;--sn-art-ink:#45414e}
+html[data-theme=dark]:has(body.rally-social){--canvas:#151617;--paper:#151617;--bg:#151617;--panel:#1d1f21;--soft:#242628;--raised:#2b2e31;--line:#2b2d30;--text:#f1f2f3;--secondary-ink:#c2c5c8;--muted:#969ba1;--faint:#969ba1;--primary:#f1f2f3;--solid:#f1f2f3;--solid-hover:#fff;--on-solid:#242529;--accent:#b2a1fb;--link:#b2a1fb;--brand:#a18aec;--r-nav-active:#292534;--sn-mint:#25372e;--sn-lilac:#302a41;--sn-peach:#3c3027;--sn-art-ink:#d8cde9}
+html body.rally-social{font-family:var(--r-font);background:var(--paper);color:var(--text);--space:24px}
+html body.rally-social button:hover:not(:disabled){color:inherit}
+html body.rally-social .r-btn.primary:hover:not(:disabled){color:var(--on-solid)}
+html body.rally-social .r-header.sn-header{display:flex;position:sticky;top:0;height:var(--sn-header);min-height:var(--sn-header);z-index:45;padding:0 max(28px,calc((100vw - 1280px)/2));gap:32px;background:var(--paper);border:0;border-bottom:1px solid var(--line);box-shadow:none}
+html body.rally-social .sn-header .r-brand{width:180px;flex:none;font-family:var(--r-font);font-size:35px;letter-spacing:-2.4px;font-weight:800;margin:0}
+html body.rally-social .sn-header .r-brand span{width:7px;height:7px;margin-bottom:5px}
+.sn-global-search{display:flex;align-items:center;gap:10px;text-align:left;width:330px;height:40px;padding:0 14px;border-radius:12px;background:var(--panel);font-size:13px;color:var(--muted);border:1px solid transparent}
+.sn-global-search kbd{font:11px var(--r-font);margin-left:auto;color:var(--muted)}
+.sn-global-search .icon{width:18px;height:18px}
+.sn-header-actions{margin-left:auto;display:flex;align-items:center;gap:12px}
+html body.rally-social .sn-header-actions :is(.r-theme-button,.r-icon-button){display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:none;flex:none}
+html body.rally-social .sn-header-actions #account-button{display:inline-flex;font-size:12px;min-height:36px;padding:8px 17px;max-width:170px}
+html body.rally-social #account-button .r-avatar{width:26px;height:26px}
+html body.rally-social[data-view] .r-layout{display:grid;grid-template-columns:188px minmax(0,1fr);gap:38px;width:100%;max-width:1336px;margin:auto;padding:0 28px;align-items:start}
+html body.rally-social .r-sidebar{top:var(--sn-header);height:calc(100dvh - var(--sn-header));padding:26px 0 18px;gap:0;overflow:auto;scrollbar-width:none}
+html body.rally-social .r-sidebar nav{gap:3px}
+html body.rally-social .r-sidebar nav a{display:flex;align-items:center;min-height:45px;width:100%;max-width:none;padding:10px 12px;gap:13px;border-radius:12px;font-size:14px;font-weight:500;line-height:1.4;color:var(--secondary-ink)}
+html body.rally-social .r-sidebar nav a.active{color:var(--text);font-weight:700;background:none}
+html body.rally-social .r-sidebar nav a:hover{background:var(--panel)}
+html body.rally-social .r-sidebar nav .icon{width:22px;height:22px}
+html body.rally-social .r-sidebar .r-nav-secondary{margin-top:22px;padding:0}
+html body.rally-social .r-sidebar .r-nav-secondary a{font-size:13px!important;font-weight:500}
+html body.rally-social .r-motion-glider{background:var(--r-nav-active);border-radius:12px}
+html body.rally-social .r-sidebar .r-post-button{width:100%;min-height:43px;max-width:none;margin:22px 0 0;font-size:14px;gap:9px;border-radius:12px}
+html body.rally-social .r-side-section{margin-top:28px;padding-top:0;border:0;width:100%;max-width:none}
+html body.rally-social .r-kicker{font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted);padding:0 12px 9px}
+html body.rally-social .r-community-link{padding:8px 12px;gap:10px}
+html body.rally-social .r-community-link>span:not(.r-community-mark){font-size:12px;color:var(--secondary-ink);line-height:1.3}
+html body.rally-social .r-community-link .r-community-mark{width:27px;height:27px;flex:none}
+html body.rally-social .r-community-link .r-community-mark img{width:100%;height:100%;object-fit:cover}
+html body.rally-social .r-side-bottom{padding:20px 8px 0;margin-top:auto;gap:14px}
+html body.rally-social .r-side-bottom #side-account-profile{font-size:12px;padding:0;gap:10px}
+html body.rally-social .r-side-bottom .r-avatar{width:34px;height:34px}
+html body.rally-social .r-more-nav summary{font-size:13px;min-height:38px}
+html body.rally-social .r-more-nav>div{bottom:100%;top:auto;z-index:50;max-height:60dvh;overflow:auto}
+html body.rally-social[data-view] .r-workspace{padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:34px;min-width:0}
+html body.rally-social[data-view] .r-workspace>#main{border:0;padding:24px 0 64px;min-height:calc(100dvh - var(--sn-header));width:100%;min-width:0}
+html body.rally-social[data-view] .r-workspace #page{background:var(--paper);border:0;border-radius:0;box-shadow:none;overflow:visible;min-height:0;padding:0 0 40px}
+html body.rally-social[data-view] .r-layout>.r-workspace>.r-rail{display:none}
+html body.rally-social:is([data-view=home][data-home-section=feed],[data-view=communities],[data-view=community],[data-view=profile],[data-view=post],[data-view=saved]) .r-workspace{grid-template-columns:minmax(0,var(--sn-read)) minmax(220px,1fr)}
+html body.rally-social:is([data-view=home][data-home-section=feed],[data-view=communities],[data-view=community],[data-view=profile],[data-view=post],[data-view=saved]) .r-workspace>.r-rail{display:block;position:sticky;top:var(--sn-header);padding:28px 0 20px;max-height:calc(100dvh - var(--sn-header));overflow:auto;scrollbar-width:none}
+html body.rally-social .r-page-head{padding:6px 0 22px;min-height:60px}
+html body.rally-social .r-page-head h1{font-size:27px;letter-spacing:-1px;font-weight:600}
+.sn-page-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 0 24px}
+.sn-page-heading h1{font-size:28px;font-weight:600;letter-spacing:-1px}
+.sn-section-label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}
+.sn-section-label h2{font-size:15px;font-weight:650;letter-spacing:-.3px;color:var(--text)}
+.sn-section-label :is(a,button),.sn-text-action{display:inline-flex;align-items:center;gap:4px;min-height:32px;color:var(--muted);font-size:11px}
+.sn-section-label .icon,.sn-text-action .icon{width:14px;height:14px}
+.sn-corners{margin:0 0 22px}
+.sn-corner-list{display:flex;gap:12px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:none;padding:2px 0 8px;scroll-snap-type:x proximity}
+.sn-corner{position:relative;flex:1 0 155px;max-width:220px;min-width:0;height:163px;border-radius:17px;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:17px;scroll-snap-align:start;isolation:isolate;color:var(--text);background:var(--sn-lilac)}
+.sn-corner.sn-tone-1{background:var(--sn-mint)}
+.sn-corner.sn-tone-2{background:var(--sn-peach)}
+.sn-corner-art{position:relative;flex:1;width:100%;display:flex;align-items:flex-start;justify-content:flex-end}
+.sn-corner-art:before,.sn-corner-art:after{content:'';position:absolute;z-index:-1;width:142px;height:142px;border:1px solid color-mix(in srgb,var(--sn-art-ink) 13%,transparent);border-radius:50%;left:-55px;top:-70px;transform:rotate(-30deg) scaleX(1.5)}
+.sn-corner-art:after{left:-35px;top:-50px}
+html body.rally-social .sn-corner-art .r-community-mark{width:59px;height:59px;border-radius:18px;object-fit:cover;border:0;background:none;transform:rotate(8deg)}
+html body.rally-social .sn-corner-art .r-community-mark img{width:100%;height:100%;object-fit:cover}
+.sn-corner-name{font-size:14px;font-weight:700;letter-spacing:-.3px;line-height:1.4;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sn-corner-members{margin-top:3px;font-size:10px;line-height:1.4;color:var(--secondary-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+html body.rally-social .r-composer-launch.sn-composer{display:flex;align-items:center;gap:13px;width:100%;margin:0 0 17px;padding:13px 0 20px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;min-height:76px;text-align:left;box-shadow:none}
+html body.rally-social .sn-composer .r-avatar{width:43px;height:43px;flex:none}
+html body.rally-social .sn-composer>span:not(.r-avatar):not(.sn-composer-media){font-size:15px;flex:1;min-width:0;color:var(--muted)}
+html body.rally-social .sn-composer .sn-composer-media{flex:0 0 38px;display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:12px;background:var(--panel);color:var(--secondary-ink)}
+html body.rally-social .sn-feed-toolbar{display:flex;align-items:center;position:sticky;top:var(--sn-header);padding:0;margin:0;background:var(--paper);border:0;border-bottom:1px solid var(--line);border-radius:0;z-index:15;box-shadow:none;backdrop-filter:none}
+html body.rally-social[data-view] .sn-feed-toolbar>.sn-feed-modes{display:flex;align-items:center;gap:25px;padding:0;margin:0;flex:1 1 0;width:0;border:0;min-width:0;background:none;overflow-x:auto}
+html body.rally-social .sn-feed-modes button{flex:none;min-height:49px;padding:0 1px;border:0;border-radius:0;background:none;font-size:13px;font-weight:550;color:var(--muted)}
+html body.rally-social .sn-feed-modes button.active{color:var(--text);font-weight:700}
+html body.rally-social .sn-feed-modes .r-motion-underline{background:var(--text);height:2px}
+.sn-feed-settings{width:36px;height:40px;display:grid;place-items:center;color:var(--muted);flex:none;margin-left:12px}
+.sn-feed-settings .icon{width:19px;height:19px}
+.sn-discussion-title{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:0 0 12px;gap:12px}
+.sn-discussion-title h2{font-size:16px;font-weight:600}
+html body.rally-social .sn-post{padding:24px 0 12px;margin:0;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;min-width:0;content-visibility:auto;contain-intrinsic-size:auto 300px}
+html body.rally-social .sn-post .r-post-heading{display:flex;align-items:center;gap:10px;margin:0 0 14px;min-width:0}
+html body.rally-social .sn-post .r-person{display:flex;align-items:center;gap:11px;flex:1;min-width:0}
+html body.rally-social .sn-post .r-person>.r-avatar{width:43px;height:43px;flex:none}
+html body.rally-social .sn-post .r-person>span:not(.r-avatar){min-width:0;text-align:left;overflow:hidden}
+html body.rally-social .sn-post .r-person b{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;line-height:1.4;min-width:0;max-width:100%}
+html body.rally-social .sn-post .r-author-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body.rally-social .sn-post .r-person small{display:block;font-size:11px;line-height:1.5;margin-top:2px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;color:var(--muted)}
+html body.rally-social .sn-post .r-person em{font-size:9px;font-weight:500;line-height:1.4;font-style:normal;color:var(--muted);margin:0;padding:1px 5px;background:var(--panel);border-radius:4px;flex:none}
+.sn-post-time{font-size:11px;color:var(--muted);white-space:nowrap;flex:none}
+html body.rally-social .sn-post .r-post-heading>.r-icon-button{width:30px;height:36px;flex:none;color:var(--muted);background:none}
+html body.rally-social .sn-post .r-post-body{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;margin:0;font-family:var(--r-font);font-size:15px;font-weight:400;line-height:1.75;letter-spacing:-.12px;color:var(--text);overflow-wrap:anywhere;max-height:none}
+html body.rally-social .sn-post.is-expanded .r-post-body,html body.rally-social[data-view=post] .sn-post .r-post-body{display:block;-webkit-line-clamp:unset;max-height:none}
+html body.rally-social .sn-post .r-post-read{font-size:12px;color:var(--muted);min-height:36px;margin-top:4px}
+html body.rally-social .sn-post .r-media{display:block;max-width:100%;width:100%;border:0;border-radius:16px;margin:14px 0;max-height:620px;object-fit:contain}
+html body.rally-social .sn-post .r-link-card{display:flex;justify-content:space-between;align-items:center;border:0;background:var(--panel);padding:12px 14px;border-radius:10px;margin:14px 0;font-size:12px}
+html body.rally-social .sn-post .r-link-card .icon{width:14px;height:14px}
+html body.rally-social .sn-post .r-post-asset{display:flex;align-items:center;gap:12px;width:100%;padding:14px;margin:16px 0 10px;background:var(--panel);border:0;border-radius:14px;min-width:0;text-align:left}
+html body.rally-social .sn-post .r-post-asset>.r-token-art{width:38px;height:38px;flex:none}
+html body.rally-social .sn-post .r-post-asset>span:nth-child(2){flex:1;min-width:0}
+html body.rally-social .sn-post .r-post-asset b{font-size:13px;font-weight:650;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body.rally-social .sn-post .r-post-asset small{font-size:11px;display:block;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+html body.rally-social .sn-post .r-asset-price{text-align:right;flex:none}
+html body.rally-social .sn-post .r-asset-trade{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:650;background:var(--solid);color:var(--on-solid);padding:10px 12px;border-radius:10px;flex:none;margin-left:4px}
+html body.rally-social .sn-post .r-asset-trade .icon{width:13px;height:13px}
+.sn-post-topics{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0 2px}
+.sn-post-topics:empty{display:none}
+html body.rally-social .sn-post-topics>button{display:flex;align-items:center;gap:6px;width:auto;min-height:28px;padding:3px 7px;margin:0;background:var(--panel);border:0;border-radius:7px;font-size:10px;font-weight:500;color:var(--secondary-ink)}
+html body.rally-social .sn-post-topics :is(.r-community-mark,.r-token-art){width:17px;height:17px;flex:none;border-radius:5px;margin:0}
+html body.rally-social .sn-post-topics .r-community-mark img{width:100%;height:100%;object-fit:cover}
+html body.rally-social .sn-post-topics .rs-post-token b{font-size:10px;font-weight:500}
+html body.rally-social .sn-post .r-post-actions{display:flex;align-items:center;justify-content:flex-start;gap:13px;margin:10px 0 0;padding:0;max-width:none;color:var(--muted)}
+html body.rally-social .sn-post .r-post-actions button{display:flex;align-items:center;gap:7px;min-width:34px;min-height:40px;font-size:11px;color:var(--muted);border-radius:8px;padding:0 5px}
+html body.rally-social .sn-post .r-post-actions button:last-child{margin-left:auto}
+html body.rally-social .sn-post .r-post-actions .icon{width:20px;height:20px;stroke-width:1.6}
+html body.rally-social .sn-post .r-post-actions .liked{color:#d44d74}
+html body.rally-social .sn-post .r-post-actions .saved,html body.rally-social .sn-post .r-post-actions .reposted{color:var(--link)}
+.sn-feed-choice{display:flex;align-items:center;gap:10px;padding:14px;background:var(--panel);border-radius:14px;margin:0 0 30px;min-width:0}
+.sn-feed-choice-icon{display:grid;place-items:center;width:34px;height:34px;background:var(--sn-lilac);color:var(--link);border-radius:11px;flex:none}
+.sn-feed-choice>div{flex:1;min-width:0}
+.sn-feed-choice small{display:block;font-size:10px;color:var(--muted);margin-bottom:3px}
+.sn-feed-choice b{display:block;font-size:12px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sn-feed-choice button{display:grid;place-items:center;width:28px;min-height:36px;color:var(--muted);flex:none}
+.sn-feed-choice button .icon{width:14px}
+html body.rally-social .r-rail .sn-people{padding:0;margin:0 0 28px;border:0}
+html body.rally-social .sn-people .sn-section-label{margin-bottom:10px}
+html body.rally-social .sn-people .sn-section-label h2{font-size:13px}
+html body.rally-social .sn-people .r-person-row{min-width:0;gap:8px;padding:11px 0;border:0}
+html body.rally-social .sn-people .r-avatar{width:36px;height:36px;flex:none}
+html body.rally-social .sn-people .r-person{gap:9px}
+html body.rally-social .sn-people .r-person b{font-size:12px;font-weight:650}
+html body.rally-social .sn-people .r-person small{font-size:10px;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+html body.rally-social .sn-people .r-person em{font-size:8px;font-weight:400;font-style:normal;color:var(--muted)}
+html body.rally-social .sn-people .r-btn{font-size:10px;font-weight:650;border:0;border-radius:8px;padding:7px 9px;min-height:32px;background:var(--panel);color:var(--text)}
+.sn-shortcuts{border-top:1px solid var(--line);padding-top:18px;display:grid;gap:8px}
+.sn-shortcuts a{display:flex;align-items:center;gap:10px;min-height:60px;text-align:left;min-width:0}
+.sn-shortcuts a>span:nth-child(2){flex:1;min-width:0}
+.sn-shortcut-icon{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:12px;background:var(--sn-mint)}
+.sn-shortcuts a:nth-child(2) .sn-shortcut-icon{background:var(--sn-peach)}
+.sn-shortcuts b{display:block;font-size:12px;font-weight:650;line-height:1.5}
+.sn-shortcuts small{font-size:10px;line-height:1.5;display:block;color:var(--muted)}
+.sn-shortcuts a>.icon{width:13px;color:var(--muted)}
+.sn-rail-footer{display:flex;flex-wrap:wrap;gap:8px 13px;padding-top:30px;font-size:10px;color:var(--muted)}
+.sn-rail-footer>span{flex-basis:100%;margin-top:6px}
+html body.rally-social .r-profile-banner.sn-profile{padding:0;border:0;position:relative}
+.sn-profile-cover{height:124px;border-radius:18px;background:var(--sn-lilac);position:relative;overflow:hidden;margin-bottom:20px}
+.sn-profile-cover:after{content:'';position:absolute;width:650px;height:350px;left:10%;top:-240px;border:1px solid color-mix(in srgb,var(--sn-art-ink) 18%,transparent);border-radius:50%;box-shadow:0 20px 0 0 var(--sn-lilac),0 21px 0 0 color-mix(in srgb,var(--sn-art-ink) 18%,transparent),0 42px 0 0 var(--sn-lilac),0 43px 0 0 color-mix(in srgb,var(--sn-art-ink) 18%,transparent);transform:rotate(-15deg)}
+html body.rally-social .sn-profile .r-profile-identity{flex-direction:row-reverse;justify-content:flex-end;gap:16px;padding:0;align-items:center}
+html body.rally-social .sn-profile .r-profile-identity>.r-avatar{height:72px;width:72px;margin:0;flex:none;border:4px solid var(--paper)}
+html body.rally-social .sn-profile .r-profile-identity h1{font-size:25px;font-weight:650;letter-spacing:-.8px;overflow-wrap:anywhere}
+html body.rally-social .sn-profile .r-profile-identity p{font-size:12px;margin-top:4px}
+html body.rally-social .sn-profile .r-profile-bio{font-size:14px;line-height:1.7;margin-top:18px}
+html body.rally-social .sn-profile .r-profile-footer{padding:18px 0;font-size:12px}
+html body.rally-social .sn-profile .r-profile-kind{font-size:10px}
+html body.rally-social .r-tabs.r-profile-tabs,html body.rally-social .r-tabs.r-community-tabs{padding-inline:0;margin-top:14px;gap:25px}
+html body.rally-social .r-profile-tabs button{font-size:13px;min-height:48px}
+html body.rally-social .rx-home-head{padding:0 0 20px;border:0;margin:0}
+html body.rally-social .rx-home-head h1{font-size:28px;font-weight:600;letter-spacing:-1px}
+html body.rally-social .rx-home-tabs{margin-top:20px;background:var(--panel);max-width:400px;border-radius:12px;padding:4px}
+html body.rally-social .rx-home-tabs button{font-size:12px;min-height:36px;border-radius:9px}
+html body.rally-social .r-compose-fab{display:none}
+@media(min-width:1191px){html body.rally-social .r-workspace:has(.sn-feed-toolbar){border:0}}
+@media(max-width:1190px){
+ html body.rally-social[data-view] .r-layout{max-width:1000px;grid-template-columns:180px minmax(0,1fr);gap:30px;padding-inline:24px}
+ html body.rally-social[data-view] .r-layout>.r-workspace{grid-template-columns:minmax(0,1fr)}
+ html body.rally-social[data-view] .r-layout>.r-workspace>.r-rail{display:none}
+ html body.rally-social .sn-header .r-brand{width:180px}
+ html body.rally-social .r-header.sn-header{padding-inline:24px;gap:30px}
+}
+@media(min-width:761px) and (max-width:980px){
+ html body.rally-social[data-view] .r-layout{grid-template-columns:58px minmax(0,1fr);max-width:800px;gap:26px}
+ html body.rally-social .r-sidebar nav a{justify-content:center;padding-inline:0;min-height:48px}
+ html body.rally-social .r-sidebar nav a>span,html body.rally-social .r-sidebar .r-side-section,html body.rally-social .r-sidebar .r-side-bottom{display:none}
+ html body.rally-social .r-sidebar .r-post-button{font-size:0;gap:0;width:46px;margin-inline:auto}
+ html body.rally-social .r-sidebar .r-post-button .icon{width:20px;height:20px}
+ html body.rally-social .sn-header .r-brand{width:120px}
+}
+@media(max-width:760px){
+ html:has(body.rally-social){--sn-header:60px}
+ html body.rally-social .r-header.sn-header{height:60px;min-height:60px;padding:0 18px;gap:9px}
+ html body.rally-social .sn-header .r-brand{font-size:31px;width:auto;flex:1;letter-spacing:-2px}
+ html body.rally-social .sn-global-search{width:36px;height:38px;padding:0;justify-content:center;background:none}
+ .sn-global-search span,.sn-global-search kbd{display:none}
+ .sn-header-actions{gap:4px;margin:0}
+ html body.rally-social .sn-header-actions .r-theme-button{width:34px;height:36px}
+ html body.rally-social .sn-header-actions>.r-icon-button{display:none}
+ html body.rally-social .sn-header-actions #account-button{font-size:11px;padding:7px 12px;min-height:34px;max-width:108px}
+ html body.rally-social #account-button:not(.primary){padding:0;background:none;min-width:32px}
+ html body.rally-social #account-button:not(.primary)>span:not(.r-avatar){display:none}
+ html body.rally-social[data-view] .r-layout{display:block;width:100%;max-width:660px;padding:0 18px;margin:auto}
+ html body.rally-social .r-sidebar{display:none}
+ html body.rally-social[data-view] .r-workspace{display:block;padding:0}
+ html body.rally-social[data-view] .r-workspace>#main{padding:17px 0 calc(78px + env(safe-area-inset-bottom));min-height:calc(100dvh - 60px)}
+ html body.rally-social[data-view] .r-workspace #page{border:0;border-radius:0;padding:0 0 20px;min-height:0}
+ html body.rally-social[data-view] .r-layout>.r-workspace>.r-rail{display:none}
+ html body.rally-social .r-mobile-nav{display:flex;position:fixed;bottom:0;top:auto;left:0;right:0;width:100%;max-width:none;height:calc(63px + env(safe-area-inset-bottom));margin:0;padding:5px 9px calc(5px + env(safe-area-inset-bottom));background:var(--paper);border:0;border-top:1px solid var(--line);border-radius:0;box-shadow:none;backdrop-filter:none;gap:0;z-index:45;justify-content:space-around;align-items:center}
+ html body.rally-social .r-mobile-nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:5px 0;min-width:0;min-height:50px;flex:1;border-radius:0;color:var(--muted);font-size:8px;font-weight:500}
+ html body.rally-social .r-mobile-nav a.active{color:var(--text);font-weight:700;background:none}
+ html body.rally-social .r-mobile-nav .r-motion-glider{display:none}
+ html body.rally-social .r-mobile-nav .icon{height:23px;width:23px}
+ html body.rally-social .r-mobile-nav .r-avatar{height:25px;width:25px}
+ html body.rally-social .r-mobile-nav a>span:not(.r-avatar){display:block;font-size:8px;line-height:1.2}
+ .sn-section-label{margin-bottom:10px}
+ .sn-section-label h2{font-size:14px}
+ .sn-corners{margin-bottom:11px}
+ .sn-corner-list{gap:10px;margin-right:-18px;padding-right:18px}
+ .sn-corner{flex:0 0 138px;height:139px;padding:14px;border-radius:15px}
+ html body.rally-social .sn-corner-art .r-community-mark{width:46px;height:46px;border-radius:14px}
+ .sn-corner-name{font-size:12px}
+ .sn-corner-members{font-size:9px}
+ html body.rally-social .r-composer-launch.sn-composer{min-height:73px;margin:0 0 7px;padding:9px 0 17px;gap:12px}
+ html body.rally-social .sn-composer .r-avatar{width:38px;height:38px}
+ html body.rally-social .sn-composer>span:not(.r-avatar):not(.sn-composer-media){font-size:13px}
+ html body.rally-social .sn-feed-toolbar{top:60px;margin:0 -18px;padding:0 18px;width:calc(100% + 36px)}
+ html body.rally-social[data-view] .sn-feed-toolbar>.sn-feed-modes{gap:24px}
+ html body.rally-social .sn-feed-modes button{font-size:12px;min-height:46px}
+ .sn-feed-settings{margin-left:8px;width:28px}
+ html body.rally-social .sn-post{padding:19px 0 10px}
+ html body.rally-social .sn-post .r-person>.r-avatar{width:38px;height:38px}
+ html body.rally-social .sn-post .r-person{gap:9px}
+ html body.rally-social .sn-post .r-person b{font-size:13px}
+ html body.rally-social .sn-post .r-person small{font-size:10px}
+ html body.rally-social .sn-post .r-post-heading{gap:6px;margin-bottom:12px}
+ .sn-post-time{font-size:10px}
+ html body.rally-social .sn-post .r-post-body{font-size:14px;line-height:1.7}
+ html body.rally-social .sn-post .r-post-actions{gap:15px}
+ html body.rally-social .sn-post .r-post-actions button{min-width:36px;min-height:42px}
+ html body.rally-social .sn-post .r-post-asset{padding:12px;gap:9px}
+ html body.rally-social .sn-post .r-asset-trade{font-size:11px;padding:9px 11px}
+ html body.rally-social .sn-post .r-asset-trade .icon{display:none}
+ html body.rally-social .sn-post .r-asset-price b{font-size:12px}
+ .sn-page-heading{padding-bottom:18px}
+ .sn-page-heading h1{font-size:26px}
+ .sn-profile-cover{height:100px;border-radius:15px}
+ html body.rally-social .sn-profile .r-profile-identity h1{font-size:22px}
+ html body.rally-social .r-page-head{padding:4px 0 18px}
+ html body.rally-social .rx-home-head{padding:0 0 17px}
+ html body.rally-social .rx-home-tabs{margin-top:15px;width:100%}
+ html body.rally-social .r-market-tools,html body.rally-social .r-table-wrap{padding-inline:0}
+ html body.rally-social .r-compose-fab{display:flex;right:18px;bottom:calc(78px + env(safe-area-inset-bottom));width:46px;height:46px;border-radius:16px;background:var(--solid);color:var(--on-solid);box-shadow:0 5px 18px #0002;z-index:35}
+ html body.rally-social:is([data-view=explore],[data-view=swipe],[data-view=launch],[data-view=launchpad],[data-view=account]) .r-compose-fab{display:none}
+}
+@media(max-width:360px){html body.rally-social[data-view] .sn-feed-toolbar>.sn-feed-modes{gap:18px}.sn-feed-settings{width:23px;margin-left:4px}html body.rally-social .sn-post .r-asset-price{max-width:75px}html body.rally-social .sn-post .r-person em{display:none}}
+@media(prefers-reduced-motion:reduce){html body.rally-social *,html body.rally-social *:before,html body.rally-social *:after{scroll-behavior:auto;transition:none;animation:none}}
+
+.sn-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.sn-reply-context{font-size:11px;color:var(--muted);min-height:30px;margin-bottom:4px}
+
+html body.rally-social #timeline .r-new-posts{position:sticky;top:calc(var(--sn-header) + 48px);z-index:16;background:var(--paper);min-height:44px;border-bottom:1px solid var(--line);color:var(--link)}

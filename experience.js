@@ -47,10 +47,10 @@ export function experienceUI(c){
  const homeViews=new Set(['home','explore','launchpad','launch','payments','analytics','swipe','token']);
  const section=()=>S.view==='explore'?'markets':S.view==='swipe'?'swipe':['launchpad','launch','payments','analytics'].includes(S.view)?'launch':S.homeSection||'markets';
  function homeHeader(){
-  return `<header class="rx-home-head"><div><h1 class="rx-home-brand" aria-label="Rally">rally<span class="rx-brand-dot" aria-hidden="true"></span></h1><div class="rx-head-actions"><button class="r-icon-button" data-nav="notifications" aria-label="Notifications">${icon('bell')}${S.boot?.unread?'<i class="rx-notice-dot"></i>':''}</button></div></div><nav class="rx-home-tabs" aria-label="Home sections">${[['markets','Markets'],['launch','Launch'],['swipe','Swipe']].map(([id,name])=>`<button data-action="home-section" data-id="${id}" aria-current="${section()===id?'page':'false'}">${name}</button>`).join('')}</nav></header>`;
+  return `<header class="rx-home-head"><div><h1>${section()==='markets'?'Markets':section()==='swipe'?'Swipe':'Launch'}</h1><div class="rx-head-actions"><button class="r-icon-button" data-nav="notifications" aria-label="Notifications">${icon('bell')}${S.boot?.unread?'<i class="rx-notice-dot"></i>':''}</button></div></div><nav class="rx-home-tabs" aria-label="Home sections">${[['markets','Markets'],['launch','Launch'],['swipe','Swipe']].map(([id,name])=>`<button data-action="home-section" data-id="${id}" aria-current="${section()===id?'page':'false'}">${name}</button>`).join('')}</nav></header>`;
  }
  function decorateHome(){
-  if(!homeViews.has(S.view))return;
+  if(!homeViews.has(S.view)||S.view==='home'&&S.homeSection==='feed')return;
   if(!$('#page>.rx-home-head'))$('#page').insertAdjacentHTML('afterbegin',homeHeader());
   homeOverview();
   motion.sections();

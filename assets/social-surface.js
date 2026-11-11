@@ -1,0 +1,31 @@
+// Social presentation only. Account, feed access and order actions use the
+// existing delegated handlers; every identity and count comes from bootstrap.
+export function socialSurface({S,esc,icon,navIcon,avatar,communityMark,personRow}){
+ const nav=[['home','nav-home','Home'],['discover','nav-search','Search'],['explore','markets','Markets'],['communities','nav-communities','Communities'],['leaderboard','trophy','Leaderboard']];
+ const mobile=[nav[0],nav[2],nav[3],nav[4],['account','nav-account','Profile']];
+ const link=([view,i,label])=>`<a href="?view=${view}${view==='home'?'&section=feed':''}" data-nav="${view}" ${view==='home'?'data-home-primary':''} aria-label="${label}">${view==='account'&&S.boot?.me?avatar(S.boot.me):navIcon(i)}<span>${label}</span></a>`;
+ function shell(){
+  return `<header class="r-header sn-header"><a class="r-brand" href="?view=home&section=feed" data-nav="home" data-home-primary aria-label="Rally home">rally<span></span></a><button class="sn-global-search" data-action="search">${icon('search')}<span>Search Rally</span><kbd>⌘ K</kbd></button><div class="sn-header-actions"><button class="r-theme-button" data-action="theme" aria-label="Switch to dark mode">${icon('moon')}</button><button class="r-icon-button" data-nav="notifications" aria-label="Notifications">${icon('bell')}</button><button id="account-button" class="r-btn primary" data-action="account">Sign in</button></div></header>
+  <div class="r-layout sn-layout"><aside class="r-sidebar"><nav aria-label="Main navigation">${nav.map(n=>link(n)).join('')}</nav><nav class="r-nav-secondary" aria-label="Your tools">${[['feeds','feeds','Subscriptions'],['agents','nav-agents','Agents'],['account','nav-account','Profile']].map(n=>link(n)).join('')}</nav><button class="r-btn primary r-post-button" data-action="compose">${icon('plus')}Post</button><div class="r-side-section"><div class="r-kicker">Communities</div><div id="side-communities"></div></div><div class="r-side-bottom"><details class="r-more-nav"><summary>${icon('ellipsis')}More</summary><div>${[['launchpad','Launch a token'],['swipe','Swipe'],['saved','Saved posts'],['portfolio','Portfolio'],['activity','Activity'],['earnings','Earnings'],['notifications','Notifications']].map(([view,label])=>`<a href="?view=${view}" data-nav="${view}">${label}</a>`).join('')}<button data-action="wallet"><span id="wallet-label">Connect wallet</span></button></div></details><button id="side-account-profile" data-action="account">${avatar()}<span>Sign in</span></button></div></aside><div class="r-workspace"><main id="main" tabindex="-1"><div id="page"></div></main><aside class="r-rail" id="rail"></aside></div></div><nav class="r-mobile-nav" aria-label="Mobile navigation">${mobile.map(n=>link(n,true)).join('')}</nav><button class="r-compose-fab" data-action="compose" aria-label="Create post">${icon('plus')}</button><div id="trade-root"></div>`;
+ }
+ function corners(){
+  const communities=S.boot.communities||[];
+  if(!communities.length)return '';
+  return `<section class="sn-corners" aria-label="Discover communities"><div class="sn-section-label"><h2>Find your people</h2><a href="?view=groups" data-nav="groups">Explore ${icon('chevron')}</a></div><div class="sn-corner-list">${communities.slice(0,5).map((c,i)=>`<button class="sn-corner sn-tone-${i%3}" data-action="community" data-id="${esc(c.id)}"><span class="sn-corner-art">${communityMark(c)}</span><span class="sn-corner-name">${esc(c.name)}</span><span class="sn-corner-members">${Number(c.members)>0?Number(c.members).toLocaleString('en-US')+(Number(c.members)===1?' member':' members'):esc(c.description)}</span></button>`).join('')}</div></section>`;
+ }
+ function composer(){
+  return `<button class="r-composer-launch sn-composer" data-action="compose">${avatar(S.boot.me)}<span>What’s happening?</span><span class="sn-composer-media" aria-hidden="true">${icon('image')}</span></button>`;
+ }
+ function home(){
+  return `<h1 class="sn-sr-only">Home</h1>${corners()}${composer()}<div class="r-feed-toolbar sn-feed-toolbar"><div class="r-tabs sn-feed-modes" aria-label="Feed filter">${[['for-you','For you'],['following','Following'],['trades','Trades'],['agents','Agents']].map(([id,label])=>`<button class="${S.mode===id?'active':''}" data-action="mode" data-id="${id}" aria-pressed="${S.mode===id}">${label}</button>`).join('')}</div><button class="sn-feed-settings" data-action="algorithm-picker" aria-label="Your feed subscriptions">${icon('feeds')}</button></div>`;
+ }
+ function communityHome(){
+  return `<header class="sn-page-heading"><h1>Communities</h1><button class="sn-text-action" data-nav="groups">Explore ${icon('chevron')}</button></header>${corners()}${composer()}<div class="sn-discussion-title"><h2>Conversations</h2><button class="sn-text-action" data-action="algorithm-picker">Subscriptions ${icon('down')}</button></div>`;
+ }
+ function rail(){
+  const chosen=S.boot.feeds?.find(f=>f.id===S.boot.activeFeed);
+  const people=(S.boot.people||[]).filter(p=>p.id!==S.boot.me?.id).sort((a,b)=>Number(!!b.avatar||b.kind==='agent')-Number(!!a.avatar||a.kind==='agent')).slice(0,4);
+  return `<section class="sn-feed-choice"><span class="sn-feed-choice-icon">${icon('feeds')}</span><div><small>Your feed</small><b>${esc(chosen?.name||'For you')}</b></div><button data-action="algorithm-picker" aria-label="Change feed">${icon('down')}</button></section><section class="r-rail-section sn-people"><div class="sn-section-label"><h2>People to follow</h2><button data-action="search" aria-label="Find people">${icon('plus')}</button></div>${people.map(personRow).join('')}</section><section class="sn-shortcuts"><a href="?view=swipe" data-nav="swipe"><span class="sn-shortcut-icon">${icon('video')}</span><span><b>Take a look around</b><small>Swipe through tokens</small></span>${icon('chevron')}</a><a href="?view=launchpad" data-nav="launchpad"><span class="sn-shortcut-icon">${icon('launch')}</span><span><b>Make it yours</b><small>Launch a community token</small></span>${icon('chevron')}</a></section><footer class="sn-rail-footer"><a href="/">About</a><a href="/docs">Docs</a><a href="/terms">Terms</a><span>Rally on Monad</span></footer>`;
+ }
+ return {shell,home,communityHome,composer,rail};
+}
