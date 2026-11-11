@@ -32,7 +32,7 @@ const results=[],errors=[];
   await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.querySelectorAll(".sn-header img,.sn-corner img,.sn-post:first-child img")].map(img=>Promise.race([img.decode().catch(()=>{}),new Promise(r=>setTimeout(r,3000))])));});
   await page.screenshot({path:path.join(output,`home-${width}-${theme}.png`),fullPage:false});
   const fit=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth-innerWidth,header:document.querySelector('.sn-header').getBoundingClientRect().height,main:document.querySelector('#main').getBoundingClientRect().width,post:document.querySelector('.sn-post').getBoundingClientRect().width,homeTabs:!!document.querySelector('.rx-home-tabs'),font:getComputedStyle(document.querySelector('.sn-post')).fontFamily}));
-  assert(fit.overflow<=1,`Home overflow ${width}: ${fit.overflow}`);assert(!fit.homeTabs,'Market tabs must not decorate social home');assert(fit.main>240);if(width===768)assert(fit.main>500,"Tablet must reclaim the hidden rail width");
+  assert(fit.overflow<=1,`Home overflow ${width}: ${fit.overflow}`);assert(!fit.homeTabs,'Market tabs must not decorate social home');assert(fit.main>240);assert.equal(await page.locator(".r-compose-fab").isVisible(),false,"Floating composer must not obscure trade controls");if(width===768)assert(fit.main>500,"Tablet must reclaim the hidden rail width");
   const firstId=await page.locator('.sn-post').first().getAttribute('data-post');
   await page.locator('.sn-post .r-person').first().click();await page.locator('.sn-profile').waitFor({timeout:20000});
   assert((await page.locator('.sn-profile h1').innerText()).length>0);

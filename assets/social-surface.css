@@ -237,8 +237,6 @@ html body.rally-social .r-compose-fab{display:none}
  html body.rally-social .rx-home-head{padding:0 0 17px}
  html body.rally-social .rx-home-tabs{margin-top:15px;width:100%}
  html body.rally-social .r-market-tools,html body.rally-social .r-table-wrap{padding-inline:0}
- html body.rally-social .r-compose-fab{display:flex;right:18px;bottom:calc(78px + env(safe-area-inset-bottom));width:46px;height:46px;border-radius:16px;background:var(--solid);color:var(--on-solid);box-shadow:0 5px 18px #0002;z-index:35}
- html body.rally-social:is([data-view=explore],[data-view=swipe],[data-view=launch],[data-view=launchpad],[data-view=account]) .r-compose-fab{display:none}
 }
 @media(max-width:360px){html body.rally-social[data-view] .sn-feed-toolbar>.sn-feed-modes{gap:18px}.sn-feed-settings{width:23px;margin-left:4px}html body.rally-social .sn-post .r-asset-price{max-width:75px}html body.rally-social .sn-post .r-person em{display:none}}
 @media(prefers-reduced-motion:reduce){html body.rally-social *,html body.rally-social *:before,html body.rally-social *:after{scroll-behavior:auto;transition:none;animation:none}}
